@@ -1,12 +1,22 @@
+from app.services.qwen_service import qwen_service
+
+
 class WriterAgent:
 
     def generate_script(self, prompt: str):
 
-        return [
-            f"Opening scene based on {prompt}",
-            "Conflict begins",
-            "Final dramatic climax"
-        ]
+        script = qwen_service.generate_text(
+            f"""
+            Create a short movie trailer script.
+
+            Idea:
+            {prompt}
+
+            Return 3 scenes.
+            """
+        )
+
+        return [script]
 
 
 writer_agent = WriterAgent()

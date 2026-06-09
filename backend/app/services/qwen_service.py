@@ -1,7 +1,31 @@
-class QwenService:
-    def __init__(self, api_base_url: str = '', api_key: str = '') -> None:
-        self.api_base_url = api_base_url
-        self.api_key = api_key
+import os
 
-    def is_configured(self) -> bool:
-        return bool(self.api_base_url and self.api_key)
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("QWEN_API_KEY"),
+    base_url=os.getenv("QWEN_BASE_URL")
+)
+
+
+class QwenService:
+
+    def generate_text(self, prompt: str) -> str:
+
+        response = client.chat.completions.create(
+            model=os.getenv("QWEN_MODEL"),
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+
+        return response.choices[0].message.content
+
+
+qwen_service = QwenService()
