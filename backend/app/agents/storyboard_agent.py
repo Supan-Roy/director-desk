@@ -1,5 +1,25 @@
-class StoryboardAgent:
-    name = 'storyboard_agent'
+from app.services.qwen_service import qwen_service
 
-    def describe(self) -> str:
-        return 'Future storyboard generation agent scaffold.'
+class StoryboardAgent:
+
+    def generate_storyboard(self, script: str):
+
+        storyboard = qwen_service.generate_text(
+            f"""
+            Convert this script into a storyboard.
+
+            For each scene provide:
+            - Scene Number
+            - Camera Shot
+            - Environment
+            - Mood
+
+            Script:
+            {script}
+            """
+        )
+
+        return storyboard
+
+
+storyboard_agent = StoryboardAgent()
