@@ -16,7 +16,7 @@ class WriterAgent:
             """
         )
 
-        return [script]
+        return script
 
 
 writer_agent = WriterAgent()
