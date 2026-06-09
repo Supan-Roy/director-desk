@@ -20,3 +20,11 @@ app.include_router(api_router, prefix='/api')
 def root():
     return {"message": "Lights, Camera, Action!"}
 
+
+from app.api.routes.showrunner import router as showrunner_router
+
+app.include_router(
+    showrunner_router,
+    prefix="/api",
+    tags=["Showrunner"]
+)

@@ -1,5 +1,12 @@
 class WriterAgent:
-    name = 'writer_agent'
 
-    def describe(self) -> str:
-        return 'Future script-writing agent scaffold.'
+    def generate_script(self, prompt: str):
+
+        return [
+            f"Opening scene based on {prompt}",
+            "Conflict begins",
+            "Final dramatic climax"
+        ]
+
+
+writer_agent = WriterAgent()
