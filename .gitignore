@@ -36,3 +36,4 @@ yarn-debug.log*
 pnpm-debug.log*
 
 .commandcode/
+.qwen/
