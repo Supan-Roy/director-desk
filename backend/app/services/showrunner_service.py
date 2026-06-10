@@ -1,6 +1,7 @@
 from app.agents.writer_agent import writer_agent
 from app.agents.storyboard_agent import storyboard_agent
 from app.services.storyboard_parser import storyboard_parser
+from app.services.project_state import project_state
 from app.schemas.responses import GenerateResponse
 
 
@@ -16,8 +17,12 @@ class ShowrunnerService:
             storyboard_text
         )
 
+        title = f"Generated from: {prompt}"
+
+        project_state.set_generation_complete(title, script, storyboard)
+
         return GenerateResponse(
-            title=f"Generated from: {prompt}",
+            title=title,
             script=script,
             storyboard=storyboard
         )
