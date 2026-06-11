@@ -44,7 +44,7 @@ export async function getProductionPlan() {
 }
 
 // Generate (trigger the showrunner)
-export async function generateStory(prompt) {
-  const response = await apiClient.post('/api/generate', { prompt })
+export async function generateStory(prompt, mode = 'fast') {
+  const response = await apiClient.post('/api/generate', { prompt, mode })
   return response.data
 }

@@ -13,8 +13,8 @@ router = APIRouter()
 @router.post("/generate")
 def generate_story(request: GenerateRequest):
     try:
-        logger.info(f"Generating story for prompt: {request.prompt[:100]}...")
-        result = showrunner_service.generate(request.prompt)
+        logger.info(f"Generating story for prompt: {request.prompt[:100]}... [Mode: {request.mode}]")
+        result = showrunner_service.generate(request.prompt, mode=request.mode)
         logger.info(f"Generation complete: {len(result.script)} chars, {len(result.storyboard)} scenes")
         return result
     except Exception as e:

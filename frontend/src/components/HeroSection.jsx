@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders } from 'react-icons/fi';
-import { PiSparkle } from 'react-icons/pi';
+import { PiSparkle, PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
 
@@ -30,6 +30,11 @@ const qualities = [
   { id: 'draft', label: 'Draft Cut', value: 'Draft' },
   { id: 'high', label: 'High Quality', value: 'High Quality' },
   { id: 'master', label: 'Master Grade', value: 'Master' },
+];
+
+const orchestrationModes = [
+  { id: 'fast', label: 'Fast Mode (Single-call)', value: 'fast' },
+  { id: 'studio', label: 'Studio Mode (Multi-agent)', value: 'studio' },
 ];
 
 const detailedSuggestions = [
@@ -143,6 +148,7 @@ export default function HeroSection({
   setCamera,
 }) {
   const [quality, setQuality] = useState('high');
+  const [orchestrationMode, setOrchestrationMode] = useState('fast');
   const [errorMsg, setErrorMsg] = useState('');
   const { isDayMode } = useTheme();
   
@@ -177,7 +183,7 @@ export default function HeroSection({
     const composedPrompt = `${prompt.trim()}\n[Aspect: ${selectedAspect}, Style: ${selectedStyle}, Motion: ${selectedCamera}, Quality: ${selectedQuality}]`;
     
     try {
-      await generate(composedPrompt);
+      await generate(composedPrompt, orchestrationMode);
     } catch (err) {
       setErrorMsg(err.message);
     }
@@ -431,6 +437,15 @@ export default function HeroSection({
                 onChange={setQuality}
                 options={qualities}
                 icon={FiSliders}
+                disabled={loading}
+              />
+
+              {/* Orchestration Mode Selector */}
+              <CustomSelect
+                value={orchestrationMode}
+                onChange={setOrchestrationMode}
+                options={orchestrationModes}
+                icon={PiRobotBold}
                 disabled={loading}
               />
             </div>

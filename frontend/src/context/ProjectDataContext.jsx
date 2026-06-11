@@ -77,11 +77,11 @@ export function ProjectDataProvider({ children }) {
     }
   }, [fetchProjectStatus, fetchScript, fetchStoryboard, fetchProductionPlan])
 
-  const handleGenerate = async (prompt) => {
+  const handleGenerate = async (prompt, mode = 'fast') => {
     setLoading(true)
     setError(null)
     try {
-      await generateStory(prompt)
+      await generateStory(prompt, mode)
       // After generation, refetch ALL data from the single shared state
       await fetchAll()
     } catch (err) {

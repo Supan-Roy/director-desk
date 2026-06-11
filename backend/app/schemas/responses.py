@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
 
 class StoryboardScene(BaseModel):
     scene_number: int
@@ -10,4 +11,6 @@ class StoryboardScene(BaseModel):
 class GenerateResponse(BaseModel):
     title: str
     script: str
-    storyboard: list[StoryboardScene]
+    storyboard: List[StoryboardScene]
+    production_plan: Optional[Dict[str, Any]] = None
+    critic_notes: Optional[List[str]] = None

@@ -1,30 +1,28 @@
-from app.agents.writer_agent import writer_agent
-from app.agents.storyboard_agent import storyboard_agent
-from app.services.storyboard_parser import storyboard_parser
+from app.services.showrunner_orchestrator import showrunner_orchestrator
 from app.services.project_state import project_state
 from app.schemas.responses import GenerateResponse
 
 
 class ShowrunnerService:
 
-    def generate(self, prompt: str) -> GenerateResponse:
+    def generate(self, prompt: str, mode: str = "fast") -> GenerateResponse:
+        
+        result = showrunner_orchestrator.run_production(prompt, mode)
 
-        script = writer_agent.generate_script(prompt)
-
-        storyboard_text = storyboard_agent.generate_storyboard(script)
-
-        storyboard = storyboard_parser.parse(
-            storyboard_text
+        project_state.set_generation_complete(
+            title=result["title"],
+            script=result["script"],
+            storyboard=result["storyboard"],
+            production_plan=result["production_plan"],
+            critic_notes=result["critic_notes"]
         )
 
-        title = f"Generated from: {prompt}"
-
-        project_state.set_generation_complete(title, script, storyboard)
-
         return GenerateResponse(
-            title=title,
-            script=script,
-            storyboard=storyboard
+            title=result["title"],
+            script=result["script"],
+            storyboard=result["storyboard"],
+            production_plan=result["production_plan"],
+            critic_notes=result["critic_notes"]
         )
 
 
