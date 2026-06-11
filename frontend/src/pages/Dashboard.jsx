@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { FiSun, FiMoon } from 'react-icons/fi';
 import Sidebar from '../components/Sidebar';
 import HeroSection from '../components/HeroSection';
 import CreativeModes from '../components/CreativeModes';
@@ -8,6 +9,7 @@ import TabbedContent from '../components/TabbedContent';
 import AgentActivityPanel from '../components/AgentActivityPanel';
 import CreditUsageCard from '../components/CreditUsageCard';
 import { useProjectData } from '../hooks/useProjectData';
+import { useTheme } from '../context/ThemeContext';
 
 // Canvas-based drifting dust spec particles in spotlight beams
 function DustParticles() {
@@ -72,6 +74,7 @@ function DustParticles() {
 
 export default function Dashboard() {
   const { hasProject, loading } = useProjectData();
+  const { isDayMode, toggleTheme } = useTheme();
   const containerRef = useRef(null);
 
   // Shared state for the prompt input controls
@@ -104,7 +107,7 @@ export default function Dashboard() {
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="flex h-screen bg-[#06060b] text-surface-200 select-none overflow-hidden font-display relative"
+      className={`flex h-screen text-surface-200 select-none overflow-hidden font-display relative transition-colors duration-500 ${isDayMode ? 'bg-[#f0ede8]' : 'bg-[#06060b]'}`}
     >
       {/* Background radial lens glows */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
@@ -158,15 +161,31 @@ export default function Dashboard() {
       {/* Main Studio Viewport */}
       <div className="flex-1 flex flex-col min-w-0 pr-8 pl-8 md:pl-12 transition-all duration-300 relative z-20 overflow-y-auto">
         {/* Minimal Header */}
-        <header className="flex items-center border-b border-white/[0.03] py-4 shrink-0">
-          <p className="text-[10px] font-extrabold tracking-[0.25em] text-surface-500 uppercase">
+        <header className="flex items-center justify-between border-b py-2 shrink-0 transition-colors duration-500 border-white/[0.03] [data-theme='day']_&:border-black/[0.06]">
+          <p className="text-[10px] font-extrabold tracking-[0.25em] uppercase header-breadcrumb">
             Director Desk <span className="text-surface-700">/</span> <span className="text-surface-300">Production Studio</span>
           </p>
+
+          {/* Day / Night Mode Toggle */}
+          <button
+            id="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={isDayMode ? 'Switch to Night Mode' : 'Switch to Day Mode'}
+            className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300 border ${
+              isDayMode
+                ? 'bg-amber-50 border-amber-200/60 text-amber-500 hover:bg-amber-100 hover:border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.18)]'
+                : 'bg-white/[0.03] border-white/[0.07] text-surface-400 hover:bg-white/[0.07] hover:text-amber-300 hover:border-amber-300/30 hover:shadow-[0_0_12px_rgba(251,191,36,0.12)]'
+            }`}
+          >
+            {isDayMode
+              ? <FiMoon size={13} strokeWidth={2} />
+              : <FiSun size={14} strokeWidth={1.8} />}
+          </button>
         </header>
 
         {/* Studio Workspace Canvas */}
-        <main className="flex-1 py-8">
-          <div className="mx-auto max-w-[1400px] space-y-12 pb-16">
+        <main className="flex-1 py-4">
+          <div className="mx-auto max-w-[1400px] space-y-6 pb-8">
             
             {/* Hero Studio Block */}
             <HeroSection 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders } from 'react-icons/fi';
 import { PiSparkle } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
+import { useTheme } from '../context/ThemeContext';
 
 const aspectRatios = [
   { id: '16-9', label: '16:9 Cinema', value: '16:9' },
@@ -56,6 +57,7 @@ const detailedSuggestions = [
 function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const { isDayMode } = useTheme();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -74,15 +76,19 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] px-3 py-2 border border-white/[0.04] text-[11px] font-semibold text-surface-300 transition-all cursor-pointer focus:outline-none ${
+        className={`flex items-center gap-2 rounded-lg px-3 py-2 border text-[11px] font-semibold transition-all cursor-pointer focus:outline-none ${
           disabled ? 'opacity-40 cursor-not-allowed' : ''
+        } ${
+          isDayMode
+            ? 'bg-black text-white border-black/15 hover:bg-neutral-900 shadow-sm'
+            : 'bg-white text-black border-white/10 hover:bg-neutral-100 shadow-sm'
         }`}
         disabled={disabled}
       >
-        <Icon size={12} className="text-surface-500" />
+        <Icon size={12} className={isDayMode ? 'text-neutral-400' : 'text-neutral-500'} />
         <span>{activeOption.label}</span>
         <span 
-          className="text-[7px] text-surface-500 ml-1 transition-transform duration-200" 
+          className={`text-[7.5px] ml-1 transition-transform duration-200 ${isDayMode ? 'text-neutral-400' : 'text-neutral-500'}`} 
           style={{ transform: isOpen ? 'rotate(180deg)' : 'none', display: 'inline-block' }}
         >
           ▼
@@ -90,7 +96,11 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1.5 z-50 min-w-[160px] rounded-xl border border-white/[0.06] bg-surface-950/95 backdrop-blur-xl p-1 shadow-elevated space-y-0.5">
+        <div className={`absolute left-0 top-full mt-1.5 z-50 min-w-[160px] rounded-xl border p-1 backdrop-blur-xl shadow-elevated space-y-0.5 ${
+          isDayMode
+            ? 'bg-white border-neutral-200/80 text-neutral-800 shadow-lg'
+            : 'bg-surface-950/95 border-white/[0.06] text-surface-200'
+        }`}>
           {options.map((opt) => {
             const isSelected = opt.id === value;
             return (
@@ -103,8 +113,12 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-[11px] transition-all flex items-center justify-between cursor-pointer ${
                   isSelected
-                    ? 'bg-accent/20 text-accent font-semibold'
-                    : 'text-surface-400 hover:bg-white/[0.04] hover:text-white'
+                    ? isDayMode
+                      ? 'bg-accent/15 text-accent font-bold'
+                      : 'bg-accent/20 text-accent font-bold'
+                    : isDayMode
+                      ? 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                      : 'text-surface-400 hover:bg-white/[0.04] hover:text-white'
                 }`}
               >
                 <span>{opt.label}</span>
@@ -177,7 +191,7 @@ export default function HeroSection({
 
   return (
     <section className={`relative mx-auto text-center transition-all duration-500 w-full ${
-      hasProject ? 'py-4 mt-2' : 'min-h-[50vh] flex flex-col justify-center py-6'
+      hasProject ? 'py-2 mt-1' : 'py-3 mt-2'
     }`}>
       {/* Studio Background Image — behind entire hero block */}
       {!hasProject && (
@@ -232,14 +246,6 @@ export default function HeroSection({
             <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
             <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
             <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
-
-            {/* Subtle Console Header Status */}
-            <div className="flex items-center justify-between text-[8px] font-mono tracking-[0.2em] text-surface-600 uppercase mb-2.5 select-none relative z-10">
-              <span>briefing console</span>
-              <span className={`transition-colors duration-300 ${loading ? 'text-emerald-400' : focused ? 'text-accent' : 'text-surface-600'}`}>
-                {loading ? 'status: rendering' : focused ? 'status: linking...' : 'status: active'}
-              </span>
-            </div>
 
             {/* Row 1: Orb, Input text, Sparkle */}
             <div className="flex items-start gap-4 relative z-10">
@@ -400,34 +406,13 @@ export default function HeroSection({
         </div>
       </div>
 
-        {/* Cinematic Suggestions */}
-        {!prompt && !errorMsg && !hasProject && (
-          <div className="space-y-2.5 mt-4 animate-fade-in">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500 flex items-center justify-center gap-1.5">
-              <FiCompass size={11} className="text-accent/60" />
-              <span>Suggested Studio Prompts</span>
-            </p>
-            <div className="flex flex-col items-center gap-2">
-              {detailedSuggestions.map((sug, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleApplySuggestion(sug)}
-                  className="w-full max-w-xl text-left rounded-xl border border-white/[0.04] bg-white/[0.01] px-4 py-2.5 text-xs text-surface-400 transition-all hover:border-accent/20 hover:bg-accent/[0.02] hover:text-surface-250 font-mono"
-                >
-                  "{sug.text}"
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Error Notification */}
-        {errorMsg && (
-          <div className="mt-4 rounded-xl border border-red-500/10 bg-red-500/[0.04] px-4 py-3 text-left max-w-xl mx-auto">
-            <p className="text-[12px] font-medium text-red-400">Production system failed</p>
-            <p className="mt-1 text-[11px] text-red-300/70">{errorMsg}</p>
-          </div>
-        )}
+      {/* Error Notification */}
+      {errorMsg && (
+        <div className="mt-4 rounded-xl border border-red-500/10 bg-red-500/[0.04] px-4 py-3 text-left max-w-xl mx-auto relative z-10">
+          <p className="text-[12px] font-medium text-red-400">Production system failed</p>
+          <p className="mt-1 text-[11px] text-red-300/70">{errorMsg}</p>
+        </div>
+      )}
       </div>
     </section>
   );
