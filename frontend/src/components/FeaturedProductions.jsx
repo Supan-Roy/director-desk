@@ -1,5 +1,6 @@
 import { useProjectData } from '../hooks/useProjectData';
 import { FiPlay, FiAward, FiTag, FiCpu, FiLayers, FiCamera } from 'react-icons/fi';
+import { useTheme } from '../context/ThemeContext';
 
 const featuredList = [
   {
@@ -62,9 +63,10 @@ const featuredList = [
 
 export default function FeaturedProductions() {
   const { loadFeatured } = useProjectData();
+  const { isDayMode } = useTheme();
 
   return (
-    <section className="space-y-6 select-none">
+    <section className="space-y-4 select-none">
       <div className="flex items-center gap-3">
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
           Featured Productions
@@ -72,110 +74,78 @@ export default function FeaturedProductions() {
         <div className="h-px w-24 bg-white/[0.04]" />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {featuredList.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => loadFeatured(item.id)}
-            className="group relative h-[295px] w-full rounded-2xl border border-white/[0.04] bg-[#08080f]/80 overflow-hidden cursor-pointer shadow-lg transition-all duration-500 hover:border-accent/40 hover:shadow-[0_12px_32px_rgba(139,92,246,0.18)] flex flex-col justify-between"
-          >
-            {/* Glossy top-shine reflection */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20" />
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+        {featuredList.map((item, idx) => {
+          const isImageRight = idx >= 2;
+          const gradientClass = isImageRight
+            ? isDayMode
+              ? 'from-white via-white/80 to-transparent'
+              : 'from-[#08080f] via-[#08080f]/80 to-transparent'
+            : isDayMode
+              ? 'from-transparent via-white/80 to-white'
+              : 'from-transparent via-[#08080f]/80 to-[#08080f]';
 
-            {/* Background Image with Hover Zoom */}
-            <div className="absolute inset-0 z-0">
-              <img
-                src={item.image}
-                alt={item.title}
-                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.7] group-hover:brightness-[0.6] contrast-[1.05]"
-              />
-              {/* Premium Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#07070d] via-[#07070d]/50 to-transparent z-10" />
-            </div>
+          return (
+            <div
+              key={item.id}
+              onClick={() => loadFeatured(item.id)}
+              className={`group relative h-[178px] w-full rounded-2xl border overflow-hidden cursor-pointer shadow-lg transition-all duration-500 flex ${
+                isImageRight ? 'flex-row-reverse' : 'flex-row'
+              } ${
+                isDayMode 
+                  ? 'bg-white border-black/[0.07] hover:border-accent/50 hover:shadow-md' 
+                  : 'bg-[#08080f]/80 border-white/[0.04] hover:border-accent/40 hover:shadow-[0_12px_32px_rgba(139,92,246,0.18)]'
+              }`}
+            >
+              {/* Glossy top-shine reflection */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20" />
 
-            {/* Viewfinder Scope Guides Overlay */}
-            <div className="absolute inset-4 z-10 opacity-30 group-hover:opacity-50 transition-opacity duration-300 pointer-events-none text-[8px] font-mono text-white/60">
-              {/* Corner bounds */}
-              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white" />
-              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white" />
-              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white" />
-              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white" />
-              
-              {/* Center focus indicator */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 flex items-center justify-center">
-                <div className="w-1.5 h-px bg-white" />
-                <div className="h-1.5 w-px bg-white absolute" />
-              </div>
-            </div>
-
-            {/* Top metadata tags */}
-            <div className="relative z-20 p-4 flex items-center justify-between">
-              <span className="text-[7.5px] font-mono tracking-widest text-surface-400 uppercase">
-                {item.format}
-              </span>
-              <span className={`text-[7.5px] font-mono tracking-widest uppercase font-bold flex items-center gap-1.5 ${item.progress === 100 ? 'text-emerald-400' : 'text-accent'}`}>
-                <span className={`h-1 w-1 rounded-full ${item.progress === 100 ? 'bg-emerald-400' : 'bg-accent animate-pulse'}`} />
-                {item.status}
-              </span>
-            </div>
-
-            {/* Play Button Overlay (Visible on Hover) */}
-            <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent/90 border border-white/20 text-white shadow-lg transform scale-75 group-hover:scale-100 transition-transform duration-300">
-                <FiPlay size={18} className="ml-1" />
-              </div>
-            </div>
-
-            {/* Content Details */}
-            <div className="relative z-20 p-4 flex flex-col justify-end">
-              {/* Badge Row */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="flex items-center gap-1 rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-surface-400 font-mono">
-                  <FiCamera size={8} />
-                  {item.tag}
-                </span>
-                <span className="flex items-center gap-1 rounded bg-accent/10 border border-accent/25 px-1.5 py-0.5 text-[8px] font-bold text-accent font-mono">
-                  <FiAward size={8} />
-                  {item.rating}
-                </span>
+              {/* Landscape image with Hover Zoom */}
+              <div className="relative w-[38%] h-full overflow-hidden shrink-0">
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.85] group-hover:brightness-[0.75] contrast-[1.05]"
+                />
+                {/* Gradient mask blending image into background */}
+                <div className={`absolute inset-0 z-10 pointer-events-none bg-gradient-to-r ${gradientClass}`} />
               </div>
 
-              {/* Title */}
-              <h4 className="text-[14px] font-black tracking-wide text-white group-hover:text-accent transition-colors leading-tight uppercase font-display">
-                {item.title}
-              </h4>
+              {/* Text content split side */}
+              <div className="flex-1 flex flex-col justify-between p-3.5 min-w-0 relative z-10">
+                <div>
+                  <h4 className={`text-[12px] font-black tracking-wide leading-tight uppercase font-display truncate transition-colors duration-300 ${
+                    isDayMode ? 'text-neutral-900 group-hover:text-accent' : 'text-white group-hover:text-accent'
+                  }`}>
+                    {item.title}
+                  </h4>
+                  <span className="text-[8px] font-extrabold tracking-wider uppercase block mt-1" style={{ color: item.accent }}>
+                    {item.tag}
+                  </span>
+                  <p className={`mt-2 text-[9.5px] leading-relaxed line-clamp-2 transition-colors duration-300 ${
+                    isDayMode ? 'text-neutral-500' : 'text-surface-500'
+                  }`}>
+                    {item.description}
+                  </p>
+                </div>
 
-              {/* Description */}
-              <p className="mt-1.5 text-[10px] leading-relaxed text-surface-500 line-clamp-2">
-                {item.description}
-              </p>
-
-              {/* Footer specs */}
-              <div className="mt-3 flex items-center justify-between border-t border-white/[0.05] pt-2 text-[9px] text-surface-400 font-semibold font-mono">
-                <span className="flex items-center gap-1">
-                  <FiCpu size={9} className="text-accent/80" />
-                  {item.agents}
-                </span>
-                <span className="flex items-center gap-1">
-                  <FiLayers size={9} className="text-accent/80" />
-                  {item.scenes}
-                </span>
+                {/* Footer scenes & agents info */}
+                <div className={`flex items-center gap-4 text-[9.5px] font-semibold font-mono border-t pt-2 mt-2 transition-colors duration-300 ${
+                  isDayMode ? 'border-neutral-100 text-neutral-500' : 'border-white/[0.05] text-surface-450'
+                }`}>
+                  <span className="flex items-center gap-1.5">
+                    <FiLayers size={10} className="text-accent/80" />
+                    {item.scenes}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <FiCpu size={10} className="text-accent/80" />
+                    {item.agents}
+                  </span>
+                </div>
               </div>
             </div>
-
-            {/* Netflix-style Glowing Bottom Progress Bar */}
-            <div className="w-full h-1 bg-white/[0.08] relative z-20 shrink-0">
-              <div 
-                className={`h-full bg-gradient-to-r transition-all duration-500 ${
-                  item.progress === 100 
-                    ? 'from-emerald-500 to-teal-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' 
-                    : 'from-accent to-purple-500 shadow-[0_0_8px_rgba(139,92,246,0.7)]'
-                }`}
-                style={{ width: `${item.progress}%` }}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

@@ -569,3 +569,195 @@
       linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   DAY MODE OVERRIDES  [data-theme="day"]
+   Warm parchment / cinematic light palette
+   ═══════════════════════════════════════════════════ */
+
+[data-theme="day"] {
+  color-scheme: light;
+}
+
+/* Body + root background */
+[data-theme="day"] body,
+[data-theme="day"] #root {
+  background: #f0ede8;
+  color: #1c1825;
+}
+
+/* Scrollbars */
+[data-theme="day"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+[data-theme="day"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Cinematic background radial gradient (lighter, warm-toned) */
+[data-theme="day"] .bg-cinematic {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(124, 58, 237, 0.03), transparent),
+    radial-gradient(ellipse 50% 30% at 10% 80%, rgba(251, 191, 36, 0.03), transparent),
+    #f0ede8;
+}
+
+/* Override the dark gradient overlay layers */
+[data-theme="day"] .bg-gradient-to-br.from-\[\#040409\] {
+  background: linear-gradient(135deg, #ede9e2, #f0ede8, #edeaff05) !important;
+}
+
+/* Volumetric ambient blobs — softer warm tones on light */
+[data-theme="day"] .bg-purple-600\/10 {
+  background-color: rgba(139, 92, 246, 0.05) !important;
+}
+[data-theme="day"] .bg-blue-600\/8 {
+  background-color: rgba(251, 191, 36, 0.04) !important;
+}
+
+/* Vignette — replace dark-on-dark vignette with soft light edges */
+[data-theme="day"] .bg-gradient-radial.from-transparent {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(235,231,224,0.7) 100%) !important;
+  opacity: 0.6 !important;
+}
+
+/* Glass panels */
+[data-theme="day"] .glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+[data-theme="day"] .glass-panel-strong {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.09);
+}
+
+/* Main content area */
+[data-theme="day"] .flex-1.flex.flex-col {
+  color: #1c1825;
+}
+
+/* Header border */
+[data-theme="day"] header {
+  border-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Header breadcrumb text */
+[data-theme="day"] .header-breadcrumb {
+  color: #8b8699;
+}
+[data-theme="day"] .header-breadcrumb span.text-surface-700 {
+  color: #c5c0d0 !important;
+}
+[data-theme="day"] .header-breadcrumb span.text-surface-300 {
+  color: #3d3656 !important;
+}
+
+/* Surface text classes → dark equivalents in day mode */
+[data-theme="day"] .text-surface-200 { color: #1c1825 !important; }
+[data-theme="day"] .text-surface-300 { color: #3d3656 !important; }
+[data-theme="day"] .text-surface-400 { color: #6b6480 !important; }
+[data-theme="day"] .text-surface-500 { color: #9490a6 !important; }
+
+/* White borders → subtle dark borders */
+[data-theme="day"] .border-white\/\[0\.04\] { border-color: rgba(0,0,0,0.06) !important; }
+[data-theme="day"] .border-white\/\[0\.06\] { border-color: rgba(0,0,0,0.08) !important; }
+[data-theme="day"] .border-white\/\[0\.08\] { border-color: rgba(0,0,0,0.10) !important; }
+
+/* Cards, panels with dark backgrounds */
+[data-theme="day"] .bg-\[\#090911\]\/90,
+[data-theme="day"] .bg-\[\#07070d\]\/80,
+[data-theme="day"] .bg-\[\#07070d\],
+[data-theme="day"] .bg-\[\#080810\]\/80 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* Prompt console border gradient — lighter on day */
+[data-theme="day"] .from-white\/\[0\.08\] {
+  --tw-gradient-from: rgba(0,0,0,0.08) !important;
+}
+[data-theme="day"] .to-white\/\[0\.02\] {
+  --tw-gradient-to: rgba(0,0,0,0.03) !important;
+}
+
+/* Hero section title text */
+[data-theme="day"] .text-white {
+  color: #1c1825 !important;
+}
+
+/* Hero accent tag stays purple */
+[data-theme="day"] .text-accent { color: #7c3aed !important; }
+[data-theme="day"] .bg-accent { background-color: #7c3aed !important; }
+[data-theme="day"] .border-accent { border-color: #7c3aed !important; }
+[data-theme="day"] .bg-accent\/10 { background-color: rgba(124,58,237,0.08) !important; }
+
+/* Textarea / input inside console */
+[data-theme="day"] textarea,
+[data-theme="day"] input {
+  color: #1c1825 !important;
+  caret-color: #7c3aed;
+}
+[data-theme="day"] textarea::placeholder,
+[data-theme="day"] input::placeholder {
+  color: #b0abc0 !important;
+}
+
+/* Dropdown selects */
+[data-theme="day"] select,
+[data-theme="day"] .custom-select-trigger {
+  color: #1c1825 !important;
+  background: rgba(255,255,255,0.9) !important;
+  border-color: rgba(0,0,0,0.1) !important;
+}
+[data-theme="day"] option {
+  background: #ffffff;
+  color: #1c1825;
+}
+
+/* Creative mode cards */
+[data-theme="day"] .group\/card,
+[data-theme="day"] [class*="rounded-2xl"][class*="border"][class*="bg-"] {
+  background: rgba(255,255,255,0.85) !important;
+  border-color: rgba(0,0,0,0.07) !important;
+}
+
+/* FeaturedProductions card backgrounds */
+[data-theme="day"] .bg-\[\#0a0a14\]\/60,
+[data-theme="day"] .bg-\[\#0c0c18\]\/80 {
+  background-color: rgba(255,255,255,0.88) !important;
+}
+
+/* Mono text / secondary labels */
+[data-theme="day"] .font-mono { color: #7b7591; }
+
+/* Viewfinder brackets: keep them very subtle on light bg */
+[data-theme="day"] .border-white\/\[0\.12\] { border-color: rgba(0,0,0,0.1) !important; }
+
+/* Studio bg image: reduce mix-blend on light bg */
+[data-theme="day"] .mix-blend-screen {
+  mix-blend-mode: multiply !important;
+  opacity: 0.25 !important;
+}
+
+/* Section headings */
+[data-theme="day"] h1,
+[data-theme="day"] h2,
+[data-theme="day"] h3 {
+  color: #1c1825;
+}
+
+/* Subtle box-shadows in day mode */
+[data-theme="day"] .shadow-\[0_10px_35px_rgba\(0\,0\,0\,0\.95\)\] {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.10) !important;
+}
+
+/* Film grain — reduce opacity in day mode */
+[data-theme="day"] div[style*="film-noise"] {
+  opacity: 0.3 !important;
+}
+
+/* Dust particles — auto-adapt via canvas color (handled by CSS class) */
+[data-theme="day"] canvas.opacity-30 {
+  opacity: 0.08 !important;
+}
+

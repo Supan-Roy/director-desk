@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FiUsers, FiLayers, FiCpu, FiMoon, FiGlobe, FiCamera, FiWind } from 'react-icons/fi';
+import { useTheme } from '../context/ThemeContext';
 
 const creativeTemplates = [
   {
@@ -7,7 +8,7 @@ const creativeTemplates = [
     icon: FiCpu,
     title: 'Cyberpunk Neo',
     productionType: 'Full CGI Sci-Fi',
-    description: 'Vibrant neon color fields, futuristic cityscapes.',
+    description: 'Neon, rain, future cityscapes',
     prompt: 'A sleek spinner vehicle hovering through neon-drenched Tokyo skyscrapers, deep purple atmospheric smoke, cyberpunk aesthetic.',
     image: '/images/cyberpunk_template.png',
     accent: '#8b5cf6',
@@ -23,10 +24,10 @@ const creativeTemplates = [
     icon: FiMoon,
     title: 'Cinematic Noir',
     productionType: 'Monochromatic Drama',
-    description: 'Shadow play, high contrast monochrome, classic noir.',
+    description: 'Mystery, shadows, classic noir',
     prompt: 'A detective walking down a dark alley under a glowing streetlamp in heavy rain, high-contrast film noir aesthetic.',
     image: '/images/noir_template.png',
-    accent: '#a1a1aa',
+    accent: '#ffffff', // changed to white for monochrome noir dot in reference image
     aspect: '2.39-1',
     camera: 'static',
     agents: 3,
@@ -39,10 +40,10 @@ const creativeTemplates = [
     icon: FiGlobe,
     title: 'Space Odyssey',
     productionType: 'Volumetric Sci-Fi',
-    description: 'Interstellar expanses, high concept cosmic sci-fi.',
+    description: 'Cosmic, epic, otherworldly',
     prompt: 'An explorer in an advanced space suit looks at a giant glowing orange nebula, cosmic flares, epic sci-fi.',
     image: '/images/space_template.png',
-    accent: '#ec4899',
+    accent: '#5b6cf6', // blue-purple dot in reference image
     aspect: '2.39-1',
     camera: 'crane',
     agents: 5,
@@ -55,7 +56,7 @@ const creativeTemplates = [
     icon: FiCamera,
     title: 'Documentary Realism',
     productionType: 'Handheld Realism',
-    description: 'Handheld realism, natural light, raw human stories.',
+    description: 'Real stories, real people',
     prompt: 'A weathered fisherman working on his boat deck in early morning mist, natural key lighting, realistic documentary.',
     image: '/images/documentary_template.png',
     accent: '#f59e0b',
@@ -69,9 +70,9 @@ const creativeTemplates = [
   {
     id: 'fantasy',
     icon: FiWind,
-    title: 'Fantasy Realism',
+    title: 'Fantasy Realic',
     productionType: 'Magic Realism',
-    description: 'Enchanted forests, mythical runes, magic realism.',
+    description: 'Magic, adventure, wonder',
     prompt: 'An ancient mossy stone portal in an enchanted glowing forest, magical wisps, volumetric lighting, fantasy realism.',
     image: '/images/fantasy_template.png',
     accent: '#10b981',
@@ -86,9 +87,10 @@ const creativeTemplates = [
 
 export default function CreativeModes({ onSelectTemplate }) {
   const [hoveredCard, setHoveredCard] = useState(null);
+  const { isDayMode } = useTheme();
 
   return (
-    <section className="space-y-6 select-none">
+    <section className="space-y-4 select-none">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
@@ -109,13 +111,17 @@ export default function CreativeModes({ onSelectTemplate }) {
             onClick={() => onSelectTemplate?.(tmpl)}
             onMouseEnter={() => setHoveredCard(tmpl.id)}
             onMouseLeave={() => setHoveredCard(null)}
-            className="film-strip-card group text-left flex flex-col h-[335px] w-full bg-[#08080f]/80 border border-white/[0.05] hover:border-accent/40 shadow-xl transition-all duration-300 relative rounded-2xl overflow-hidden"
+            className={`group text-left flex flex-col h-[205px] w-full border shadow-xl transition-all duration-300 relative rounded-2xl overflow-hidden ${
+              isDayMode 
+                ? 'bg-white border-black/[0.07] hover:border-accent/50' 
+                : 'bg-[#08080f]/80 border-white/[0.05] hover:border-accent/40'
+            }`}
           >
             {/* Glossy top-shine reflection */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20" />
 
             {/* Template Visual Header */}
-            <div className="relative h-36 w-full overflow-hidden bg-surface-900 image-overlay-container shrink-0">
+            <div className="relative h-[125px] w-full overflow-hidden bg-surface-900 shrink-0">
               <img
                 src={tmpl.image}
                 alt={tmpl.title}
@@ -123,55 +129,47 @@ export default function CreativeModes({ onSelectTemplate }) {
               />
               {/* Category Icon */}
               <div 
-                className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg bg-[#0c0c16]/90 border border-white/10 group-hover:border-accent/40 shadow-lg transition-colors"
+                className={`absolute left-2.5 top-2.5 z-10 flex h-6.5 w-6.5 items-center justify-center rounded-lg border transition-colors ${
+                  isDayMode 
+                    ? 'bg-white/90 border-black/10' 
+                    : 'bg-[#0c0c16]/90 border-white/10 group-hover:border-accent/40'
+                }`}
               >
-                <tmpl.icon size={13} style={{ color: tmpl.accent }} />
+                <tmpl.icon size={12} style={{ color: tmpl.accent }} />
               </div>
               {/* Status/Format tag */}
-              <div className="absolute right-3 top-3 z-10 rounded bg-black/60 border border-white/10 px-1.5 py-0.5 text-[8px] font-semibold text-surface-300 tracking-wider uppercase font-mono">
+              <div className={`absolute right-2.5 top-2.5 z-10 rounded border px-1 py-0.5 text-[7px] font-semibold tracking-wider uppercase font-mono ${
+                isDayMode 
+                  ? 'bg-white/90 border-black/10 text-neutral-700' 
+                  : 'bg-black/60 border-white/10 text-surface-300'
+              }`}>
                 {tmpl.tag}
               </div>
             </div>
 
-            {/* Template Metadata Details */}
-            <div className="p-4 flex-1 flex flex-col justify-between relative z-10">
-              <div>
-                <h4 className="text-[12.5px] font-bold tracking-wide text-white group-hover:text-accent transition-colors leading-tight">
-                  {tmpl.title}
-                </h4>
-                <p className="text-[9.5px] text-accent/80 font-bold mt-0.5 tracking-wide">{tmpl.productionType}</p>
-                <p className="mt-1.5 text-[10px] leading-normal text-surface-500 line-clamp-2">
-                  {tmpl.description}
-                </p>
-              </div>
-              
-              {/* Output & Agent Metadata Dials */}
-              <div className="border-t border-white/[0.05] pt-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-[9.5px] text-surface-400 font-semibold font-mono">
-                  <span className="flex items-center gap-1.5">
-                    <FiUsers size={10.5} className="text-accent/80" />
-                    {tmpl.agents} Agents
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <FiLayers size={10.5} className="text-accent/80" />
-                    {tmpl.scenes} Scenes
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[9px] font-semibold mt-1">
-                  <span className="text-surface-600 uppercase tracking-widest text-[8px] font-mono">
-                    {tmpl.duration}
-                  </span>
-                  <span className="text-accent font-mono text-[9px] tracking-wide">
-                    Storyboard Ready
-                  </span>
-                </div>
-              </div>
+            {/* Template Details */}
+            <div className="p-3 flex-1 flex flex-col justify-center relative z-10 min-w-0">
+              <h4 className={`text-[11.5px] font-bold tracking-wide transition-colors leading-tight truncate ${
+                isDayMode 
+                  ? 'text-neutral-900 group-hover:text-accent' 
+                  : 'text-white group-hover:text-accent'
+              }`}>
+                {tmpl.title}
+              </h4>
+              <p className={`mt-0.5 text-[9.5px] leading-normal font-medium truncate ${
+                isDayMode ? 'text-neutral-500' : 'text-surface-500'
+              }`}>
+                {tmpl.description}
+              </p>
             </div>
 
-            {/* Accent glowing dot */}
+            {/* Accent colored dot */}
             <div 
-              className="absolute right-3.5 top-3.5 h-1 w-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ backgroundColor: tmpl.accent, boxShadow: `0 0 6px ${tmpl.accent}` }}
+              className="absolute right-3.5 bottom-3.5 h-1.5 w-1.5 rounded-full transition-all duration-300"
+              style={{ 
+                backgroundColor: tmpl.accent, 
+                boxShadow: `0 0 8px ${tmpl.accent}` 
+              }}
             />
           </button>
         ))}
