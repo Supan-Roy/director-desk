@@ -7,6 +7,7 @@ import {
   generateStory,
   resetProject,
 } from '../services/apiClient'
+import { featuredProductions } from '../data/featuredProductions'
 
 const ProjectDataContext = createContext(null)
 
@@ -110,6 +111,18 @@ export function ProjectDataProvider({ children }) {
     }
   }
 
+  const loadFeatured = useCallback((id) => {
+    const prod = featuredProductions[id];
+    if (prod) {
+      setHasProject(true);
+      setTitle(prod.title);
+      setScript(prod.script);
+      setStoryboard(prod.storyboard);
+      setProductionPlan(prod.productionPlan);
+      setAgents(prod.agents);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAll()
   }, [fetchAll])
@@ -126,6 +139,7 @@ export function ProjectDataProvider({ children }) {
     generate: handleGenerate,
     reset: handleReset,
     refresh: fetchAll,
+    loadFeatured,
   }
 
   return (
