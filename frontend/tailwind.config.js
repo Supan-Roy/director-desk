@@ -26,8 +26,9 @@ export default {
         },
       },
       fontFamily: {
+        sans: ['"Sofia Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', '"Courier New"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
-        display: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Sofia Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         screenplay: ['"Courier New"', 'Courier', 'monospace'],
       },
       boxShadow: {

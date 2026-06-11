@@ -12,7 +12,7 @@ class WriterAgent:
             Idea:
             {prompt}
 
-            Return 3 scenes.
+            Return 5 to 7 detailed scenes.
             """
         )
 

@@ -29,6 +29,8 @@ class ProjectState:
         self.prompt: Optional[str] = None
         self.script: Optional[str] = None
         self.storyboard: list[StoryboardScene] = []
+        self.production_plan: Optional[dict] = None
+        self.critic_notes: list[str] = []
         self.agents = [
             AgentStatus("writer", "Writer Agent", "Script & Narrative", "✍️"),
             AgentStatus("storyboard", "Storyboard Agent", "Visual Planning", "🎨"),
@@ -42,24 +44,37 @@ class ProjectState:
         self.prompt = None
         self.script = None
         self.storyboard = []
+        self.production_plan = None
+        self.critic_notes = []
         for agent in self.agents:
             agent.status = "waiting"
             agent.completed_at = None
 
-    def set_generation_complete(self, title: str, script: str, storyboard: list[StoryboardScene]):
+    def set_generation_complete(
+        self,
+        title: str,
+        script: str,
+        storyboard: list[StoryboardScene],
+        production_plan: Optional[dict] = None,
+        critic_notes: Optional[list[str]] = None
+    ):
         self.has_project = True
         self.title = title
         self.script = script
         self.storyboard = storyboard
-        self.agents[0].status = "completed"
-        self.agents[0].completed_at = "just now"
-        self.agents[1].status = "completed"
-        self.agents[1].completed_at = "just now"
+        self.production_plan = production_plan
+        self.critic_notes = critic_notes or []
+        for agent in self.agents:
+            agent.status = "completed"
+            agent.completed_at = "just now"
 
     def get_production_plan(self):
         if not self.has_project:
             return None
         
+        if self.production_plan:
+            return self.production_plan
+
         return {
             "title": f"{self.title} — Production Plan" if self.title else "Production Plan",
             "phases": [

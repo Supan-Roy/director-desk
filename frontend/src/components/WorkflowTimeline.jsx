@@ -166,61 +166,6 @@ export default function WorkflowTimeline() {
           })}
         </div>
       </div>
-
-      {/* Terminal Logs Block */}
-      <div className="terminal-box rounded-xl overflow-hidden border border-white/[0.05]">
-        {/* Terminal Header */}
-        <div className="flex items-center justify-between bg-black/60 px-4 py-2 border-b border-white/[0.04]">
-          <div className="flex items-center gap-2">
-            <FiTerminal size={12} className="text-accent" />
-            <span className="text-[10px] font-bold tracking-widest text-surface-400 uppercase font-mono">
-              Live Agent Execution Logs
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500/50" />
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500/50" />
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500/50" />
-          </div>
-        </div>
-
-        {/* Terminal Lines Container */}
-        <div className="p-4 max-h-48 overflow-y-auto space-y-1.5 font-mono text-[11px]">
-          {visibleLogs.length === 0 ? (
-            <div className="text-surface-600 italic py-2 flex items-center gap-2">
-              <FiCpu className="animate-spin text-accent" size={12} />
-              <span>Awaiting agent execution commands...</span>
-            </div>
-          ) : (
-            visibleLogs.map((log, i) => {
-              const isSystem = log.agent === 'System';
-              const isLastLine = i === visibleLogs.length - 1;
-
-              return (
-                <div 
-                  key={i} 
-                  className={`terminal-line py-1 px-2.5 rounded flex items-start gap-3 ${
-                    isLastLine ? 'active text-white bg-white/[0.02]' : 'text-surface-400'
-                  }`}
-                >
-                  <span className="text-surface-600 select-none shrink-0 font-light">
-                    [{log.time}]
-                  </span>
-                  <span className={`uppercase font-bold shrink-0 tracking-wide ${
-                    isSystem ? 'text-emerald-400' : 'text-accent'
-                  }`}>
-                    {log.agent}
-                  </span>
-                  <span className="text-surface-300 select-text leading-relaxed">
-                    {log.text}
-                  </span>
-                </div>
-              );
-            })
-          )}
-          <div ref={terminalEndRef} />
-        </div>
-      </div>
     </section>
   );
 }
