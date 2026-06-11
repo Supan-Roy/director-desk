@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers } from 'react-icons/fi';
+import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders } from 'react-icons/fi';
+import { PiSparkle } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 
 const aspectRatios = [
@@ -22,6 +23,12 @@ const cameraMotions = [
   { id: 'pan', label: 'Pan Left/Right', value: 'Pan Left/Right' },
   { id: 'zoom', label: 'Zoom In Slow', value: 'Zoom In' },
   { id: 'crane', label: 'Crane Shot Up', value: 'Crane' },
+];
+
+const qualities = [
+  { id: 'draft', label: 'Draft Cut', value: 'Draft' },
+  { id: 'high', label: 'High Quality', value: 'High Quality' },
+  { id: 'master', label: 'Master Grade', value: 'Master' },
 ];
 
 const detailedSuggestions = [
@@ -67,7 +74,7 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] px-3 py-1.5 border border-white/[0.04] text-[11px] font-medium text-surface-300 transition-all cursor-pointer focus:outline-none ${
+        className={`flex items-center gap-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] px-3 py-2 border border-white/[0.04] text-[11px] font-semibold text-surface-300 transition-all cursor-pointer focus:outline-none ${
           disabled ? 'opacity-40 cursor-not-allowed' : ''
         }`}
         disabled={disabled}
@@ -121,9 +128,26 @@ export default function HeroSection({
   camera,
   setCamera,
 }) {
+  const [quality, setQuality] = useState('high');
   const [errorMsg, setErrorMsg] = useState('');
   
+  // AI Production Orb animation states
+  const [focused, setFocused] = useState(false);
+  const [orbAnimating, setOrbAnimating] = useState(false);
+  
   const { generate, loading, hasProject } = useProjectData();
+
+  useEffect(() => {
+    if (focused) {
+      setOrbAnimating(true);
+      const timer = setTimeout(() => {
+        setOrbAnimating(false);
+      }, 3000); // 3 seconds of high-energy camera focus dial swirl
+      return () => clearTimeout(timer);
+    } else {
+      setOrbAnimating(false);
+    }
+  }, [focused]);
 
   const handleSubmit = async () => {
     if (!prompt.trim() || loading) return;
@@ -133,8 +157,9 @@ export default function HeroSection({
     const selectedAspect = aspectRatios.find(a => a.id === aspect)?.value || '16:9';
     const selectedStyle = styles.find(s => s.id === style)?.value || 'Default';
     const selectedCamera = cameraMotions.find(c => c.id === camera)?.value || 'Static';
+    const selectedQuality = qualities.find(q => q.id === quality)?.value || 'High Quality';
 
-    const composedPrompt = `${prompt.trim()}\n[Aspect: ${selectedAspect}, Style: ${selectedStyle}, Motion: ${selectedCamera}]`;
+    const composedPrompt = `${prompt.trim()}\n[Aspect: ${selectedAspect}, Style: ${selectedStyle}, Motion: ${selectedCamera}, Quality: ${selectedQuality}]`;
     
     try {
       await generate(composedPrompt);
@@ -151,44 +176,171 @@ export default function HeroSection({
   };
 
   return (
-    <section className={`relative mx-auto text-center transition-all duration-500 max-w-4xl ${
-      hasProject ? 'py-4 mt-2' : 'min-h-[60vh] flex flex-col justify-center py-12'
+    <section className={`relative mx-auto text-center transition-all duration-500 w-full ${
+      hasProject ? 'py-4 mt-2' : 'min-h-[50vh] flex flex-col justify-center py-6'
     }`}>
-      {/* Immersive lens flare beam glow */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[600px] -translate-x-1/2 rounded-full bg-gradient-radial from-accent/[0.07] to-transparent blur-3xl" />
+      {/* Studio Background Image — behind entire hero block */}
+      {!hasProject && (
+        <>
+          <div
+            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-3xl"
+            style={{ backgroundImage: `url('/images/studio_bg.png')` }}
+          />
+          {/* Gradient mask: dark sides + heavy bottom so console remains crisp */}
+          <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+          <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#06060b]/80 via-transparent to-[#06060b]/80" />
+        </>
+      )}
 
-      <div className="relative z-10 space-y-6">
+      {/* Immersive radial glows */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[600px] -translate-x-1/2 rounded-full bg-gradient-radial from-accent/[0.08] to-transparent blur-3xl" />
+
+      <div className="relative z-10 space-y-6 max-w-4xl mx-auto px-6">
+        
         {/* Cinematic Titles */}
         {!hasProject && (
           <div className="space-y-3">
-            <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent">
+            <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">
               Creative Production Engine
             </span>
-            <h2 className="text-4xl font-extrabold tracking-tight text-white md:text-5xl lg:text-6xl">
+            <h2 className="text-4xl font-black tracking-tight text-white md:text-5xl lg:text-6xl uppercase font-display">
               Director Desk
             </h2>
-            <p className="mx-auto max-w-xl text-sm leading-relaxed text-surface-400 md:text-base">
-              Enter your concept. Collaborating AI showrunner agents will compose screenplay scripts, script storyboard shots, and draft timelines.
+            <p className="mx-auto max-w-2xl text-xs font-semibold leading-relaxed text-surface-400 font-mono">
+              AI Showrunner Studio. From concept to cut. Collaborative agents for writers, storyboard artists, critics and editors.
             </p>
+            {/* Showrunner indicator */}
+            <div className="flex items-center justify-center gap-2 pt-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">
+                AI Showrunner Online
+              </span>
+            </div>
           </div>
         )}
 
-        {/* Prompt Input Box */}
-        <div className="glass-panel rounded-2xl p-4 shadow-elevated border border-white/[0.05] bg-surface-950/20 backdrop-blur-md">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your film vision in detail..."
-            className="w-full bg-transparent border-0 outline-none text-white placeholder-surface-600 text-[15px] resize-none h-24 focus:ring-0 px-2 pt-1"
-            disabled={loading}
-          />
+        {/* Prompt Input / Production Console Box */}
+        <div className={`group/console relative p-[1.5px] rounded-2xl transition-all duration-500 bg-gradient-to-b ${
+          focused 
+            ? 'from-accent/60 via-accent/30 to-purple-600/20 shadow-[0_12px_40px_rgba(139,92,246,0.15)]' 
+            : 'from-white/[0.08] to-white/[0.02] shadow-[0_10px_35px_rgba(0,0,0,0.95)]'
+        }`}>
+          <div className="bg-[#07070d]/80 rounded-[15px] p-5 shadow-[inset_0_2px_12px_rgba(0,0,0,0.9)] relative backdrop-blur-[2px]">
 
-          {/* Divider */}
-          <div className="h-px bg-white/[0.04] my-3" />
+            {/* Viewfinder corner brackets inside the console */}
+            <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
+            <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
+            <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
+            <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
 
-          {/* Custom Film Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Subtle Console Header Status */}
+            <div className="flex items-center justify-between text-[8px] font-mono tracking-[0.2em] text-surface-600 uppercase mb-2.5 select-none relative z-10">
+              <span>briefing console</span>
+              <span className={`transition-colors duration-300 ${loading ? 'text-emerald-400' : focused ? 'text-accent' : 'text-surface-600'}`}>
+                {loading ? 'status: rendering' : focused ? 'status: linking...' : 'status: active'}
+              </span>
+            </div>
+
+            {/* Row 1: Orb, Input text, Sparkle */}
+            <div className="flex items-start gap-4 relative z-10">
+              
+              {/* AI Production Orb / Camera Focus Spinner */}
+              <div className="flex items-center justify-center h-12 w-12 shrink-0 relative select-none">
+                {/* Outer Volumetric Halo */}
+                <div className={`absolute inset-0 rounded-full blur-md pointer-events-none transition-all duration-500 ${
+                  loading 
+                    ? 'bg-emerald-500/10' 
+                    : focused 
+                      ? 'bg-accent/10' 
+                      : 'bg-accent/5'
+                }`} />
+
+                {/* Case 1: Loading (Active Production Rendering) */}
+                {loading && (
+                  <div className="relative w-10 h-10 flex items-center justify-center scale-105">
+                    {/* Outer Fast Ring */}
+                    <div className="absolute inset-0 rounded-full border-2 border-dashed border-emerald-400/90 animate-[spin_2s_linear_infinite]" />
+                    {/* Middle Fast Ring */}
+                    <div className="absolute w-7 h-7 rounded-full border border-dotted border-emerald-300/60 animate-[spin_4s_linear_infinite_reverse]" />
+                    {/* Core */}
+                    <div className="absolute w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(52,211,153,0.5)]">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Case 2: Unfocused Idle (Default) */}
+                {!loading && !focused && (
+                  <div className="relative w-8 h-8 flex items-center justify-center">
+                    {/* Dotted border guide */}
+                    <div className="absolute inset-0 rounded-full border border-white/10 border-dashed" />
+                    {/* Glowing core dot */}
+                    <div className="h-2.5 w-2.5 rounded-full bg-accent/40 shadow-[0_0_8px_rgba(139,92,246,0.6)] animate-pulse" />
+                  </div>
+                )}
+
+                {/* Case 3: Focused but animating (first 3 seconds) */}
+                {!loading && focused && orbAnimating && (
+                  <div className="relative w-10 h-10 flex items-center justify-center scale-105">
+                    {/* Outer Ring */}
+                    <div className="absolute inset-0 rounded-full border-2 border-dashed border-accent/80 animate-[spin_2.5s_linear_infinite]" />
+                    {/* Middle Ring */}
+                    <div className="absolute w-7 h-7 rounded-full border border-dotted border-purple-400/60 animate-[spin_4s_linear_infinite_reverse]" />
+                    {/* Core */}
+                    <div className="absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/30 via-purple-600/20 to-pink-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(139,92,246,0.4)]">
+                      <div className="w-1.5 h-1.5 relative">
+                        <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80 animate-pulse" />
+                        <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80 animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Case 4: Focused and settled (after 3 seconds) */}
+                {!loading && focused && !orbAnimating && (
+                  <div className="relative w-10 h-10 flex items-center justify-center scale-105">
+                    {/* Outer Ring */}
+                    <div className="absolute inset-0 rounded-full border border-dashed border-accent/50 animate-[spin_12s_linear_infinite]" />
+                    {/* Middle Ring */}
+                    <div className="absolute w-7 h-7 rounded-full border border-dotted border-purple-400/30 animate-[spin_20s_linear_infinite_reverse]" />
+                    {/* Core */}
+                    <div className="absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/15 to-purple-800/20 flex items-center justify-center shadow-[0_0_8px_rgba(139,92,246,0.2)]">
+                      <div className="w-1.5 h-1.5 relative">
+                        <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80" />
+                        <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Prompt text field */}
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                placeholder="Describe your film vision in detail..."
+                className="flex-1 bg-transparent border-0 outline-none text-white placeholder-surface-600 text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono"
+                disabled={loading}
+              />
+
+              {/* Sparkles Action */}
+              <button 
+                type="button"
+                className="text-surface-500 hover:text-accent p-2 rounded-lg transition-colors cursor-pointer shrink-0 mt-1"
+                title="Enhance Prompt"
+              >
+                <PiSparkle size={16} />
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-white/[0.04] my-4 relative z-10" />
+
+          {/* Row 2: Selectors & Initiate Production */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-1 relative z-10">
+            <div className="flex flex-wrap items-center gap-2.5">
               {/* Aspect Ratio Selector */}
               <CustomSelect
                 value={aspect}
@@ -215,13 +367,22 @@ export default function HeroSection({
                 icon={FiVideo}
                 disabled={loading}
               />
+
+              {/* Quality Preset Selector */}
+              <CustomSelect
+                value={quality}
+                onChange={setQuality}
+                options={qualities}
+                icon={FiSliders}
+                disabled={loading}
+              />
             </div>
 
-            {/* Launch Button */}
+            {/* Initiate Button */}
             <button
               onClick={handleSubmit}
               disabled={!prompt.trim() || loading}
-              className="btn-primary shrink-0 rounded-xl px-5 py-2.5 flex items-center gap-2 bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-500 text-xs font-semibold uppercase tracking-wider"
+              className="btn-primary shrink-0 rounded-xl px-5 py-2.5 flex items-center gap-2 bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-500 text-xs font-semibold uppercase tracking-widest transition-all shadow-[0_4px_16px_rgba(139,92,246,0.25)]"
             >
               {loading ? (
                 <>
@@ -237,11 +398,12 @@ export default function HeroSection({
             </button>
           </div>
         </div>
+      </div>
 
         {/* Cinematic Suggestions */}
         {!prompt && !errorMsg && !hasProject && (
-          <div className="space-y-2 mt-4 animate-fade-in">
-            <p className="text-[11px] font-medium uppercase tracking-widest text-surface-500 flex items-center justify-center gap-1.5">
+          <div className="space-y-2.5 mt-4 animate-fade-in">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500 flex items-center justify-center gap-1.5">
               <FiCompass size={11} className="text-accent/60" />
               <span>Suggested Studio Prompts</span>
             </p>
@@ -250,7 +412,7 @@ export default function HeroSection({
                 <button
                   key={idx}
                   onClick={() => handleApplySuggestion(sug)}
-                  className="w-full max-w-xl text-left rounded-xl border border-white/[0.04] bg-white/[0.01] px-4 py-2.5 text-xs text-surface-400 transition-all hover:border-accent/20 hover:bg-accent/[0.02] hover:text-surface-200"
+                  className="w-full max-w-xl text-left rounded-xl border border-white/[0.04] bg-white/[0.01] px-4 py-2.5 text-xs text-surface-400 transition-all hover:border-accent/20 hover:bg-accent/[0.02] hover:text-surface-250 font-mono"
                 >
                   "{sug.text}"
                 </button>
