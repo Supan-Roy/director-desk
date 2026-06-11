@@ -761,3 +761,12 @@
   opacity: 0.08 !important;
 }
 
+/* Force white text style to bypass global day mode text overrides */
+.text-white-force {
+  color: #ffffff !important;
+}
+.hover\:text-white-force:hover {
+  color: #ffffff !important;
+}
+
+

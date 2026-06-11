@@ -80,7 +80,7 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
           disabled ? 'opacity-40 cursor-not-allowed' : ''
         } ${
           isDayMode
-            ? 'bg-black text-white border-black/15 hover:bg-neutral-900 shadow-sm'
+            ? 'bg-black text-white-force border-black/15 hover:bg-neutral-900 shadow-sm'
             : 'bg-white text-black border-white/10 hover:bg-neutral-100 shadow-sm'
         }`}
         disabled={disabled}
@@ -96,10 +96,10 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
       </button>
 
       {isOpen && (
-        <div className={`absolute left-0 top-full mt-1.5 z-50 min-w-[160px] rounded-xl border p-1 backdrop-blur-xl shadow-elevated space-y-0.5 ${
+        <div className={`absolute left-0 top-full mt-1.5 z-50 min-w-[160px] rounded-xl border p-1 backdrop-blur-xl shadow-lg space-y-0.5 ${
           isDayMode
-            ? 'bg-white border-neutral-200/80 text-neutral-800 shadow-lg'
-            : 'bg-surface-950/95 border-white/[0.06] text-surface-200'
+            ? 'bg-black border-white/[0.08] text-white-force shadow-xl'
+            : 'bg-white border-neutral-200/80 text-neutral-800 shadow-xl'
         }`}>
           {options.map((opt) => {
             const isSelected = opt.id === value;
@@ -114,15 +114,15 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
                 className={`w-full text-left px-3 py-2 rounded-lg text-[11px] transition-all flex items-center justify-between cursor-pointer ${
                   isSelected
                     ? isDayMode
-                      ? 'bg-accent/15 text-accent font-bold'
-                      : 'bg-accent/20 text-accent font-bold'
+                      ? 'bg-white/15 text-white-force font-bold'
+                      : 'bg-accent/15 text-accent font-bold'
                     : isDayMode
-                      ? 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-                      : 'text-surface-400 hover:bg-white/[0.04] hover:text-white'
+                      ? 'text-neutral-300 hover:bg-white/10 hover:text-white-force'
+                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
                 }`}
               >
                 <span>{opt.label}</span>
-                {isSelected && <span className="text-[6px]">●</span>}
+                {isSelected && <span className="text-[6px] text-accent">●</span>}
               </button>
             );
           })}
@@ -144,6 +144,7 @@ export default function HeroSection({
 }) {
   const [quality, setQuality] = useState('high');
   const [errorMsg, setErrorMsg] = useState('');
+  const { isDayMode } = useTheme();
   
   // AI Production Orb animation states
   const [focused, setFocused] = useState(false);
@@ -190,19 +191,43 @@ export default function HeroSection({
   };
 
   return (
-    <section className={`relative mx-auto text-center transition-all duration-500 w-full ${
+    <section className={`relative z-30 mx-auto text-center transition-all duration-500 w-full ${
       hasProject ? 'py-2 mt-1' : 'py-3 mt-2'
     }`}>
       {/* Studio Background Image — behind entire hero block */}
       {!hasProject && (
         <>
-          <div
-            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-3xl"
-            style={{ backgroundImage: `url('/images/studio_bg.png')` }}
-          />
-          {/* Gradient mask: dark sides + heavy bottom so console remains crisp */}
-          <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-          <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#06060b]/80 via-transparent to-[#06060b]/80" />
+          {isDayMode ? (
+            // LIGHT MODE ARTWORK AND OVERLAYS
+            <>
+              {/* Cinematic background artwork (Leica/film tone color grade) */}
+              <div
+                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none rounded-3xl opacity-[0.55] filter contrast-[1.25] brightness-[0.88] saturate-[0.75]"
+                style={{
+                  backgroundImage: `url('/images/studio_bg.png')`,
+                  mixBlendMode: 'multiply'
+                }}
+              />
+              {/* Warm film-tone overlay gradient */}
+              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-[#e3ded5]/25 via-transparent to-[#ede9e2]/80" />
+              {/* Soft warm radial vignette for readability & keeping silhouettes visible */}
+              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-radial from-transparent via-[#f0ede8]/30 to-[#f0ede8]/85" />
+              {/* Left/Right side gradient for visual focus */}
+              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#f0ede8]/50 via-transparent to-[#f0ede8]/50" />
+            </>
+          ) : (
+            // DARK MODE ARTWORK AND OVERLAYS
+            <>
+              {/* Cinematic background artwork */}
+              <div
+                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-3xl"
+                style={{ backgroundImage: `url('/images/studio_bg.png')` }}
+              />
+              {/* Dark overlay (70-80%) */}
+              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-black/75 via-transparent to-black/85" />
+              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#06060b]/85 via-transparent to-[#06060b]/85" />
+            </>
+          )}
         </>
       )}
 
@@ -217,10 +242,14 @@ export default function HeroSection({
             <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">
               Creative Production Engine
             </span>
-            <h2 className="text-4xl font-black tracking-tight text-white md:text-5xl lg:text-6xl uppercase font-display">
+            <h2 className={`text-4xl font-black tracking-tight md:text-5xl lg:text-6xl uppercase font-display transition-colors duration-300 ${
+              isDayMode ? 'text-[#1c1825]' : 'text-white'
+            }`}>
               Director Desk
             </h2>
-            <p className="mx-auto max-w-2xl text-xs font-semibold leading-relaxed text-surface-400 font-mono">
+            <p className={`mx-auto max-w-2xl text-xs font-semibold leading-relaxed font-mono transition-colors duration-300 ${
+              isDayMode ? 'text-neutral-600' : 'text-surface-400'
+            }`}>
               AI Showrunner Studio. From concept to cut. Collaborative agents for writers, storyboard artists, critics and editors.
             </p>
             {/* Showrunner indicator */}
@@ -235,17 +264,33 @@ export default function HeroSection({
 
         {/* Prompt Input / Production Console Box */}
         <div className={`group/console relative p-[1.5px] rounded-2xl transition-all duration-500 bg-gradient-to-b ${
-          focused 
-            ? 'from-accent/60 via-accent/30 to-purple-600/20 shadow-[0_12px_40px_rgba(139,92,246,0.15)]' 
-            : 'from-white/[0.08] to-white/[0.02] shadow-[0_10px_35px_rgba(0,0,0,0.95)]'
+          isDayMode
+            ? focused 
+              ? 'from-accent/50 via-accent/25 to-purple-500/10 shadow-[0_12px_32px_rgba(124,58,237,0.12)]' 
+              : 'from-black/[0.08] to-black/[0.02] shadow-[0_8px_30px_rgba(28,24,37,0.06)]'
+            : focused 
+              ? 'from-accent/60 via-accent/30 to-purple-600/20 shadow-[0_12px_40px_rgba(139,92,246,0.15)]' 
+              : 'from-white/[0.08] to-white/[0.02] shadow-[0_10px_35px_rgba(0,0,0,0.95)]'
         }`}>
-          <div className="bg-[#07070d]/80 rounded-[15px] p-5 shadow-[inset_0_2px_12px_rgba(0,0,0,0.9)] relative backdrop-blur-[2px]">
+          <div className={`rounded-[15px] p-5 relative transition-all duration-500 ${
+            isDayMode
+              ? 'bg-white/75 border border-white/35 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)] shadow-sm'
+              : 'bg-[#07070d]/80 backdrop-blur-[2px] shadow-[inset_0_2px_12px_rgba(0,0,0,0.9)]'
+          }`}>
 
             {/* Viewfinder corner brackets inside the console */}
-            <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
-            <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
-            <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
-            <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r border-white/[0.12] transition-all duration-500 pointer-events-none group-focus-within/console:border-accent/80 group-focus-within/console:scale-105 z-10`} />
+            <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
+              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
+            }`} />
+            <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
+              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
+            }`} />
+            <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
+              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
+            }`} />
+            <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
+              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
+            }`} />
 
             {/* Row 1: Orb, Input text, Sparkle */}
             <div className="flex items-start gap-4 relative z-10">
@@ -327,14 +372,18 @@ export default function HeroSection({
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 placeholder="Describe your film vision in detail..."
-                className="flex-1 bg-transparent border-0 outline-none text-white placeholder-surface-600 text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono"
+                className={`flex-1 bg-transparent border-0 outline-none placeholder-neutral-500 text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono transition-colors duration-300 ${
+                  isDayMode ? 'text-neutral-900' : 'text-white'
+                }`}
                 disabled={loading}
               />
 
               {/* Sparkles Action */}
               <button 
                 type="button"
-                className="text-surface-500 hover:text-accent p-2 rounded-lg transition-colors cursor-pointer shrink-0 mt-1"
+                className={`hover:text-accent p-2 rounded-lg transition-colors cursor-pointer shrink-0 mt-1 ${
+                  isDayMode ? 'text-neutral-500' : 'text-surface-500'
+                }`}
                 title="Enhance Prompt"
               >
                 <PiSparkle size={16} />
@@ -342,7 +391,9 @@ export default function HeroSection({
             </div>
 
             {/* Divider */}
-            <div className="h-px bg-white/[0.04] my-4 relative z-10" />
+            <div className={`h-px my-4 relative z-10 transition-colors duration-300 ${
+              isDayMode ? 'bg-black/[0.08]' : 'bg-white/[0.04]'
+            }`} />
 
           {/* Row 2: Selectors & Initiate Production */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-1 relative z-10">
