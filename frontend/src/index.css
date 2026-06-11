@@ -544,4 +544,28 @@
       transform: translateY(0);
     }
   }
+
+  /* ── Volumetric Light Drifts ── */
+  @keyframes drift-light-1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(40px, 60px) scale(1.15); }
+  }
+  @keyframes drift-light-2 {
+    0%, 100% { transform: translate(0, 0) scale(1.1); }
+    50% { transform: translate(-50px, -40px) scale(0.95); }
+  }
+  .animate-drift-light-1 {
+    animation: drift-light-1 20s ease-in-out infinite;
+  }
+  .animate-drift-light-2 {
+    animation: drift-light-2 24s ease-in-out infinite;
+  }
+
+  /* ── Viewfinder Camera Grid ── */
+  .bg-grid-lines {
+    background-size: 80px 80px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+  }
 }

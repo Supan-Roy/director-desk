@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import HeroSection from '../components/HeroSection';
 import CreativeModes from '../components/CreativeModes';
@@ -8,6 +8,67 @@ import TabbedContent from '../components/TabbedContent';
 import AgentActivityPanel from '../components/AgentActivityPanel';
 import CreditUsageCard from '../components/CreditUsageCard';
 import { useProjectData } from '../hooks/useProjectData';
+
+// Canvas-based drifting dust spec particles in spotlight beams
+function DustParticles() {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+
+    const resizeCanvas = () => {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const particles = [];
+    const particleCount = 20;
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 1.2 + 0.4,
+        dx: (Math.random() - 0.5) * 0.12,
+        dy: (Math.random() - 0.5) * 0.12,
+        alpha: Math.random() * 0.4 + 0.1,
+      });
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        p.x += p.dx;
+        p.y += p.dy;
+
+        // Wrap around boundaries
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(167, 139, 250, ${p.alpha})`; // lavender tone
+        ctx.fill();
+      });
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-10 opacity-30" />;
+}
 
 export default function Dashboard() {
   const { hasProject, loading } = useProjectData();
@@ -43,29 +104,69 @@ export default function Dashboard() {
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="flex min-h-screen bg-cinematic lens-flare-radial text-surface-200 select-none overflow-x-hidden font-display relative"
+      className="flex h-screen bg-[#06060b] text-surface-200 select-none overflow-hidden font-display relative"
     >
-      {/* Sleek Floating Sidebar Dock */}
+      {/* Background radial lens glows */}
+      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
+      <div className="absolute inset-0 z-0 pointer-events-none bg-cinematic lens-flare-radial opacity-95" />
+
+      {/* Cinematic Vignette for readability */}
+      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-radial from-transparent via-black/30 to-black/80 opacity-90" />
+
+      {/* Film Grain SVG Overlay */}
+      <svg className="hidden">
+        <filter id="film-noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" stitchTiles="stitch" />
+          <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.035 0" />
+        </filter>
+      </svg>
+      <div className="absolute inset-0 pointer-events-none z-10 opacity-100" style={{ filter: 'url(#film-noise)' }} />
+
+      {/* Volumetric ambient lights (drifting slowly) */}
+      <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[130px] pointer-events-none mix-blend-screen animate-drift-light-1" />
+      <div className="absolute bottom-[20%] right-[15%] w-[600px] h-[600px] rounded-full bg-blue-600/8 blur-[150px] pointer-events-none mix-blend-screen animate-drift-light-2" />
+
+      {/* Cinematic Viewfinder elements overlay (almost invisible, grid and crosshair target) */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.03] select-none">
+        {/* Center focus crosshair circle */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border border-white rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-px bg-white" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-32 w-px bg-white" />
+        
+        {/* Viewfinder corner brackets for the page canvas */}
+        <div className="absolute top-12 left-12 w-6 h-6 border-t border-l border-white" />
+        <div className="absolute top-12 right-12 w-6 h-6 border-t border-r border-white" />
+        <div className="absolute bottom-12 left-12 w-6 h-6 border-b border-l border-white" />
+        <div className="absolute bottom-12 right-12 w-6 h-6 border-b border-r border-white" />
+
+        {/* Technical timeline markers / ticks along the top and bottom edge */}
+        <div className="absolute top-4 left-24 right-24 h-2 border-b border-dashed border-white/40 flex justify-between text-[6px] font-mono text-white/40">
+          <span>00:00:00:00</span>
+          <span>00:02:15:00</span>
+          <span>00:04:30:00</span>
+          <span>00:06:45:00</span>
+          <span>00:09:00:00</span>
+        </div>
+
+        {/* Grid lines background */}
+        <div className="absolute inset-0 bg-grid-lines" />
+      </div>
+
+      {/* Permanent Studio Sidebar */}
       <Sidebar />
 
       {/* Main Studio Viewport */}
-      <div className="flex flex-1 flex-col pl-24 md:pl-64 pr-8 md:pr-12 transition-all duration-300">
+      <div className="flex-1 flex flex-col min-w-0 pr-8 pl-8 md:pl-12 transition-all duration-300 relative z-20 overflow-y-auto">
         {/* Minimal Header */}
-        <header className="flex items-center justify-between border-b border-white/[0.03] py-4">
-          <p className="text-[11px] font-bold tracking-[0.25em] text-surface-500 uppercase">
+        <header className="flex items-center border-b border-white/[0.03] py-4 shrink-0">
+          <p className="text-[10px] font-extrabold tracking-[0.25em] text-surface-500 uppercase">
             Director Desk <span className="text-surface-700">/</span> <span className="text-surface-300">Production Studio</span>
           </p>
-          <div className="flex items-center gap-2 rounded-full bg-emerald-500/5 border border-emerald-500/10 px-3 py-1">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-semibold text-emerald-400/90 uppercase tracking-wider">
-              Studio Engines Active
-            </span>
-          </div>
         </header>
 
         {/* Studio Workspace Canvas */}
         <main className="flex-1 py-8">
-          <div className="mx-auto max-w-[1400px] space-y-12">
+          <div className="mx-auto max-w-[1400px] space-y-12 pb-16">
             
             {/* Hero Studio Block */}
             <HeroSection 

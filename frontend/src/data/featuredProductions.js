@@ -228,5 +228,76 @@ FADE OUT.`,
       { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "completed", completedAt: "8 mins ago" },
       { id: "editor", name: "Editor Agent", role: "Final Assembly", icon: "completed", completedAt: "8 mins ago" }
     ]
+  },
+  'last-lighthouse': {
+    title: 'The Last Lighthouse',
+    script: `FADE IN:
+
+EXT. CLIFFS OF EIRE - NIGHT
+
+Thunder crashes. A massive wave slams against the black jagged rocks below. 
+
+A lone watchman, ALISTAIR (60s), stands on the balcony of the white stone lighthouse, holding a lantern high against the wind.
+
+ALISTAIR
+(shouting into the gale)
+Keep off the shoals! Keep off!
+
+Through the dark, a silent ghost ship sails with no lights, straight towards the reef.
+
+FADE OUT.`,
+    storyboard: [
+      {
+        scene: 1,
+        shot: "ESTABLISHING WIDE - THE LIGHTHOUSE",
+        description: "The tall stone tower stands defiantly against towering storm waves, lighting the dark stormy sea.",
+        environment: "EXT. LIGHTHOUSE CLIFF",
+        mood: "STORMY DRAMA"
+      },
+      {
+        scene: 2,
+        shot: "CLOSE UP - ALISTAIR",
+        description: "Alistair holds a brass lantern, his face lit by the warm flame, screaming into the dark.",
+        environment: "EXT. BALCONY",
+        mood: "DESPERATION"
+      }
+    ],
+    productionPlan: {
+      title: "The Last Lighthouse - Production Plan",
+      phases: [
+        {
+          name: "Pre-Production",
+          status: "complete",
+          items: [
+            "Script finalized by Writer Agent",
+            "Ocean simulator presets calibrated",
+            "Storm lighting model compiled"
+          ]
+        },
+        {
+          name: "Production",
+          status: "pending",
+          items: [
+            "Fluid dynamics wave render",
+            "Alistair voice narration synth",
+            "Focal sweep camera modeling"
+          ]
+        },
+        {
+          name: "Post-Production",
+          status: "pending",
+          items: [
+            "Low-frequency thunder audio effects",
+            "Moody cold color grade pass"
+          ]
+        }
+      ]
+    },
+    agents: [
+      { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "4 mins ago" },
+      { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "3 mins ago" },
+      { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "waiting", completedAt: null },
+      { id: "editor", name: "Editor Agent", role: "Final Assembly", icon: "🎬", status: "waiting", completedAt: null }
+    ]
   }
 };
