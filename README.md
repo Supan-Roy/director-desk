@@ -1,3 +1,5 @@
+![Director Desk Banner](frontend/public/images/studio_banner.png)
+
 # Director Desk
 
 Director Desk is an AI showrunner platform for orchestrating script generation, storyboard creation, scene planning, prompt generation, and video assembly.
