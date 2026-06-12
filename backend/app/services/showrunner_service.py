@@ -19,11 +19,18 @@ logger = logging.getLogger(__name__)
 
 class ShowrunnerService:
 
-    def generate(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect") -> GenerateResponse:
+    def generate(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect", files: list = None) -> GenerateResponse:
         if production_type == "Auto Detect" or not production_type:
             production_type = showrunner_agent.detect_production_type(prompt)
             
-        result = showrunner_agent.generate_all(prompt, production_type)
+        from app.services.content_processor import content_processor
+        unified_context = content_processor.process_files(files or [])
+        if unified_context:
+            full_prompt = f"{prompt}\n\n[Reference Context Files]\n{unified_context}"
+        else:
+            full_prompt = prompt
+
+        result = showrunner_agent.generate_all(full_prompt, production_type)
 
         project_state.set_generation_complete(
             title=result["title"],
@@ -42,7 +49,7 @@ class ShowrunnerService:
             critic_notes=result["critic_notes"]
         )
 
-    def generate_stream(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect") -> Generator[dict, None, None]:
+    def generate_stream(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect", files: list = None) -> Generator[dict, None, None]:
         # Normalize mode string
         mode = (mode or "fast").strip().lower()
         logger.info(f"ShowrunnerService: Starting streaming generation in {mode.upper()} mode...")
@@ -62,6 +69,14 @@ class ShowrunnerService:
             "type": "production_type",
             "data": production_type
         }
+
+        # Process uploaded files and build full prompt
+        from app.services.content_processor import content_processor
+        unified_context = content_processor.process_files(files or [])
+        if unified_context:
+            full_prompt = f"{prompt}\n\n[Reference Context Files]\n{unified_context}"
+        else:
+            full_prompt = prompt
 
         if mode == "studio":
             # Stage 1: Writer Agent generates script
@@ -88,7 +103,7 @@ class ShowrunnerService:
             Based on the user concept, write a script for a {production_type}.
 
             Concept:
-            {prompt}
+            {full_prompt}
 
             Guidelines:
             {format_guidelines}
@@ -186,7 +201,7 @@ class ShowrunnerService:
         else:
             # FAST mode: Single AI call, then stream with progressive pacing
             project_state.set_agent_status("writer", "active")
-            result = showrunner_agent.generate_all(prompt, production_type)
+            result = showrunner_agent.generate_all(full_prompt, production_type)
             
             production_type = result.get("production_type", production_type)
             project_state.production_type = production_type

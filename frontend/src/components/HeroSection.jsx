@@ -173,6 +173,55 @@ export default function HeroSection({
   const { generate, loading, hasProject, productionType: contextProductionType } = useProjectData();
   const [selectedProdType, setSelectedProdType] = useState('Auto Detect');
 
+  // Multimodal file states
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const fileInputRef = useRef(null);
+
+  const handleOrbClick = () => {
+    if (!loading && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (!e.target.files) return;
+    const filesArray = Array.from(e.target.files);
+    
+    filesArray.forEach((file) => {
+      const reader = new FileReader();
+      const fileType = file.type;
+      const fileName = file.name;
+      
+      if (fileType.startsWith('image/') || fileType === 'application/pdf') {
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          setAttachedFiles((prev) => {
+            if (prev.some(f => f.name === fileName)) return prev;
+            return [...prev, {
+              name: fileName,
+              type: fileType,
+              content: reader.result
+            }];
+          });
+        };
+      } else {
+        reader.readAsText(file);
+        reader.onload = () => {
+          setAttachedFiles((prev) => {
+            if (prev.some(f => f.name === fileName)) return prev;
+            return [...prev, {
+              name: fileName,
+              type: fileType,
+              content: reader.result
+            }];
+          });
+        };
+      }
+    });
+    
+    e.target.value = '';
+  };
+
   useEffect(() => {
     if (contextProductionType) {
       setSelectedProdType(contextProductionType);
@@ -204,7 +253,8 @@ export default function HeroSection({
     const composedPrompt = `${prompt.trim()}\n[Aspect: ${selectedAspect}, Style: ${selectedStyle}, Motion: ${selectedCamera}, Quality: ${selectedQuality}]`;
     
     try {
-      await generate(composedPrompt, orchestrationMode, selectedProdType);
+      await generate(composedPrompt, orchestrationMode, selectedProdType, attachedFiles);
+      setAttachedFiles([]);
     } catch (err) {
       setErrorMsg(err.message);
     }
@@ -215,6 +265,33 @@ export default function HeroSection({
     setAspect(sug.aspect);
     setStyle(sug.style);
     setCamera(sug.camera);
+  };
+
+  const getOuterRingClass = () => {
+    if (loading) return "absolute w-10 h-10 rounded-full border-2 border-dashed border-emerald-400/90 animate-[spin_2s_linear_infinite] scale-105";
+    if (focused) {
+      if (orbAnimating) return "absolute w-10 h-10 rounded-full border-2 border-dashed border-accent/80 animate-[spin_2.5s_linear_infinite] scale-105";
+      return "absolute w-10 h-10 rounded-full border border-dashed border-accent/50 animate-[spin_12s_linear_infinite] scale-105";
+    }
+    return "absolute w-8 h-8 rounded-full border border-white/15 border-dashed";
+  };
+
+  const getMiddleRingClass = () => {
+    if (loading) return "absolute w-7 h-7 rounded-full border border-dotted border-emerald-300/60 animate-[spin_4s_linear_infinite_reverse] transition-all duration-300";
+    if (focused) {
+      if (orbAnimating) return "absolute w-7 h-7 rounded-full border border-dotted border-purple-400/60 animate-[spin_4s_linear_infinite_reverse] transition-all duration-300";
+      return "absolute w-7 h-7 rounded-full border border-dotted border-purple-400/30 animate-[spin_20s_linear_infinite_reverse] transition-all duration-300";
+    }
+    return "absolute w-7 h-7 rounded-full border border-dotted border-transparent opacity-0 scale-75 transition-all duration-300";
+  };
+
+  const getCoreClass = () => {
+    if (loading) return "absolute w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(52,211,153,0.5)] transition-all duration-300";
+    if (focused) {
+      if (orbAnimating) return "absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/30 via-purple-600/20 to-pink-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(139,92,246,0.4)] scale-105 transition-all duration-300";
+      return "absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/15 to-purple-800/20 flex items-center justify-center shadow-[0_0_8px_rgba(139,92,246,0.2)] scale-105 transition-all duration-300";
+    }
+    return "absolute w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center shadow-[0_0_8px_rgba(139,92,246,0.3)] transition-all duration-300";
   };
 
   return (
@@ -304,6 +381,15 @@ export default function HeroSection({
               ? 'bg-white/75 border border-white/35 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)] shadow-sm'
               : 'bg-[#07070d]/80 backdrop-blur-[2px] shadow-[inset_0_2px_12px_rgba(0,0,0,0.9)]'
           }`}>
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              multiple
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".pdf,.txt,.md,image/*"
+              className="hidden"
+            />
 
             {/* Viewfinder corner brackets inside the console */}
             <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
@@ -318,12 +404,18 @@ export default function HeroSection({
             <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
               isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
             }`} />
-
+ 
             {/* Row 1: Orb, Input text, Sparkle */}
             <div className="flex items-start gap-4 relative z-10">
               
               {/* AI Production Orb / Camera Focus Spinner */}
-              <div className="flex items-center justify-center h-12 w-12 shrink-0 relative select-none">
+              <div 
+                onClick={!loading ? handleOrbClick : undefined}
+                className={`flex items-center justify-center h-12 w-12 shrink-0 relative select-none ${
+                  !loading ? 'cursor-pointer hover:scale-105 transition-all' : ''
+                }`}
+                title={!loading ? "Upload reference documents or images (PDF, TXT, MD, PNG/JPG)" : "Processing..."}
+              >
                 {/* Outer Volumetric Halo */}
                 <div className={`absolute inset-0 rounded-full blur-md pointer-events-none transition-all duration-500 ${
                   loading 
@@ -333,63 +425,23 @@ export default function HeroSection({
                       : 'bg-accent/5'
                 }`} />
 
-                {/* Case 1: Loading (Active Production Rendering) */}
-                {loading && (
-                  <div className="relative w-10 h-10 flex items-center justify-center scale-105">
-                    {/* Outer Fast Ring */}
-                    <div className="absolute inset-0 rounded-full border-2 border-dashed border-emerald-400/90 animate-[spin_2s_linear_infinite]" />
-                    {/* Middle Fast Ring */}
-                    <div className="absolute w-7 h-7 rounded-full border border-dotted border-emerald-300/60 animate-[spin_4s_linear_infinite_reverse]" />
-                    {/* Core */}
-                    <div className="absolute w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(52,211,153,0.5)]">
-                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    </div>
-                  </div>
-                )}
+                {/* Stable Outer Ring */}
+                <div className={getOuterRingClass()} />
 
-                {/* Case 2: Unfocused Idle (Default) */}
-                {!loading && !focused && (
-                  <div className="relative w-8 h-8 flex items-center justify-center">
-                    {/* Dotted border guide */}
-                    <div className="absolute inset-0 rounded-full border border-white/10 border-dashed" />
-                    {/* Glowing core dot */}
-                    <div className="h-2.5 w-2.5 rounded-full bg-accent/40 shadow-[0_0_8px_rgba(139,92,246,0.6)] animate-pulse" />
-                  </div>
-                )}
+                {/* Stable Middle Ring */}
+                <div className={getMiddleRingClass()} />
 
-                {/* Case 3: Focused but animating (first 3 seconds) */}
-                {!loading && focused && orbAnimating && (
-                  <div className="relative w-10 h-10 flex items-center justify-center scale-105">
-                    {/* Outer Ring */}
-                    <div className="absolute inset-0 rounded-full border-2 border-dashed border-accent/80 animate-[spin_2.5s_linear_infinite]" />
-                    {/* Middle Ring */}
-                    <div className="absolute w-7 h-7 rounded-full border border-dotted border-purple-400/60 animate-[spin_4s_linear_infinite_reverse]" />
-                    {/* Core */}
-                    <div className="absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/30 via-purple-600/20 to-pink-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(139,92,246,0.4)]">
-                      <div className="w-1.5 h-1.5 relative">
-                        <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80 animate-pulse" />
-                        <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80 animate-pulse" />
-                      </div>
+                {/* Stable Core */}
+                <div className={getCoreClass()}>
+                  {loading ? (
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  ) : (
+                    <div className={`w-1.5 h-1.5 relative ${focused && orbAnimating ? 'animate-pulse' : ''}`}>
+                      <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80" />
+                      <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80" />
                     </div>
-                  </div>
-                )}
-
-                {/* Case 4: Focused and settled (after 3 seconds) */}
-                {!loading && focused && !orbAnimating && (
-                  <div className="relative w-10 h-10 flex items-center justify-center scale-105">
-                    {/* Outer Ring */}
-                    <div className="absolute inset-0 rounded-full border border-dashed border-accent/50 animate-[spin_12s_linear_infinite]" />
-                    {/* Middle Ring */}
-                    <div className="absolute w-7 h-7 rounded-full border border-dotted border-purple-400/30 animate-[spin_20s_linear_infinite_reverse]" />
-                    {/* Core */}
-                    <div className="absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/15 to-purple-800/20 flex items-center justify-center shadow-[0_0_8px_rgba(139,92,246,0.2)]">
-                      <div className="w-1.5 h-1.5 relative">
-                        <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80" />
-                        <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80" />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Prompt text field */}
@@ -398,7 +450,7 @@ export default function HeroSection({
                 onChange={(e) => setPrompt(e.target.value)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                placeholder="Describe your film vision in detail..."
+                placeholder="Describe your creative concept or project idea, or drop context files..."
                 className={`flex-1 bg-transparent border-0 outline-none placeholder-neutral-500 text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono transition-colors duration-300 ${
                   isDayMode ? 'text-neutral-900' : 'text-white'
                 }`}
@@ -416,6 +468,46 @@ export default function HeroSection({
                 <PiSparkle size={16} />
               </button>
             </div>
+
+            {/* Attached Files List */}
+            {attachedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4 px-1 relative z-10">
+                {attachedFiles.map((file, idx) => {
+                  const isImage = file.type.startsWith('image/');
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono transition-all ${
+                        isDayMode 
+                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800' 
+                          : 'bg-white/[0.03] border-white/[0.08] text-neutral-300'
+                      }`}
+                    >
+                      {isImage ? (
+                        <div className="w-4 h-4 rounded overflow-hidden shrink-0 border border-white/10">
+                          <img src={file.content} alt={file.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <span className="text-[10px] opacity-60">📄</span>
+                      )}
+                      <span className="truncate max-w-[150px] font-medium" title={file.name}>{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
+                        }}
+                        className={`hover:text-red-500 font-bold ml-1 transition-colors focus:outline-none cursor-pointer ${
+                          isDayMode ? 'text-neutral-400' : 'text-neutral-500'
+                        }`}
+                        title="Remove file"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Divider */}
             <div className={`h-px my-4 relative z-10 transition-colors duration-300 ${
@@ -484,7 +576,7 @@ export default function HeroSection({
             <button
               onClick={handleSubmit}
               disabled={!prompt.trim() || loading}
-              className="btn-primary shrink-0 rounded-xl px-5 py-2.5 flex items-center gap-2 bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-500 text-xs font-semibold uppercase tracking-widest transition-all shadow-[0_4px_16px_rgba(139,92,246,0.25)]"
+              className="btn-primary ml-auto shrink-0 rounded-xl px-5 py-2.5 flex items-center gap-2 bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-500 text-xs font-semibold uppercase tracking-widest transition-all shadow-[0_4px_16px_rgba(139,92,246,0.25)]"
             >
               {loading ? (
                 <>
