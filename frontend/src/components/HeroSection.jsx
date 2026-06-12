@@ -298,42 +298,40 @@ export default function HeroSection({
     <section className={`relative z-30 mx-auto text-center transition-all duration-500 w-full ${
       hasProject ? 'py-2 mt-1' : 'py-3 mt-2'
     }`}>
-      {/* Studio Background Image — behind entire hero block */}
-      {!hasProject && (
-        <>
-          {isDayMode ? (
-            // LIGHT MODE ARTWORK AND OVERLAYS
-            <>
-              {/* Cinematic background artwork (Leica/film tone color grade) */}
-              <div
-                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none rounded-3xl opacity-[0.55] filter contrast-[1.25] brightness-[0.88] saturate-[0.75]"
-                style={{
-                  backgroundImage: `url('/images/studio_bg.png')`,
-                  mixBlendMode: 'multiply'
-                }}
-              />
-              {/* Warm film-tone overlay gradient */}
-              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-[#e3ded5]/25 via-transparent to-[#ede9e2]/80" />
-              {/* Soft warm radial vignette for readability & keeping silhouettes visible */}
-              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-radial from-transparent via-[#f0ede8]/30 to-[#f0ede8]/85" />
-              {/* Left/Right side gradient for visual focus */}
-              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#f0ede8]/50 via-transparent to-[#f0ede8]/50" />
-            </>
-          ) : (
-            // DARK MODE ARTWORK AND OVERLAYS
-            <>
-              {/* Cinematic background artwork */}
-              <div
-                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-3xl"
-                style={{ backgroundImage: `url('/images/studio_bg.png')` }}
-              />
-              {/* Dark overlay (70-80%) */}
-              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-black/75 via-transparent to-black/85" />
-              <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#06060b]/85 via-transparent to-[#06060b]/85" />
-            </>
-          )}
-        </>
-      )}
+      {/* Studio Background Image — always visible for immersive studio feel */}
+      <>
+        {isDayMode ? (
+          // LIGHT MODE ARTWORK AND OVERLAYS
+          <>
+            {/* Cinematic background artwork (Leica/film tone color grade) */}
+            <div
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none rounded-3xl opacity-[0.55] filter contrast-[1.25] brightness-[0.88] saturate-[0.75]"
+              style={{
+                backgroundImage: `url('/images/studio_bg.png')`,
+                mixBlendMode: 'multiply'
+              }}
+            />
+            {/* Warm film-tone overlay gradient */}
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-[#e3ded5]/25 via-transparent to-[#ede9e2]/80" />
+            {/* Soft warm radial vignette for readability & keeping silhouettes visible */}
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-radial from-transparent via-[#f0ede8]/30 to-[#f0ede8]/85" />
+            {/* Left/Right side gradient for visual focus */}
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#f0ede8]/50 via-transparent to-[#f0ede8]/50" />
+          </>
+        ) : (
+          // DARK MODE ARTWORK AND OVERLAYS
+          <>
+            {/* Cinematic background artwork */}
+            <div
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-3xl"
+              style={{ backgroundImage: `url('/images/studio_bg.png')` }}
+            />
+            {/* Dark overlay (70-80%) */}
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-black/75 via-transparent to-black/85" />
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#06060b]/85 via-transparent to-[#06060b]/85" />
+          </>
+        )}
+      </>
 
       {/* Immersive radial glows */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[600px] -translate-x-1/2 rounded-full bg-gradient-radial from-accent/[0.08] to-transparent blur-3xl" />

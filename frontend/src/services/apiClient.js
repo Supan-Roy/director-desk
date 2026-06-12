@@ -14,7 +14,7 @@ export async function healthCheck() {
   return response.data
 }
 
-// Project status & agents
+// Project status & agents (in-memory)
 export async function getProjectStatus() {
   const response = await apiClient.get('/api/project/status')
   return response.data
@@ -47,4 +47,23 @@ export async function getProductionPlan() {
 export async function generateStory(prompt, mode = 'fast') {
   const response = await apiClient.post('/api/generate', { prompt, mode })
   return response.data
+}
+
+// ─── Persisted Projects ────────────────────────────────────────────────────
+
+/** Fetch all saved projects (sidebar list). */
+export async function getProjects() {
+  const response = await apiClient.get('/api/projects')
+  return response.data
+}
+
+/** Fetch a single saved project by id (full detail). */
+export async function getProjectById(id) {
+  const response = await apiClient.get(`/api/projects/${id}`)
+  return response.data
+}
+
+/** Delete a saved project by id. */
+export async function deleteProject(id) {
+  await apiClient.delete(`/api/projects/${id}`)
 }
