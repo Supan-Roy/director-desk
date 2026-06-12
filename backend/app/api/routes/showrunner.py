@@ -101,7 +101,7 @@ def _auto_save_project(original_prompt: str) -> None:
 
         db = SessionLocal()
         try:
-            project_service.save_project(
+            project = project_service.save_project(
                 db,
                 title=project_state.title or "Untitled Production",
                 production_type=project_state.production_type,
@@ -110,6 +110,7 @@ def _auto_save_project(original_prompt: str) -> None:
                 storyboard=storyboard_data,
                 production_plan=project_state.production_plan,
             )
+            project_state.id = project.id
         finally:
             db.close()
 

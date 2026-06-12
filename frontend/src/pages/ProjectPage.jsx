@@ -3,44 +3,109 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import {
   FiArrowLeft, FiEdit3, FiSend, FiX, FiFileText,
-  FiImage, FiClipboard, FiLoader, FiClock, FiFilm,
+  FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck
 } from 'react-icons/fi';
 import { PiSparkle } from 'react-icons/pi';
-import { getProjectById, apiBaseUrl } from '../services/apiClient';
+import { getProjectById, apiBaseUrl, updateProjectScript } from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
 import { useTheme } from '../context/ThemeContext';
 import { useProjectData } from '../hooks/useProjectData';
+import { decodeProjectRouteId } from '../utils/hashids';
 
 // ── Reusable script renderer (copied from TabbedContent) ──────────────────
-function ScriptView({ script }) {
-  if (!script) return (
+function ScriptView({ script, onSave }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(script || '');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setText(script || '');
+  }, [script]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSave = () => {
+    if (onSave) {
+      onSave(text);
+    }
+    setIsEditing(false);
+  };
+
+  if (!script && !isEditing) return (
     <div className="flex min-h-[260px] items-center justify-center text-surface-600 text-sm">
       No script available.
     </div>
   );
-  const lines = script.split('\n');
+
+  const lines = text.split('\n');
   return (
-    <div className="prose prose-invert max-w-none screenplay-prose">
-      {lines.map((line, i) => {
-        const t = line.trim();
-        if (!t) return <div key={i} className="h-3" />;
-        if (t.startsWith('# ')) return <h1 key={i} className="text-3xl font-extrabold tracking-[0.18em] text-white text-center uppercase my-10 font-display" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(2)) }} />;
-        if (t.startsWith('## ')) return <h2 key={i} className="text-xl font-bold tracking-[0.1em] text-surface-100 uppercase mt-8 mb-3 font-display" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(3)) }} />;
-        if (t.startsWith('### ')) return <h3 key={i} className="text-base font-semibold text-surface-200 mt-6 mb-3" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(4)) }} />;
-        if (t.startsWith('>')) return (
-          <div key={i} className="my-5 flex justify-center">
-            <blockquote className="max-w-[70%] border-l-2 border-accent bg-accent/[0.02] px-6 py-3 rounded-r-xl text-center italic text-xs text-surface-200 leading-relaxed font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(1).trim()) }} />
-          </div>
-        );
-        if (/^(SCENE\s+\d+|INT\.|EXT\.)/i.test(t)) return (
-          <div key={i} className="my-6 border-b border-white/[0.06] pb-2">
-            <h3 className="text-xs font-bold tracking-[0.2em] text-accent uppercase font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />
-          </div>
-        );
-        if (t.startsWith('(') && t.endsWith(')')) return <p key={i} className="text-center italic text-xs text-surface-500 my-1 font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />;
-        if (/^[A-Z][A-Z\s.]{1,20}$/.test(t) && t.length > 1) return <p key={i} className="text-center font-bold tracking-widest text-xs text-surface-100 uppercase mt-5 mb-1 font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />;
-        return <p key={i} className="text-sm text-surface-400 leading-relaxed my-2 font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />;
-      })}
+    <div className="space-y-4">
+      {/* Edit/Copy Action Bar */}
+      <div className="flex justify-end gap-2 border-b border-white/[0.04] pb-3 mb-4">
+        {isEditing ? (
+          <button
+            onClick={handleSave}
+            title="Save script"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-accent text-white hover:bg-accent/90 transition-all"
+          >
+            <FiCheck size={12} />
+            <span>Save</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsEditing(true)}
+            title="Edit script manually"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
+          >
+            <FiEdit3 size={12} />
+            <span>Edit</span>
+          </button>
+        )}
+        <button
+          onClick={handleCopy}
+          title="Copy full script"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
+        >
+          {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiClipboard size={12} />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+      </div>
+
+      {isEditing ? (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={18}
+          className="w-full bg-black/40 border border-white/[0.08] rounded-xl p-4 text-xs font-mono leading-relaxed text-surface-300 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-y"
+        />
+      ) : (
+        <div className="prose prose-invert max-w-none screenplay-prose">
+          {lines.map((line, i) => {
+            const t = line.trim();
+            if (!t) return <div key={i} className="h-3" />;
+            if (t.startsWith('# ')) return <h1 key={i} className="text-3xl font-extrabold tracking-[0.18em] text-white text-center uppercase my-10 font-display" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(2)) }} />;
+            if (t.startsWith('## ')) return <h2 key={i} className="text-xl font-bold tracking-[0.1em] text-surface-100 uppercase mt-8 mb-3 font-display" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(3)) }} />;
+            if (t.startsWith('### ')) return <h3 key={i} className="text-base font-semibold text-surface-200 mt-6 mb-3" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(4)) }} />;
+            if (t.startsWith('>')) return (
+              <div key={i} className="my-5 flex justify-center">
+                <blockquote className="max-w-[70%] border-l-2 border-accent bg-accent/[0.02] px-6 py-3 rounded-r-xl text-center italic text-xs text-surface-200 leading-relaxed font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t.slice(1).trim()) }} />
+              </div>
+            );
+            if (/^(SCENE\s+\d+|INT\.|EXT\.)/i.test(t)) return (
+              <div key={i} className="my-6 border-b border-white/[0.06] pb-2">
+                <h3 className="text-xs font-bold tracking-[0.2em] text-accent uppercase font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />
+              </div>
+            );
+            if (t.startsWith('(') && t.endsWith(')')) return <p key={i} className="text-center italic text-xs text-surface-500 my-1 font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />;
+            if (/^[A-Z][A-Z\s.]{1,20}$/.test(t) && t.length > 1) return <p key={i} className="text-center font-bold tracking-widest text-xs text-surface-100 uppercase mt-5 mb-1 font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />;
+            return <p key={i} className="text-sm text-surface-400 leading-relaxed my-2 font-mono" dangerouslySetInnerHTML={{ __html: marked.parseInline(t) }} />;
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -319,7 +384,8 @@ export default function ProjectPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getProjectById(id)
+    const numericId = decodeProjectRouteId(id);
+    getProjectById(numericId)
       .then(data => { if (!cancelled) { setProject(data); setLoading(false); } })
       .catch(err => { if (!cancelled) { setError(err.message); setLoading(false); } });
     return () => { cancelled = true; };
@@ -329,6 +395,18 @@ export default function ProjectPage() {
     setProject(updated);
     fetchSavedProjects();
   }, [fetchSavedProjects]);
+
+  const handleSaveScript = async (newScriptText) => {
+    try {
+      const numericId = decodeProjectRouteId(id);
+      const updated = await updateProjectScript(numericId, newScriptText);
+      setProject(updated);
+      fetchSavedProjects();
+    } catch (err) {
+      console.error('Failed to save script:', err);
+      alert('Failed to save script: ' + err.message);
+    }
+  };
 
   return (
     <div className={`flex h-screen overflow-hidden font-display transition-colors duration-500 ${d ? 'bg-[#f0ede8]' : 'bg-[#06060b]'}`}>
@@ -367,7 +445,7 @@ export default function ProjectPage() {
                   <span>{project.production_type}</span>
                   <span className="opacity-40">·</span>
                   <FiClock size={8} />
-                  <span>{fmtDate(project.created_at)}</span>
+                  <span>{fmtDate(project.updated_at)}</span>
                 </div>
               </div>
             </div>
@@ -436,7 +514,7 @@ export default function ProjectPage() {
 
                 {/* Tab content */}
                 <div className="glass-panel rounded-xl p-6 bg-surface-950/45 border border-white/[0.03]">
-                  {activeTab === 'script' && <ScriptView script={project.script} />}
+                  {activeTab === 'script' && <ScriptView script={project.script} onSave={handleSaveScript} />}
                   {activeTab === 'storyboard' && <StoryboardView storyboard={project.storyboard} productionType={project.production_type} />}
                   {activeTab === 'plan' && <PlanView plan={project.production_plan} />}
                 </div>

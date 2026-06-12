@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { marked } from 'marked';
-import { FiFileText, FiImage, FiClipboard } from 'react-icons/fi';
+import { FiFileText, FiImage, FiClipboard, FiEdit3, FiCheck } from 'react-icons/fi';
 import { useProjectData } from '../hooks/useProjectData';
+import { useEffect } from 'react';
 
 const tabs = [
   { id: 'script', label: 'Script', icon: FiFileText },
@@ -10,7 +11,27 @@ const tabs = [
 ];
 
 function ScriptTab({ script }) {
-  if (!script) {
+  const { updateScript } = useProjectData();
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(script || '');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setText(script || '');
+  }, [script]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSave = () => {
+    updateScript(text);
+    setIsEditing(false);
+  };
+
+  if (!script && !isEditing) {
     return (
       <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
         <p className="text-sm text-surface-600">Script will appear here after generation.</p>
@@ -19,8 +40,8 @@ function ScriptTab({ script }) {
   }
 
   // Parse lines and render custom screenplay components with inline markdown compiled
-  const renderScriptLines = (text) => {
-    const lines = text.split('\n');
+  const renderScriptLines = (textVal) => {
+    const lines = textVal.split('\n');
     return lines.map((line, i) => {
       const trimmed = line.trim();
       if (!trimmed) return <div key={i} className="h-4" />;
@@ -123,10 +144,50 @@ function ScriptTab({ script }) {
   };
 
   return (
-    <div className="glass-panel rounded-xl p-8 bg-surface-950/45 border border-white/[0.03] select-text screenplay-prose">
-      <div className="prose prose-invert max-w-none">
-        {renderScriptLines(script)}
+    <div className="glass-panel rounded-xl p-8 bg-surface-950/45 border border-white/[0.03] screenplay-prose flex flex-col gap-4">
+      {/* Edit/Copy Action Bar */}
+      <div className="flex justify-end gap-2 border-b border-white/[0.04] pb-3 mb-2">
+        {isEditing ? (
+          <button
+            onClick={handleSave}
+            title="Save script"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-accent text-white hover:bg-accent/90 transition-all"
+          >
+            <FiCheck size={12} />
+            <span>Save</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsEditing(true)}
+            title="Edit script manually"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
+          >
+            <FiEdit3 size={12} />
+            <span>Edit</span>
+          </button>
+        )}
+        <button
+          onClick={handleCopy}
+          title="Copy full script"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
+        >
+          {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiClipboard size={12} />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
       </div>
+
+      {isEditing ? (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={18}
+          className="w-full bg-black/40 border border-white/[0.08] rounded-xl p-4 text-xs font-mono leading-relaxed text-surface-300 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-y"
+        />
+      ) : (
+        <div className="prose prose-invert max-w-none select-text">
+          {renderScriptLines(text)}
+        </div>
+      )}
     </div>
   );
 }

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.services.project_state import project_state
 from app.services.project_service import project_service
-from app.schemas.project_schemas import ProjectDetail, ProjectSummary
+from app.schemas.project_schemas import ProjectDetail, ProjectSummary, ProjectUpdate
 from app.db.repository import get_db
 
 router = APIRouter(tags=["project"])
@@ -29,6 +29,7 @@ router = APIRouter(tags=["project"])
 def get_project_status():
     agents = [agent.to_dict() for agent in project_state.agents]
     return {
+        "id": project_state.id,
         "hasProject": project_state.has_project,
         "title": project_state.title,
         "agents": agents,
@@ -62,3 +63,15 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
 def delete_project(project_id: int, db: Session = Depends(get_db)):
     """Permanently delete a saved project."""
     project_service.delete_project(db, project_id)
+
+
+@router.patch("/projects/{project_id}", response_model=ProjectDetail)
+def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db)):
+    """Update a saved project's fields (like script)."""
+    # Check if the in-memory state is this project, and update it as well
+    if project_state.has_project and project_state.id == project_id:
+        if payload.script is not None:
+            project_state.script = payload.script
+
+    return project_service.update_project(db, project_id, script=payload.script)
+

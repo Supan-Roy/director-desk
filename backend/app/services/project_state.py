@@ -24,6 +24,7 @@ class AgentStatus:
 
 class ProjectState:
     def __init__(self):
+        self.id: Optional[int] = None
         self.has_project = False
         self.title: Optional[str] = None
         self.prompt: Optional[str] = None
@@ -40,6 +41,7 @@ class ProjectState:
         ]
 
     def reset(self):
+        self.id = None
         self.has_project = False
         self.title = None
         self.prompt = None
