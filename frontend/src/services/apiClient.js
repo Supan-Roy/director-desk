@@ -67,3 +67,9 @@ export async function getProjectById(id) {
 export async function deleteProject(id) {
   await apiClient.delete(`/api/projects/${id}`)
 }
+
+/** Update the script of a saved project. */
+export async function updateProjectScript(id, script) {
+  const response = await apiClient.patch(`/api/projects/${id}`, { script })
+  return response.data
+}

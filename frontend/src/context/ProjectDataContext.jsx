@@ -10,6 +10,8 @@ import {
   getProjects,
   getProjectById,
   deleteProject,
+  updateProjectScript,
+  apiClient,
 } from '../services/apiClient'
 import { featuredProductions } from '../data/featuredProductions'
 
@@ -99,6 +101,9 @@ export function ProjectDataProvider({ children }) {
       setTitle(data.title)
       setAgents(data.agents)
       setProductionType(data.productionType || 'Auto Detect')
+      if (data.id) {
+        setActiveProjectId(data.id)
+      }
     } catch (err) {
       setError(err.message)
     }
@@ -301,6 +306,28 @@ export function ProjectDataProvider({ children }) {
     }
   }, []);
 
+  // ── Update Script (Context-wide) ─────────────────────────────────────────
+  const updateScript = useCallback(async (newScriptText) => {
+    setScript(newScriptText);
+    
+    // Sync with backend's in-memory project_state
+    try {
+      await apiClient.put('/api/script', { script: newScriptText });
+    } catch (err) {
+      console.error('Failed to update in-memory script:', err);
+    }
+
+    // If activeProjectId is set, sync with SQLite DB
+    if (activeProjectId) {
+      try {
+        await updateProjectScript(activeProjectId, newScriptText);
+        fetchSavedProjects();
+      } catch (err) {
+        console.error('Failed to update project script in database:', err);
+      }
+    }
+  }, [activeProjectId, fetchSavedProjects]);
+
   // ── Bootstrap ───────────────────────────────────────────────────────────
   useEffect(() => {
     fetchAll()
@@ -329,6 +356,7 @@ export function ProjectDataProvider({ children }) {
     loadProject,
     removeSavedProject,
     fetchSavedProjects,
+    updateScript,
   }
 
   return (

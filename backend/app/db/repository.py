@@ -61,10 +61,10 @@ class ProjectRepository:
         return project
 
     def get_all(self, db: Session) -> List[Project]:
-        """Return all projects ordered by newest first (summary only)."""
+        """Return all projects ordered by newest modification first (summary only)."""
         return (
             db.query(Project)
-            .order_by(Project.created_at.desc())
+            .order_by(Project.updated_at.desc())
             .all()
         )
 
@@ -80,6 +80,19 @@ class ProjectRepository:
         db.delete(project)
         db.commit()
         return True
+
+    def update(self, db: Session, project_id: int, **kwargs) -> Optional[Project]:
+        """Update a project's fields and return the updated instance."""
+        project = self.get_by_id(db, project_id)
+        if not project:
+            return None
+        for key, value in kwargs.items():
+            if hasattr(project, key):
+                setattr(project, key, value)
+        project.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(project)
+        return project
 
 
 project_repository = ProjectRepository()

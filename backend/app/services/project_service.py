@@ -70,5 +70,15 @@ class ProjectService:
                 detail=f"Project {project_id} not found.",
             )
 
+    def update_project(self, db: Session, project_id: int, script: str) -> ProjectDetail:
+        """Update a project's script. Raises 404 if not found."""
+        project = project_repository.update(db, project_id, script=script)
+        if not project:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Project {project_id} not found.",
+            )
+        return ProjectDetail.model_validate(project)
+
 
 project_service = ProjectService()

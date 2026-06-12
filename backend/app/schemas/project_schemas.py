@@ -13,6 +13,7 @@ class ProjectSummary(BaseModel):
     title: str
     production_type: Optional[str] = None
     created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -30,3 +31,9 @@ class ProjectDetail(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ProjectUpdate(BaseModel):
+    """Payload to update fields of a saved project."""
+    script: Optional[str] = None
+

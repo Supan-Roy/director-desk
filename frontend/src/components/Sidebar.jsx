@@ -16,6 +16,7 @@ import {
 import { PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
+import { encodeId, decodeId } from '../utils/hashids';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -82,8 +83,8 @@ export default function Sidebar() {
   const [deletingId, setDeletingId] = useState(null);
 
   const activeProjectId = (() => {
-    const match = location.pathname.match(/^\/projects\/(\d+)$/);
-    return match ? Number(match[1]) : null;
+    const match = location.pathname.match(/^\/projects\/([a-z0-9]+)$/);
+    return match ? decodeId(match[1]) : null;
   })();
 
   const handleDelete = async (e, id) => {
@@ -227,7 +228,7 @@ export default function Sidebar() {
                   return (
                     <button
                       key={project.id}
-                      onClick={() => navigate(`/projects/${project.id}`)}
+                      onClick={() => navigate(`/projects/${encodeId(project.id)}`)}
                       title={project.title}
                       className={`group relative w-full flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
                         isActive
@@ -259,7 +260,7 @@ export default function Sidebar() {
                           d ? 'text-gray-400' : 'text-surface-600'
                         }`}>
                           <FiClock size={8} />
-                          <span>{shortDate(project.created_at)}</span>
+                          <span>{shortDate(project.updated_at)}</span>
                           {project.production_type && (
                             <>
                               <span className="opacity-40">·</span>
