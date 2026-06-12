@@ -16,7 +16,7 @@ router = APIRouter()
 def generate_story(request: GenerateRequest):
     try:
         logger.info(f"Generating story for prompt: {request.prompt[:100]}... [Mode: {request.mode}]")
-        result = showrunner_service.generate(request.prompt, mode=request.mode)
+        result = showrunner_service.generate(request.prompt, mode=request.mode, production_type=request.production_type)
         logger.info(f"Generation complete: {len(result.script)} chars, {len(result.storyboard)} scenes")
         return result
     except Exception as e:
@@ -35,7 +35,7 @@ async def generate_story_stream(request: GenerateRequest):
         
         def run_sync_generation():
             try:
-                for event in showrunner_service.generate_stream(request.prompt, request.mode):
+                for event in showrunner_service.generate_stream(request.prompt, request.mode, request.production_type):
                     loop.call_soon_threadsafe(queue.put_nowait, event)
                 loop.call_soon_threadsafe(queue.put_nowait, None)
             except Exception as e:

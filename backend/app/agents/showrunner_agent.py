@@ -9,47 +9,125 @@ logger = logging.getLogger(__name__)
 class ShowrunnerAgent:
     name = "showrunner_agent"
 
-    def generate_all(self, prompt: str) -> dict:
-        system_prompt = f"""
-        You are a Showrunner Agent. Orchestrate a full pre-production package (Title, Script, Storyboard, Production Plan, Critic Notes) for the following user concept in a single structured JSON response.
+    def detect_production_type(self, prompt: str) -> str:
+        detect_prompt = f"""
+        Analyze the following prompt and classify it into exactly one of these production formats:
+        - "Short Film"
+        - "Trailer"
+        - "Documentary"
+        - "Podcast"
+        - "Drama"
+        - "Series Episode"
+        - "Educational Show"
+        - "Interview"
+        - "YouTube Video"
+        - "Audio Story"
 
+        Prompt: {prompt}
+
+        Return ONLY the name of the category (no extra text, no period, no markdown).
+        """
+        try:
+            detected = qwen_service.generate_text(detect_prompt).strip()
+            detected = detected.replace('"', '').replace("'", "").replace('.', '').strip()
+            valid_types = [
+                "Short Film", "Trailer", "Documentary", "Podcast", "Drama",
+                "Series Episode", "Educational Show", "Interview", "YouTube Video", "Audio Story"
+            ]
+            for vt in valid_types:
+                if vt.lower() == detected.lower():
+                    return vt
+        except Exception as e:
+            logger.warning(f"Failed to auto-detect production type: {e}")
+        return "Short Film"
+
+    def get_system_prompt(self, prompt: str, production_type: str) -> str:
+        if production_type == "Short Film":
+            format_rules = """
+            - Script: Screenplay format with scene headings (e.g. SCENE 1: INT. ...), action lines, and character dialogue blocks starting with '>'.
+            - Storyboard: Yes, detailed scene-by-scene framing, camera shots, environments, and moods.
+            - Production Plan: Pre-production preparation, production filming schedules, and post-production editing.
+            """
+        elif production_type == "Trailer":
+            format_rules = """
+            - Script: High-impact trailer beats, voiceover cues, fast-paced action sequences, and character dialogue blocks starting with '>'.
+            - Storyboard: Yes, high-fidelity visual hooks and key teaser frames.
+            - Production Plan: Sound hooks, teaser assembly, and cinematic pacing alignment.
+            """
+        elif production_type == "Documentary":
+            format_rules = """
+            - Script: Structured narrative segments, presenter/narrator dialogue starting with '>', and interview snippets.
+            - Storyboard: Yes, real-world visual references, map locations, and archival footage mockups.
+            - Production Plan: Investigation/research phase, guest/expert interview setups, and footage indexing.
+            """
+        elif production_type == "Podcast":
+            format_rules = """
+            - Script: Host dialogue, guest dialogue, episode structure, intro/outro music cues.
+            - NO camera instructions, NO visual cinematography directions.
+            - Storyboard: Return an empty array [] (no storyboard scenes allowed).
+            - Production Plan: Episode recording, audio cleanup, mixing, sound effects layering.
+            """
+        elif production_type == "Drama":
+            format_rules = """
+            - Script: Acts, theatrical scenes, deep character arcs, intense dialogue blocks starting with '>'.
+            - Storyboard: Yes, character interaction framings and stage blockings.
+            - Production Plan: Casting, rehearsals, scene shooting schedules.
+            """
+        elif production_type == "Series Episode":
+            format_rules = """
+            - Script: Acts, television scenes, character subplots, episode-level hooks and dialogue blocks starting with '>'.
+            - Storyboard: Yes, television-style camera setups.
+            - Production Plan: Multi-episode scheduling, production block planning, and editing.
+            """
+        elif production_type == "Educational Show":
+            format_rules = """
+            - Script: Lesson structure, clear explanations, graphical insert instructions, and presenter dialogue blocks starting with '>'.
+            - Storyboard: Yes, graphic slides, presentation frames, blackboard diagrams.
+            - Production Plan: Script mapping, visual slide design, asset compilation.
+            """
+        elif production_type == "Interview":
+            format_rules = """
+            - Script: Interviewer dialogue, guest dialogue, discussion topics, and intro/outro.
+            - Storyboard: Yes, camera switches between interviewer and guest (or empty if audio).
+            - Production Plan: Guest booking, pre-interview outline, multi-cam shooting setup.
+            """
+        elif production_type == "YouTube Video":
+            format_rules = """
+            - Script: Attention-grabbing intro hooks, sponsor segments, call-to-actions (like/subscribe), and dialogue blocks starting with '>'.
+            - Storyboard: Yes, thumbnail framing, B-roll placeholders, overlays, screen graphics.
+            - Production Plan: B-roll cataloging, editing pacing, thumbnail design.
+            """
+        elif production_type == "Audio Story":
+            format_rules = """
+            - Script: Narrator blocks, audio atmosphere/ambience cues, sound effects (SFX) instructions.
+            - NO camera instructions, NO visual directions.
+            - Storyboard: Return an empty array [] (no storyboard scenes allowed).
+            - Production Plan: Voice recording, sound effects layering, mixing.
+            """
+        else:
+            format_rules = "Standard screenplay generation rules."
+
+        system_prompt = f"""
+        You are a Showrunner Agent. Orchestrate a full pre-production package (Title, Script, Storyboard, Production Plan, Critic Notes) for the following user concept.
+        
+        Production Format: {production_type}
+        
         Concept:
         {prompt}
 
+        Format Generation Rules:
+        {format_rules}
+
         You must output ONLY a valid JSON object matching exactly this schema:
         {{
-          "title": "Title of the Movie/Show",
-          "script": "A short movie script or screenplay text (containing 5 to 7 scenes with clear headings like 'SCENE 1: INT. ...' and dialogue blocks starting with '>'). Try to include actor parentheticals and character names in UPPERCASE.",
+          "title": "Title of the Production",
+          "script": "A short production script conforming to the {production_type} rules above. Dialogue blocks must start with '>'.",
           "storyboard": [
             {{
               "scene_number": 1,
-              "camera_shot": "Establishing Wide Shot",
-              "environment": "Cyberpunk Neon Alley",
+              "camera_shot": "Establishing Wide Shot (or 'N/A' for audio)",
+              "environment": "Cyberpunk Neon Alley (or 'N/A' for audio)",
               "mood": "Tense and atmospheric"
-            }},
-            {{
-              "scene_number": 2,
-              "camera_shot": "Medium Close-up",
-              "environment": "Dark Room",
-              "mood": "Suspenseful"
-            }},
-            {{
-              "scene_number": 3,
-              "camera_shot": "Low Angle Panning Shot",
-              "environment": "City Rooftops",
-              "mood": "Climactic"
-            }},
-            {{
-              "scene_number": 4,
-              "camera_shot": "Tracking Shot",
-              "environment": "Underground Metro Station",
-              "mood": "Ominous"
-            }},
-            {{
-              "scene_number": 5,
-              "camera_shot": "Close-up Detail Shot",
-              "environment": "Control Terminal Room",
-              "mood": "Suspenseful"
             }}
           ],
           "production_plan": {{
@@ -59,41 +137,45 @@ class ShowrunnerAgent:
                 "name": "Pre-Production",
                 "status": "complete",
                 "items": [
-                  "Script finalized by Showrunner Agent",
-                  "Storyboard mapped out (5 scenes)",
-                  "Setting profiles prepared"
+                  "Script finalized",
+                  "Asset list compiled"
                 ]
               }},
               {{
                 "name": "Production",
                 "status": "pending",
                 "items": [
-                  "Scene rendering",
-                  "Camera movement simulation"
+                  "Recording or rendering"
                 ]
               }},
               {{
                 "name": "Post-Production",
                 "status": "pending",
                 "items": [
-                  "Editing and final cuts",
-                  "Critic notes review"
+                  "Editing and final cuts"
                 ]
               }}
             ]
           }},
           "critic_notes": [
-            "Critic note 1 about story pacing or cinematic shots",
-            "Critic note 2 about visual continuity",
-            "Critic note 3 about mood setting and audio recommendations"
+            "Critic note 1",
+            "Critic note 2"
           ]
         }}
 
+        IMPORTANT: If this is an audio-only format (like Podcast or Audio Story), "storyboard" MUST be an empty array [].
         Return ONLY the raw JSON object (no markdown code blocks, no trailing text, no introduction).
         """
+        return system_prompt
+
+    def generate_all(self, prompt: str, production_type: str = "Auto Detect") -> dict:
+        if production_type == "Auto Detect" or not production_type:
+            production_type = self.detect_production_type(prompt)
+            
+        system_prompt = self.get_system_prompt(prompt, production_type)
         
         try:
-            logger.info("Calling Qwen in FAST mode for a single-call structured generation...")
+            logger.info(f"Calling Qwen in FAST mode for a single-call structured generation (Format: {production_type})...")
             response_text = qwen_service.generate_text(system_prompt).strip()
             
             # Clean up code block wrap if the LLM provided it
@@ -109,63 +191,92 @@ class ShowrunnerAgent:
             if not all(k in data for k in required_keys):
                 raise ValueError("Missing required keys in JSON response")
                 
-            # Ensure storyboard items match StoryboardScene structure
+            # Ensure storyboard items match StoryboardScene structure (or empty list if audio)
             parsed_storyboard = []
-            for scene in data["storyboard"]:
-                parsed_storyboard.append(
-                    StoryboardScene(
-                        scene_number=int(scene.get("scene_number", 1)),
-                        camera_shot=str(scene.get("camera_shot", "Wide Shot")),
-                        environment=str(scene.get("environment", "Default Studio")),
-                        mood=str(scene.get("mood", "Neutral"))
+            is_audio = production_type in ["Podcast", "Audio Story"]
+            if not is_audio and isinstance(data.get("storyboard"), list):
+                for scene in data["storyboard"]:
+                    parsed_storyboard.append(
+                        StoryboardScene(
+                            scene_number=int(scene.get("scene_number", 1)),
+                            camera_shot=str(scene.get("camera_shot", "Wide Shot")),
+                            environment=str(scene.get("environment", "Default Studio")),
+                            mood=str(scene.get("mood", "Neutral"))
+                        )
                     )
-                )
             data["storyboard"] = parsed_storyboard
+            data["production_type"] = production_type
             return data
             
         except Exception as e:
-            logger.warning(f"FAST mode JSON generation failed or parsed incorrectly: {e}. Falling back to default structures.")
-            # Graceful fallback logic
+            logger.warning(f"FAST mode JSON generation failed: {e}. Falling back to default structures.")
             fallback_title = f"Generated from: {prompt}"
-            fallback_script = f"# {fallback_title}\n\nSCENE 1: INT. STUDIO - NIGHT\n\nThe director sits in the chair, looking over scripts.\n\nDIRECTOR\n(smiling)\n> Let's make this show run.\n\nSCENE 2: EXT. STREET - RAIN\n\nRain splatters on neon billboards.\n\nSCENE 3: INT. CONTROL ROOM - NIGHT\n\nScreens flicker with neon light.\n\nSCENE 4: EXT. HIGHWAY - NIGHT\n\nA hover car zooms past.\n\nSCENE 5: INT. WAREHOUSE - DAWN\n\nA dust ray streams through broken glass."
-            fallback_storyboard = [
-                StoryboardScene(scene_number=1, camera_shot="Wide Shot", environment="Studio Desk", mood="Focused"),
-                StoryboardScene(scene_number=2, camera_shot="Close Up", environment="Rainy Street", mood="Atmospheric"),
-                StoryboardScene(scene_number=3, camera_shot="Detail Shot", environment="Control Panels", mood="Creative"),
-                StoryboardScene(scene_number=4, camera_shot="Tracking Shot", environment="City Highway", mood="Action"),
-                StoryboardScene(scene_number=5, camera_shot="Static Shot", environment="Abandoned Warehouse", mood="Mysterious")
-            ]
-            fallback_plan = {
-                "title": f"{fallback_title} — Production Plan",
-                "phases": [
-                    {
-                        "name": "Pre-Production",
-                        "status": "complete",
-                        "items": ["Script drafted (5 scenes)", "Scenes outline finalized"]
-                    },
-                    {
-                        "name": "Production",
-                        "status": "pending",
-                        "items": ["Asset collection", "Image generation setup"]
-                    },
-                    {
-                        "name": "Post-Production",
-                        "status": "pending",
-                        "items": ["Timeline assembly"]
-                    }
+            is_audio = production_type in ["Podcast", "Audio Story"]
+            
+            if is_audio:
+                fallback_script = f"# {fallback_title}\n\n[Episode Intro Music Cues]\n\nHOST\n> Welcome to our session on: {prompt}.\n\nGUEST\n> Thank you for having me today."
+                fallback_storyboard = []
+                fallback_plan = {
+                    "title": f"{fallback_title} — Audio Production Plan",
+                    "phases": [
+                        {
+                            "name": "Pre-Production",
+                            "status": "complete",
+                            "items": ["Script drafted", "Audio outline finalized"]
+                        },
+                        {
+                            "name": "Production",
+                            "status": "pending",
+                            "items": ["Voice recording session", "Mic calibration"]
+                        },
+                        {
+                            "name": "Post-Production",
+                            "status": "pending",
+                            "items": ["Audio noise reduction", "Sound effects assembly"]
+                        }
+                    ]
+                }
+                fallback_critic_notes = [
+                    "Verify audio level balance between host and guest.",
+                    "Ensure intro music duration is correct."
                 ]
-            }
-            fallback_critic_notes = [
-                "Ensure spacing between camera motions fits dialog length.",
-                "Review the lighting parameters under light mode for contrast.",
-                "Verify character continuity in scene 3."
-            ]
+            else:
+                fallback_script = f"# {fallback_title}\n\nSCENE 1: INT. STUDIO - NIGHT\n\nThe director sits in the chair.\n\nDIRECTOR\n> Let's make this show run."
+                fallback_storyboard = [
+                    StoryboardScene(scene_number=1, camera_shot="Wide Shot", environment="Studio Desk", mood="Focused")
+                ]
+                fallback_plan = {
+                    "title": f"{fallback_title} — Production Plan",
+                    "phases": [
+                        {
+                            "name": "Pre-Production",
+                            "status": "complete",
+                            "items": ["Script drafted", "Storyboard sketched"]
+                        },
+                        {
+                            "name": "Production",
+                            "status": "pending",
+                            "items": ["Video rendering"]
+                        },
+                        {
+                            "name": "Post-Production",
+                            "status": "pending",
+                            "items": ["Timeline assembly"]
+                        }
+                    ]
+                }
+                fallback_critic_notes = [
+                    "Check framing for scene 1.",
+                    "Review lighting parameters."
+                ]
+                
             return {
                 "title": fallback_title,
                 "script": fallback_script,
                 "storyboard": fallback_storyboard,
                 "production_plan": fallback_plan,
-                "critic_notes": fallback_critic_notes
+                "critic_notes": fallback_critic_notes,
+                "production_type": production_type
             }
 
 showrunner_agent = ShowrunnerAgent()

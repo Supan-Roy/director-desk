@@ -4,3 +4,4 @@ from typing import Optional
 class GenerateRequest(BaseModel):
     prompt: str
     mode: Optional[str] = "fast"
+    production_type: Optional[str] = "Auto Detect"

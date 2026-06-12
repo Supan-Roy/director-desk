@@ -12,6 +12,7 @@ def get_project_status():
         "hasProject": project_state.has_project,
         "title": project_state.title,
         "agents": agents,
+        "productionType": project_state.production_type,
     }
 
 

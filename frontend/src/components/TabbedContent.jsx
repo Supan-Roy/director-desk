@@ -131,11 +131,16 @@ function ScriptTab({ script }) {
   );
 }
 
-function StoryboardTab({ storyboard }) {
+function StoryboardTab({ storyboard, productionType }) {
+  const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
   if (!storyboard || storyboard.length === 0) {
     return (
       <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
-        <p className="text-sm text-surface-600">Storyboard scenes will appear here.</p>
+        <p className="text-sm text-surface-600">
+          {isAudio 
+            ? "Not applicable for audio-only productions (Podcasts, Audio Stories)." 
+            : "Storyboard scenes will appear here."}
+        </p>
       </div>
     );
   }
@@ -222,7 +227,7 @@ function ProductionPlanTab({ plan }) {
 
 export default function TabbedContent() {
   const [activeTab, setActiveTab] = useState('script');
-  const { script, storyboard, productionPlan } = useProjectData();
+  const { script, storyboard, productionPlan, productionType } = useProjectData();
 
   return (
     <section>
@@ -255,7 +260,7 @@ export default function TabbedContent() {
       {/* Tab content */}
       <div className="max-h-[520px] overflow-y-auto pr-1">
         {activeTab === 'script' && <ScriptTab script={script} />}
-        {activeTab === 'storyboard' && <StoryboardTab storyboard={storyboard} />}
+        {activeTab === 'storyboard' && <StoryboardTab storyboard={storyboard} productionType={productionType} />}
         {activeTab === 'plan' && <ProductionPlanTab plan={productionPlan} />}
       </div>
     </section>
