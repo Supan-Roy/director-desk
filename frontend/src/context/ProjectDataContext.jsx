@@ -21,6 +21,7 @@ export function ProjectDataProvider({ children }) {
   const [productionPlan, setProductionPlan] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [productionType, setProductionType] = useState('Auto Detect')
 
   const fetchProjectStatus = useCallback(async () => {
     try {
@@ -28,6 +29,7 @@ export function ProjectDataProvider({ children }) {
       setHasProject(data.hasProject)
       setTitle(data.title)
       setAgents(data.agents)
+      setProductionType(data.productionType || 'Auto Detect')
     } catch (err) {
       setError(err.message)
     }
@@ -78,7 +80,7 @@ export function ProjectDataProvider({ children }) {
     }
   }, [fetchProjectStatus, fetchScript, fetchStoryboard, fetchProductionPlan])
 
-  const handleGenerate = async (prompt, mode = 'fast') => {
+  const handleGenerate = async (prompt, mode = 'fast', prodType = 'Auto Detect') => {
     setLoading(true)
     setError(null)
     setHasProject(true)
@@ -86,6 +88,7 @@ export function ProjectDataProvider({ children }) {
     setScript("")
     setStoryboard([])
     setProductionPlan(null)
+    setProductionType(prodType)
     setAgents([
       { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "active" },
       { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "waiting" },
@@ -99,7 +102,7 @@ export function ProjectDataProvider({ children }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt, mode }),
+        body: JSON.stringify({ prompt, mode, production_type: prodType }),
       })
 
       if (!response.ok) {
@@ -114,28 +117,31 @@ export function ProjectDataProvider({ children }) {
       const processEvent = (event) => {
         if (event.type === 'title') {
           setTitle(event.data)
+        } else if (event.type === 'production_type') {
+          setProductionType(event.data)
         } else if (event.type === 'script_chunk') {
           setScript((prev) => prev + event.data)
         } else if (event.type === 'storyboard') {
           setStoryboard(event.data)
+          const isAudio = event.data.length === 0
           setAgents([
             { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "active" },
-            { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "waiting" },
+            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: isAudio ? "completed" : "active", completedAt: isAudio ? "N/A" : null },
+            { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: isAudio ? "active" : "waiting" },
             { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "waiting" }
           ])
         } else if (event.type === 'production_plan') {
           setProductionPlan(event.data)
           setAgents([
             { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "just now" },
+            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: storyboard && storyboard.length === 0 ? "completed" : "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
             { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
             { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "active" }
           ])
         } else if (event.type === 'complete') {
           setAgents([
             { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "just now" },
+            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: storyboard && storyboard.length === 0 ? "completed" : "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
             { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
             { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "completed", completedAt: "just now" }
           ])
@@ -196,6 +202,7 @@ export function ProjectDataProvider({ children }) {
       setScript('')
       setStoryboard([])
       setProductionPlan(null)
+      setProductionType('Auto Detect')
       setAgents([])
     } catch (err) {
       setError(err.message)
@@ -213,6 +220,7 @@ export function ProjectDataProvider({ children }) {
       setStoryboard(prod.storyboard);
       setProductionPlan(prod.productionPlan);
       setAgents(prod.agents);
+      setProductionType(prod.productionType || 'Short Film');
     }
   }, []);
 
@@ -229,6 +237,7 @@ export function ProjectDataProvider({ children }) {
     productionPlan,
     loading,
     error,
+    productionType,
     generate: handleGenerate,
     reset: handleReset,
     refresh: fetchAll,

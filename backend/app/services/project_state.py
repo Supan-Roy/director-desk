@@ -31,6 +31,7 @@ class ProjectState:
         self.storyboard: list[StoryboardScene] = []
         self.production_plan: Optional[dict] = None
         self.critic_notes: list[str] = []
+        self.production_type: Optional[str] = "Auto Detect"
         self.agents = [
             AgentStatus("writer", "Writer Agent", "Script & Narrative", "✍️"),
             AgentStatus("storyboard", "Storyboard Agent", "Visual Planning", "🎨"),
@@ -46,6 +47,7 @@ class ProjectState:
         self.storyboard = []
         self.production_plan = None
         self.critic_notes = []
+        self.production_type = "Auto Detect"
         for agent in self.agents:
             agent.status = "waiting"
             agent.completed_at = None
@@ -63,7 +65,8 @@ class ProjectState:
         script: str,
         storyboard: list[StoryboardScene],
         production_plan: Optional[dict] = None,
-        critic_notes: Optional[list[str]] = None
+        critic_notes: Optional[list[str]] = None,
+        production_type: Optional[str] = "Auto Detect"
     ):
         self.has_project = True
         self.title = title
@@ -71,6 +74,7 @@ class ProjectState:
         self.storyboard = storyboard
         self.production_plan = production_plan
         self.critic_notes = critic_notes or []
+        self.production_type = production_type
         for agent in self.agents:
             agent.status = "completed"
             agent.completed_at = "just now"

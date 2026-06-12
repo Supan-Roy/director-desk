@@ -7,14 +7,25 @@ class PlannerAgent:
     def describe(self) -> str:
         return 'Generates a production plan with pre-production, production, and post-production phases.'
 
-    def generate_plan(self, title: str, script: str, storyboard_text: str) -> dict:
+    def generate_plan(self, title: str, script: str, storyboard_text: str, production_type: str = "Short Film") -> dict:
+        is_audio = production_type in ["Podcast", "Audio Story"]
+        
+        phase_guidelines = f"Generate items tailored specifically for a {production_type}."
+        if is_audio:
+            phase_guidelines += "\nFocus on audio-first tasks. Pre-production: outline preparation, host/guest brief, and mic check. Production: vocal recording session, audio levels monitoring. Post-production: sound effects layering, noise gate/EQ, mixing, and audio export."
+        else:
+            phase_guidelines += "\nFocus on visual tasks. Pre-production: location scouting, storyboard mapping, set references. Production: filming/rendering, lens/shutter setup. Post-production: scene assembly, editing cuts, color grading, audio score mix."
+
         prompt = f"""
-        You are a Production Planner Agent in a film studio.
-        Based on the following script and storyboard, generate a structured production plan containing three phases: "Pre-Production", "Production", and "Post-Production".
+        You are a Production Planner Agent in a production studio.
+        Based on the following script and storyboard (if applicable), generate a structured production plan for a {production_type}.
         
         Title: {title}
         Script: {script}
         Storyboard: {storyboard_text}
+
+        Guidelines:
+        {phase_guidelines}
 
         Return a JSON object matching this schema:
         {{
@@ -24,7 +35,7 @@ class PlannerAgent:
               "name": "Pre-Production",
               "status": "complete",
               "items": [
-                "Detailed action item 1 (must relate to the script/storyboard)",
+                "Detailed action item 1 (must relate to the {production_type} format/script)",
                 "Detailed action item 2"
               ]
             }},

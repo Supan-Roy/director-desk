@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders } from 'react-icons/fi';
+import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm } from 'react-icons/fi';
 import { PiSparkle, PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
@@ -35,6 +35,20 @@ const qualities = [
 const orchestrationModes = [
   { id: 'fast', label: 'Fast Mode (Single-call)', value: 'fast' },
   { id: 'studio', label: 'Studio Mode (Multi-agent)', value: 'studio' },
+];
+
+const productionTypes = [
+  { id: 'Auto Detect', label: 'Auto Detect', value: 'Auto Detect' },
+  { id: 'Short Film', label: 'Short Film', value: 'Short Film' },
+  { id: 'Trailer', label: 'Trailer', value: 'Trailer' },
+  { id: 'Documentary', label: 'Documentary', value: 'Documentary' },
+  { id: 'Podcast', label: 'Podcast (Audio)', value: 'Podcast' },
+  { id: 'Drama', label: 'Drama', value: 'Drama' },
+  { id: 'Series Episode', label: 'Series Episode', value: 'Series Episode' },
+  { id: 'Educational Show', label: 'Educational Show', value: 'Educational Show' },
+  { id: 'Interview', label: 'Interview', value: 'Interview' },
+  { id: 'YouTube Video', label: 'YouTube Video', value: 'YouTube Video' },
+  { id: 'Audio Story', label: 'Audio Story (Audio)', value: 'Audio Story' },
 ];
 
 const detailedSuggestions = [
@@ -156,7 +170,14 @@ export default function HeroSection({
   const [focused, setFocused] = useState(false);
   const [orbAnimating, setOrbAnimating] = useState(false);
   
-  const { generate, loading, hasProject } = useProjectData();
+  const { generate, loading, hasProject, productionType: contextProductionType } = useProjectData();
+  const [selectedProdType, setSelectedProdType] = useState('Auto Detect');
+
+  useEffect(() => {
+    if (contextProductionType) {
+      setSelectedProdType(contextProductionType);
+    }
+  }, [contextProductionType]);
 
   useEffect(() => {
     if (focused) {
@@ -183,7 +204,7 @@ export default function HeroSection({
     const composedPrompt = `${prompt.trim()}\n[Aspect: ${selectedAspect}, Style: ${selectedStyle}, Motion: ${selectedCamera}, Quality: ${selectedQuality}]`;
     
     try {
-      await generate(composedPrompt, orchestrationMode);
+      await generate(composedPrompt, orchestrationMode, selectedProdType);
     } catch (err) {
       setErrorMsg(err.message);
     }
@@ -404,6 +425,15 @@ export default function HeroSection({
           {/* Row 2: Selectors & Initiate Production */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-1 relative z-10">
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* Production Type Selector */}
+              <CustomSelect
+                value={selectedProdType}
+                onChange={setSelectedProdType}
+                options={productionTypes}
+                icon={FiFilm}
+                disabled={loading}
+              />
+
               {/* Aspect Ratio Selector */}
               <CustomSelect
                 value={aspect}
