@@ -148,7 +148,7 @@ export default function HeroSection({
   setCamera,
 }) {
   const [quality, setQuality] = useState('high');
-  const [orchestrationMode, setOrchestrationMode] = useState('fast');
+  const [orchestrationMode, setOrchestrationMode] = useState('studio');
   const [errorMsg, setErrorMsg] = useState('');
   const { isDayMode } = useTheme();
   

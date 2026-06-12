@@ -1,4 +1,5 @@
 import os
+from typing import Generator
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -32,6 +33,30 @@ class QwenService:
         )
 
         return response.choices[0].message.content
+
+    def generate_text_stream(self, prompt: str) -> Generator[str, None, None]:
+
+        if not os.getenv("QWEN_API_KEY"):
+            raise RuntimeError(
+                "QWEN_API_KEY is not set. "
+                "Copy backend/.env.example to backend/.env and add your API key."
+            )
+
+        response = client.chat.completions.create(
+            model=os.getenv("QWEN_MODEL", "qwen-plus"),
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            stream=True
+        )
+
+        for chunk in response:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
 
 
 qwen_service = QwenService()

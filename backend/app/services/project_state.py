@@ -34,8 +34,8 @@ class ProjectState:
         self.agents = [
             AgentStatus("writer", "Writer Agent", "Script & Narrative", "✍️"),
             AgentStatus("storyboard", "Storyboard Agent", "Visual Planning", "🎨"),
+            AgentStatus("planner", "Production Planner", "Execution Strategy", "📋"),
             AgentStatus("critic", "Critic Agent", "Quality Review", "🔍"),
-            AgentStatus("editor", "Editor Agent", "Final Assembly", "🎬"),
         ]
 
     def reset(self):
@@ -49,6 +49,13 @@ class ProjectState:
         for agent in self.agents:
             agent.status = "waiting"
             agent.completed_at = None
+
+    def set_agent_status(self, agent_id: str, status: str, completed_at: Optional[str] = None):
+        for agent in self.agents:
+            if agent.id == agent_id:
+                agent.status = status
+                if completed_at:
+                    agent.completed_at = completed_at
 
     def set_generation_complete(
         self,
