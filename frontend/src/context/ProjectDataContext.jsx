@@ -6,6 +6,7 @@ import {
   getProductionPlan,
   generateStory,
   resetProject,
+  apiBaseUrl,
 } from '../services/apiClient'
 import { featuredProductions } from '../data/featuredProductions'
 
@@ -80,12 +81,104 @@ export function ProjectDataProvider({ children }) {
   const handleGenerate = async (prompt, mode = 'fast') => {
     setLoading(true)
     setError(null)
+    setHasProject(true)
+    setTitle("Analyzing Creative Concept...")
+    setScript("")
+    setStoryboard([])
+    setProductionPlan(null)
+    setAgents([
+      { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "active" },
+      { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "waiting" },
+      { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "waiting" },
+      { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "waiting" }
+    ])
+
     try {
-      await generateStory(prompt, mode)
-      // After generation, refetch ALL data from the single shared state
+      const response = await fetch(`${apiBaseUrl}/api/generate/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt, mode }),
+      })
+
+      if (!response.ok) {
+        const errText = await response.text()
+        throw new Error(errText || 'Failed to start stream')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder('utf-8')
+      let buffer = ''
+
+      const processEvent = (event) => {
+        if (event.type === 'title') {
+          setTitle(event.data)
+        } else if (event.type === 'script_chunk') {
+          setScript((prev) => prev + event.data)
+        } else if (event.type === 'storyboard') {
+          setStoryboard(event.data)
+          setAgents([
+            { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "active" },
+            { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "waiting" },
+            { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "waiting" }
+          ])
+        } else if (event.type === 'production_plan') {
+          setProductionPlan(event.data)
+          setAgents([
+            { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "just now" },
+            { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
+            { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "active" }
+          ])
+        } else if (event.type === 'complete') {
+          setAgents([
+            { id: "writer", name: "Writer Agent", role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "just now" },
+            { id: "planner", name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
+            { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "completed", completedAt: "just now" }
+          ])
+        } else if (event.type === 'error') {
+          throw new Error(event.message || 'Stream error')
+        }
+      }
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(trimmed.substring(6))
+              processEvent(event)
+            } catch (err) {
+              console.error('Error parsing streaming event:', err)
+            }
+          }
+        }
+      }
+
+      if (buffer.trim().startsWith('data: ')) {
+        try {
+          const event = JSON.parse(buffer.trim().substring(6))
+          processEvent(event)
+        } catch (err) {
+          console.error('Error parsing trailing streaming event:', err)
+        }
+      }
+
       await fetchAll()
     } catch (err) {
-      const message = err.response?.data?.detail || err.message || 'Generation failed'
+      console.error("Streaming generation failed:", err)
+      const message = err.message || 'Generation failed'
       setError(message)
       throw new Error(message)
     } finally {

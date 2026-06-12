@@ -217,7 +217,7 @@ export default function Dashboard() {
                 <WorkflowTimeline />
 
                 {/* Production Workspace: Screenplays, Storyboard slides, & timeline details */}
-                {hasProject && (
+                {(hasProject || loading) && (
                   <div className="workspace-reveal flex flex-col lg:flex-row gap-8 mt-10">
                     {/* Screenplay & Storyboards tabbed panels */}
                     <div className="min-w-0 flex-1">
