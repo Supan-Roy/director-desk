@@ -80,7 +80,7 @@ export function ProjectDataProvider({ children }) {
     }
   }, [fetchProjectStatus, fetchScript, fetchStoryboard, fetchProductionPlan])
 
-  const handleGenerate = async (prompt, mode = 'fast', prodType = 'Auto Detect') => {
+  const handleGenerate = async (prompt, mode = 'fast', prodType = 'Auto Detect', files = []) => {
     setLoading(true)
     setError(null)
     setHasProject(true)
@@ -102,7 +102,7 @@ export function ProjectDataProvider({ children }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt, mode, production_type: prodType }),
+        body: JSON.stringify({ prompt, mode, production_type: prodType, files }),
       })
 
       if (!response.ok) {
