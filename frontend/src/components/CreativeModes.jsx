@@ -1,16 +1,45 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FiUsers, FiLayers, FiCpu, FiMoon, FiGlobe, FiCamera, FiWind } from 'react-icons/fi';
 import { useTheme } from '../context/ThemeContext';
+
+function VideoThumbnail({ src, isHovered }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isHovered) {
+      video.play().catch((err) => {
+        // Handle interruptions silently (e.g. user hover transitions quickly)
+      });
+    } else {
+      video.pause();
+      video.currentTime = 0;
+    }
+  }, [isHovered]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      muted
+      loop
+      playsInline
+      className="h-full w-full object-cover filter contrast-[1.05]"
+    />
+  );
+}
 
 const creativeTemplates = [
   {
     id: 'cyberpunk',
     icon: FiCpu,
-    title: 'Cyberpunk Neo',
+    title: 'Neon Syndicate',
     productionType: 'Full CGI Sci-Fi',
     description: 'Neon, rain, future cityscapes',
     prompt: 'A sleek spinner vehicle hovering through neon-drenched Tokyo skyscrapers, deep purple atmospheric smoke, cyberpunk aesthetic.',
     image: '/images/cyberpunk_template.png',
+    video: '/videos/robot_transform.mp4',
     accent: '#8b5cf6',
     aspect: '2.39-1',
     camera: 'pan',
@@ -27,6 +56,7 @@ const creativeTemplates = [
     description: 'Mystery, shadows, classic noir',
     prompt: 'A detective walking down a dark alley under a glowing streetlamp in heavy rain, high-contrast film noir aesthetic.',
     image: '/images/noir_template.png',
+    video: '/videos/cinematic_noir.mp4',
     accent: '#ffffff', // changed to white for monochrome noir dot in reference image
     aspect: '2.39-1',
     camera: 'static',
@@ -43,6 +73,7 @@ const creativeTemplates = [
     description: 'Cosmic, epic, otherworldly',
     prompt: 'An explorer in an advanced space suit looks at a giant glowing orange nebula, cosmic flares, epic sci-fi.',
     image: '/images/space_template.png',
+    video: '/videos/space_odyssey.mp4',
     accent: '#5b6cf6', // blue-purple dot in reference image
     aspect: '2.39-1',
     camera: 'crane',
@@ -59,6 +90,7 @@ const creativeTemplates = [
     description: 'Real stories, real people',
     prompt: 'A weathered fisherman working on his boat deck in early morning mist, natural key lighting, realistic documentary.',
     image: '/images/documentary_template.png',
+    video: '/videos/documentary_realism.mp4',
     accent: '#f59e0b',
     aspect: '16-9',
     camera: 'zoom',
@@ -70,17 +102,18 @@ const creativeTemplates = [
   {
     id: 'fantasy',
     icon: FiWind,
-    title: 'Fantasy Realic',
+    title: 'Sci-Fi Metropolis',
     productionType: 'Magic Realism',
-    description: 'Magic, adventure, wonder',
-    prompt: 'An ancient mossy stone portal in an enchanted glowing forest, magical wisps, volumetric lighting, fantasy realism.',
+    description: 'Skyscrapers, flying vehicles, future urbanism',
+    prompt: 'A sprawling high-tech sci-fi city with majestic skyscrapers, floating transit lines, neon-lit skybridges, cinematic lighting.',
     image: '/images/fantasy_template.png',
+    video: '/videos/sci-fi_city.mp4',
     accent: '#10b981',
     aspect: '2.39-1',
     camera: 'zoom',
     agents: 4,
     scenes: 28,
-    tag: 'Fantasy Real',
+    tag: 'Metropolis',
     duration: 'Est. Render: 2.2m'
   },
 ];
@@ -122,11 +155,15 @@ export default function CreativeModes({ onSelectTemplate }) {
 
             {/* Template Visual Header */}
             <div className="relative h-[125px] w-full overflow-hidden bg-surface-900 shrink-0">
-              <img
-                src={tmpl.image}
-                alt={tmpl.title}
-                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108 filter contrast-[1.05]"
-              />
+              {tmpl.video ? (
+                <VideoThumbnail src={tmpl.video} isHovered={hoveredCard === tmpl.id} />
+              ) : (
+                <img
+                  src={tmpl.image}
+                  alt={tmpl.title}
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108 filter contrast-[1.05]"
+                />
+              )}
               {/* Category Icon */}
               <div 
                 className={`absolute left-2.5 top-2.5 z-10 flex h-6.5 w-6.5 items-center justify-center rounded-lg border transition-colors ${
