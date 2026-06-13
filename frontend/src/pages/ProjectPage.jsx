@@ -11,6 +11,7 @@ import Sidebar from '../components/Sidebar';
 import { useTheme } from '../context/ThemeContext';
 import { useProjectData } from '../hooks/useProjectData';
 import { decodeProjectRouteId } from '../utils/hashids';
+import Footer from '../components/Footer';
 
 // ── Reusable script renderer (copied from TabbedContent) ──────────────────
 function ScriptView({ script, onSave }) {
@@ -547,6 +548,7 @@ export default function ProjectPage() {
                 )}
               </div>
             )}
+            <Footer />
           </div>
 
           {/* Modify panel — slides in from the right */}

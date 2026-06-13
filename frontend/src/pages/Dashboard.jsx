@@ -10,6 +10,7 @@ import AgentActivityPanel from '../components/AgentActivityPanel';
 import CreditUsageCard from '../components/CreditUsageCard';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
+import Footer from '../components/Footer';
 
 // Canvas-based drifting dust spec particles in spotlight beams
 function DustParticles() {
@@ -235,6 +236,7 @@ export default function Dashboard() {
             )}
           </div>
         </main>
+        <Footer />
       </div>
     </div>
   );
