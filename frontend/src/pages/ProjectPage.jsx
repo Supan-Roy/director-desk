@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import {
   FiArrowLeft, FiEdit3, FiSend, FiX, FiFileText,
-  FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck
+  FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck, FiShare2
 } from 'react-icons/fi';
 import { PiSparkle } from 'react-icons/pi';
 import { getProjectById, apiBaseUrl, updateProjectScript } from '../services/apiClient';
@@ -379,6 +379,8 @@ export default function ProjectPage() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('script');
   const [modifyOpen, setModifyOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -452,6 +454,21 @@ export default function ProjectPage() {
           )}
 
           <div className="ml-auto flex items-center gap-2">
+            {/* Share button */}
+            {project && (
+              <button
+                onClick={() => setShareOpen(true)}
+                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-200 border ${
+                  d
+                    ? 'border-emerald-600/30 text-emerald-600 hover:bg-emerald-600/10 bg-emerald-600/5'
+                    : 'border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/10 bg-emerald-500/5'
+                }`}
+              >
+                <FiShare2 size={12} />
+                <span>Share</span>
+              </button>
+            )}
+
             {/* Modify button */}
             <button
               onClick={() => setModifyOpen(o => !o)}
@@ -544,6 +561,107 @@ export default function ProjectPage() {
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      {shareOpen && project && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+          {/* Backdrop overlay */}
+          <div 
+            onClick={() => setShareOpen(false)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+          />
+
+          {/* Modal Card */}
+          <div className={`relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-2xl transition-all duration-300 scale-100 flex flex-col gap-4 animate-scale-in ${
+            d 
+              ? 'bg-white/95 border-neutral-200 text-neutral-800' 
+              : 'bg-[#0b0b14]/95 border-white/[0.08] text-white shadow-black/80'
+          }`}>
+            
+            {/* Header */}
+            <div className={`flex items-center justify-between border-b pb-3 mb-1 transition-colors ${
+              d ? 'border-neutral-200' : 'border-white/[0.06]'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <div className={`flex h-6.5 w-6.5 items-center justify-center rounded-lg border ${
+                  d ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                }`}>
+                  <FiShare2 size={12} />
+                </div>
+                <h3 className="text-xs font-bold tracking-widest uppercase">Share Production</h3>
+              </div>
+              <button 
+                onClick={() => setShareOpen(false)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  d ? 'hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600' : 'hover:bg-white/[0.06] text-surface-500 hover:text-surface-300'
+                }`}
+              >
+                <FiX size={14} />
+              </button>
+            </div>
+
+            {/* Description */}
+            <p className={`text-[12px] leading-relaxed mb-1 ${d ? 'text-neutral-500' : 'text-surface-400'}`}>
+              Anyone with this public link can view this production, including the screenplay, storyboard, and plan.
+            </p>
+
+            {/* Link Copy Field */}
+            <div className={`flex items-center gap-2 border rounded-xl p-2.5 transition-all duration-300 ${
+              d ? 'bg-neutral-50 border-neutral-200/80' : 'bg-white/[0.02] border-white/[0.08]'
+            }`}>
+              <input 
+                type="text" 
+                readOnly
+                value={window.location.href}
+                className={`flex-1 bg-transparent border-0 outline-none text-[11px] font-mono leading-none tracking-tight select-all focus:ring-0 ${
+                  d ? 'text-neutral-600' : 'text-surface-300'
+                }`}
+              />
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                }}
+                className={`shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all duration-150 ${
+                  linkCopied 
+                    ? 'bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]' 
+                    : d 
+                      ? 'bg-neutral-200/60 text-neutral-700 hover:bg-neutral-200' 
+                      : 'bg-white/[0.05] text-surface-300 hover:bg-white/[0.08] hover:text-white'
+                }`}
+              >
+                {linkCopied ? (
+                  <>
+                    <FiCheck size={10} />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <FiClipboard size={10} />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Footer buttons */}
+            <div className="mt-2 flex justify-end">
+              <button 
+                onClick={() => setShareOpen(false)}
+                className={`px-4 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-wider transition-all ${
+                  d 
+                    ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700' 
+                    : 'bg-white/[0.03] border border-white/[0.06] text-surface-300 hover:bg-white/[0.06] hover:text-white'
+                }`}
+              >
+                Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
