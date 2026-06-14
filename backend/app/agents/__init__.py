@@ -1,4 +1,4 @@
-from app.agents.editor_agent import EditorAgent
+from app.agents.editor_agent import EditorAgent, editor_agent
 from app.agents.planner_agent import PlannerAgent, planner_agent
 from app.agents.storyboard_agent import StoryboardAgent, storyboard_agent
 from app.agents.writer_agent import WriterAgent, writer_agent
@@ -7,6 +7,7 @@ from app.agents.showrunner_agent import ShowrunnerAgent, showrunner_agent
 
 __all__ = [
     'EditorAgent',
+    'editor_agent',
     'PlannerAgent',
     'planner_agent',
     'StoryboardAgent',

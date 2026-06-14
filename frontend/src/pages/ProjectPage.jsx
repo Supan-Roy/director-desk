@@ -3,10 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import {
   FiArrowLeft, FiEdit3, FiSend, FiX, FiFileText,
-  FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck, FiShare2
+  FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck, FiShare2,
+  FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar
 } from 'react-icons/fi';
 import { PiSparkle } from 'react-icons/pi';
-import { getProjectById, apiBaseUrl, updateProjectScript } from '../services/apiClient';
+import { 
+  getProjectById, apiBaseUrl, updateProjectScript,
+  updateProjectApproval, refineProjectScript 
+} from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
 import { useTheme } from '../context/ThemeContext';
 import { useProjectData } from '../hooks/useProjectData';
@@ -14,17 +18,21 @@ import { decodeProjectRouteId } from '../utils/hashids';
 import Footer from '../components/Footer';
 
 // ── Reusable script renderer (copied from TabbedContent) ──────────────────
-function ScriptView({ script, onSave }) {
+function ScriptView({ script, originalScript, onSave }) {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(script || '');
   const [copied, setCopied] = useState(false);
+  const [viewVersion, setViewVersion] = useState('refined');
 
   useEffect(() => {
     setText(script || '');
   }, [script]);
 
+  const hasMultipleVersions = originalScript && script && originalScript !== script;
+  const activeText = viewVersion === 'original' ? (originalScript || script) : text;
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(activeText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -41,39 +49,75 @@ function ScriptView({ script, onSave }) {
       No script available.
     </div>
   );
-
-  const lines = text.split('\n');
+ 
+  const lines = activeText.split('\n');
   return (
     <div className="space-y-4">
-      {/* Edit/Copy Action Bar */}
-      <div className="flex justify-end gap-2 border-b border-white/[0.04] pb-3 mb-4">
-        {isEditing ? (
-          <button
-            onClick={handleSave}
-            title="Save script"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-accent text-white hover:bg-accent/90 transition-all"
-          >
-            <FiCheck size={12} />
-            <span>Save</span>
-          </button>
+      {/* Version and Edit/Copy Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.04] pb-3 mb-4">
+        {hasMultipleVersions ? (
+          <div className="flex gap-1 rounded-lg bg-white/[0.02] p-0.5 border border-white/[0.04] text-[9px] uppercase font-bold tracking-wider select-none">
+            <button
+              onClick={() => { setViewVersion('original'); setIsEditing(false); }}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                viewVersion === 'original'
+                  ? 'bg-white/[0.06] text-white'
+                  : 'text-surface-500 hover:text-surface-300'
+              }`}
+            >
+              Original Draft
+            </button>
+            <button
+              onClick={() => { setViewVersion('refined'); }}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                viewVersion === 'refined'
+                  ? 'bg-accent/20 text-accent font-semibold'
+                  : 'text-surface-500 hover:text-surface-300'
+              }`}
+            >
+              Refined Draft
+            </button>
+          </div>
         ) : (
+          <div />
+        )}
+
+        <div className="flex gap-2">
+          {viewVersion === 'refined' && (
+            isEditing ? (
+              <button
+                onClick={handleSave}
+                title="Save script"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-accent text-white hover:bg-accent/90 transition-all"
+              >
+                <FiCheck size={12} />
+                <span>Save</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                title="Edit script manually"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
+              >
+                <FiEdit3 size={12} />
+                <span>Edit</span>
+              </button>
+            )
+          )}
+          {viewVersion === 'original' && (
+            <span className="text-[10px] text-surface-500 italic flex items-center pr-1.5 select-none">
+              Original version is read-only
+            </span>
+          )}
           <button
-            onClick={() => setIsEditing(true)}
-            title="Edit script manually"
+            onClick={handleCopy}
+            title="Copy full script"
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
           >
-            <FiEdit3 size={12} />
-            <span>Edit</span>
+            {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiClipboard size={12} />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
-        )}
-        <button
-          onClick={handleCopy}
-          title="Copy full script"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
-        >
-          {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiClipboard size={12} />}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
-        </button>
+        </div>
       </div>
 
       {isEditing ? (
@@ -344,11 +388,139 @@ The user wants to modify it. Apply their request and return ONLY the updated scr
   );
 }
 
+function ReviewView({ criticReview, approved, onApprove, onRefine, loading }) {
+  if (!criticReview) {
+    return (
+      <div className="flex min-h-[260px] items-center justify-center text-surface-600 text-sm">
+        Review will appear after the Critic Agent completes its review.
+      </div>
+    );
+  }
+
+  const { score, strengths = [], weaknesses = [], suggestions = [] } = criticReview;
+
+  return (
+    <div className="space-y-6">
+      {/* Score Card */}
+      <div className="glass-panel rounded-2xl p-5 border border-white/[0.04] bg-surface-950/20 flex items-center justify-between gap-6 flex-wrap">
+        <div className="space-y-1">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-surface-200">Review Report Summary</h4>
+          <p className="text-[11px] text-surface-500">Actionable assessment of structure, pacing, clarity, and visual alignment.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-[9px] uppercase font-bold tracking-widest text-surface-500">Overall Score</div>
+          <div className="flex items-center justify-center w-12 h-12 rounded-full border border-accent/25 bg-accent/5 text-lg font-extrabold text-accent shadow-[0_0_15px_rgba(139,92,246,0.15)] select-none">
+            {score}/10
+          </div>
+        </div>
+      </div>
+
+      {/* Review Details Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Strengths */}
+        <div className="glass-panel rounded-xl p-5 border border-emerald-500/10 bg-emerald-500/[0.01]">
+          <div className="flex items-center gap-2 mb-3 text-emerald-400">
+            <FiCheckSquare size={13} />
+            <h5 className="text-[10px] font-bold uppercase tracking-wider">Strengths</h5>
+          </div>
+          <ul className="space-y-2">
+            {strengths.map((str, i) => (
+              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed">
+                <span className="text-emerald-400 mt-1 shrink-0">•</span>
+                <span>{str}</span>
+              </li>
+            ))}
+            {strengths.length === 0 && (
+              <li className="text-[12px] text-surface-500 italic">No strengths listed.</li>
+            )}
+          </ul>
+        </div>
+
+        {/* Weaknesses */}
+        <div className="glass-panel rounded-xl p-5 border border-rose-500/10 bg-rose-500/[0.01]">
+          <div className="flex items-center gap-2 mb-3 text-rose-400">
+            <FiAlertCircle size={13} />
+            <h5 className="text-[10px] font-bold uppercase tracking-wider">Weaknesses</h5>
+          </div>
+          <ul className="space-y-2">
+            {weaknesses.map((wk, i) => (
+              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed">
+                <span className="text-rose-400 mt-1 shrink-0">•</span>
+                <span>{wk}</span>
+              </li>
+            ))}
+            {weaknesses.length === 0 && (
+              <li className="text-[12px] text-surface-500 italic">No weaknesses listed.</li>
+            )}
+          </ul>
+        </div>
+      </div>
+
+      {/* Suggestions */}
+      <div className="glass-panel rounded-xl p-5 border border-white/[0.03] bg-surface-950/10">
+        <div className="flex items-center gap-2 mb-3 text-accent">
+          <FiTrendingUp size={13} />
+          <h5 className="text-[10px] font-bold uppercase tracking-wider">Refinement Suggestions</h5>
+        </div>
+        <ul className="space-y-2.5">
+          {suggestions.map((sug, i) => (
+            <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed">
+              <span className="text-accent font-semibold mt-0.5 shrink-0">{i+1}.</span>
+              <span>{sug}</span>
+            </li>
+          ))}
+          {suggestions.length === 0 && (
+            <li className="text-[12px] text-surface-500 italic">No suggestions listed.</li>
+          )}
+        </ul>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="border-t border-white/[0.04] pt-4">
+        {approved ? (
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-400">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15">
+                <FiAward size={15} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold uppercase tracking-wider">Production Approved</span>
+                <span className="text-[10px] text-emerald-500/70">Ready for visual asset and video generation pipelines.</span>
+              </div>
+            </div>
+            <span className="text-xs font-bold bg-emerald-500/10 px-2.5 py-1 rounded-md uppercase tracking-wider select-none">✓ Ready</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onApprove}
+              disabled={loading}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-wider py-3 shadow-[0_0_16px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300 disabled:opacity-40"
+            >
+              <FiCheckSquare size={13} />
+              <span>Continue Production</span>
+            </button>
+            <button
+              onClick={onRefine}
+              disabled={loading}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-accent/25 hover:border-accent/40 bg-accent/5 hover:bg-accent/10 text-accent font-semibold text-xs uppercase tracking-wider py-3 shadow-[0_0_16px_rgba(139,92,246,0.05)] hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all duration-300 disabled:opacity-40"
+            >
+              <PiSparkle size={13} className={loading ? "animate-spin" : ""} />
+              <span>{loading ? "Refining Draft..." : "Refine Draft"}</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Project Page ─────────────────────────────────────────────────────
 const TABS = [
   { id: 'script',     label: 'Script',     icon: FiFileText },
   { id: 'storyboard', label: 'Storyboard', icon: FiImage },
   { id: 'plan',       label: 'Plan',       icon: FiClipboard },
+  { id: 'review',     label: 'Review',     icon: FiStar },
 ];
 
 function typeIcon(pt) {
@@ -408,6 +580,33 @@ export default function ProjectPage() {
     } catch (err) {
       console.error('Failed to save script:', err);
       alert('Failed to save script: ' + err.message);
+    }
+  };
+
+  const handleApproveProject = async () => {
+    try {
+      const numericId = decodeProjectRouteId(id);
+      const updated = await updateProjectApproval(numericId, true);
+      setProject(updated);
+      fetchSavedProjects();
+    } catch (err) {
+      console.error('Failed to approve project:', err);
+      alert('Failed to approve project: ' + err.message);
+    }
+  };
+
+  const handleRefineProject = async () => {
+    setLoading(true);
+    try {
+      const numericId = decodeProjectRouteId(id);
+      const updated = await refineProjectScript(numericId);
+      setProject(updated);
+      fetchSavedProjects();
+    } catch (err) {
+      console.error('Failed to refine script:', err);
+      alert('Failed to refine script: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -532,9 +731,24 @@ export default function ProjectPage() {
 
                 {/* Tab content */}
                 <div className="glass-panel rounded-xl p-6 bg-surface-950/45 border border-white/[0.03]">
-                  {activeTab === 'script' && <ScriptView script={project.script} onSave={handleSaveScript} />}
+                  {activeTab === 'script' && (
+                    <ScriptView 
+                      script={project.script} 
+                      originalScript={project.original_script} 
+                      onSave={handleSaveScript} 
+                    />
+                  )}
                   {activeTab === 'storyboard' && <StoryboardView storyboard={project.storyboard} productionType={project.production_type} />}
                   {activeTab === 'plan' && <PlanView plan={project.production_plan} />}
+                  {activeTab === 'review' && (
+                    <ReviewView 
+                      criticReview={project.critic_review} 
+                      approved={project.approved} 
+                      onApprove={handleApproveProject} 
+                      onRefine={handleRefineProject} 
+                      loading={loading} 
+                    />
+                  )}
                 </div>
 
                 {/* Prompt used */}

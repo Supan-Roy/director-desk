@@ -26,8 +26,11 @@ class ProjectService:
         production_type: Optional[str],
         prompt: Optional[str],
         script: Optional[str],
+        original_script: Optional[str] = None,
         storyboard: Optional[list],
         production_plan: Optional[dict],
+        critic_review: Optional[dict] = None,
+        approved: bool = False,
     ) -> Project:
         """
         Persist a completed generation as a Project record.
@@ -40,8 +43,11 @@ class ProjectService:
             production_type=production_type,
             prompt=prompt,
             script=script,
+            original_script=original_script or script,
             storyboard=storyboard,
             production_plan=production_plan,
+            critic_review=critic_review,
+            approved=approved,
         )
         logger.info(f"Project saved: id={project.id}")
         return project
@@ -53,13 +59,17 @@ class ProjectService:
 
     def get_project(self, db: Session, project_id: int) -> ProjectDetail:
         """Return a full project record. Raises 404 if not found."""
-        project = project_repository.get_by_id(db, project_id)
+        project = self.get_project_model(db, project_id)
         if not project:
             raise HTTPException(
                 status_code=404,
                 detail=f"Project {project_id} not found.",
             )
         return ProjectDetail.model_validate(project)
+
+    def get_project_model(self, db: Session, project_id: int) -> Optional[Project]:
+        """Return the raw Project database model."""
+        return project_repository.get_by_id(db, project_id)
 
     def delete_project(self, db: Session, project_id: int) -> None:
         """Delete a project. Raises 404 if not found."""
@@ -70,9 +80,9 @@ class ProjectService:
                 detail=f"Project {project_id} not found.",
             )
 
-    def update_project(self, db: Session, project_id: int, script: str) -> ProjectDetail:
-        """Update a project's script. Raises 404 if not found."""
-        project = project_repository.update(db, project_id, script=script)
+    def update_project(self, db: Session, project_id: int, **kwargs) -> ProjectDetail:
+        """Update a project's fields dynamically. Raises 404 if not found."""
+        project = project_repository.update(db, project_id, **kwargs)
         if not project:
             raise HTTPException(
                 status_code=404,

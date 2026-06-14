@@ -34,6 +34,10 @@ def get_project_status():
         "title": project_state.title,
         "agents": agents,
         "productionType": project_state.production_type,
+        "criticReview": project_state.critic_review,
+        "originalScript": project_state.original_script,
+        "script": project_state.script,
+        "approved": project_state.approved,
     }
 
 
@@ -67,11 +71,60 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
 
 @router.patch("/projects/{project_id}", response_model=ProjectDetail)
 def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db)):
-    """Update a saved project's fields (like script)."""
+    """Update a saved project's fields (like script or approval)."""
     # Check if the in-memory state is this project, and update it as well
     if project_state.has_project and project_state.id == project_id:
         if payload.script is not None:
             project_state.script = payload.script
+        if payload.original_script is not None:
+            project_state.original_script = payload.original_script
+        if payload.critic_review is not None:
+            project_state.critic_review = payload.critic_review
+        if payload.approved is not None:
+            project_state.approved = payload.approved
 
-    return project_service.update_project(db, project_id, script=payload.script)
+    update_dict = payload.model_dump(exclude_unset=True)
+    return project_service.update_project(db, project_id, **update_dict)
+
+
+@router.post("/projects/{project_id}/refine", response_model=ProjectDetail)
+def refine_project_endpoint(project_id: int, db: Session = Depends(get_db)):
+    """Use Editor Agent to refine a project's script based on its critic review."""
+    project = project_service.get_project_model(db, project_id)
+    if not project:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    if not project.critic_review:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Project does not have a critic review yet")
+        
+    # Run the Editor Agent
+    from app.agents.editor_agent import editor_agent
+    original_script = project.original_script or project.script or ""
+    refined_script = editor_agent.refine_script(original_script, project.critic_review)
+    
+    # Save the refined script in the database, leaving original_script untouched
+    updated_project = project_service.update_project(db, project_id, script=refined_script, approved=False)
+    
+    # Sync with in-memory project_state if active
+    if project_state.has_project and project_state.id == project_id:
+        project_state.script = refined_script
+        project_state.approved = False
+        
+    return updated_project
+
+
+@router.post("/projects/refine-raw")
+def refine_raw_script(payload: dict):
+    """Refine a raw script based on a raw critic review body."""
+    script = payload.get("script", "")
+    critic_review = payload.get("critic_review", {})
+    if not script or not critic_review:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="script and critic_review are required")
+        
+    from app.agents.editor_agent import editor_agent
+    refined_script = editor_agent.refine_script(script, critic_review)
+    return {"refined_script": refined_script}
 

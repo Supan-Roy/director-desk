@@ -14,3 +14,4 @@ class GenerateResponse(BaseModel):
     storyboard: List[StoryboardScene]
     production_plan: Optional[Dict[str, Any]] = None
     critic_notes: Optional[List[str]] = None
+    critic_review: Optional[Dict[str, Any]] = None

@@ -12,6 +12,7 @@ class ProjectSummary(BaseModel):
     id: int
     title: str
     production_type: Optional[str] = None
+    approved: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -25,6 +26,9 @@ class ProjectDetail(BaseModel):
     production_type: Optional[str] = None
     prompt: Optional[str] = None
     script: Optional[str] = None
+    original_script: Optional[str] = None
+    critic_review: Optional[Dict[str, Any]] = None
+    approved: bool = False
     storyboard: Optional[List[Dict[str, Any]]] = None
     production_plan: Optional[Dict[str, Any]] = None
     created_at: datetime
@@ -36,4 +40,7 @@ class ProjectDetail(BaseModel):
 class ProjectUpdate(BaseModel):
     """Payload to update fields of a saved project."""
     script: Optional[str] = None
+    original_script: Optional[str] = None
+    critic_review: Optional[Dict[str, Any]] = None
+    approved: Optional[bool] = None
 

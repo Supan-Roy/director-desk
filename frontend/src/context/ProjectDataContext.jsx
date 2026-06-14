@@ -12,6 +12,9 @@ import {
   deleteProject,
   updateProjectScript,
   apiClient,
+  updateProjectApproval,
+  refineProjectScript,
+  refineRawScript,
 } from '../services/apiClient'
 import { featuredProductions } from '../data/featuredProductions'
 
@@ -27,6 +30,9 @@ export function ProjectDataProvider({ children }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [productionType, setProductionType] = useState('Auto Detect')
+  const [criticReview, setCriticReview] = useState(null)
+  const [originalScript, setOriginalScript] = useState('')
+  const [approved, setApproved] = useState(false)
 
   // ── Saved projects (sidebar list) ──────────────────────────────────────
   const [savedProjects, setSavedProjects] = useState([])
@@ -58,6 +64,9 @@ export function ProjectDataProvider({ children }) {
       setProductionPlan(project.production_plan || null)
       setProductionType(project.production_type || 'Auto Detect')
       setActiveProjectId(id)
+      setCriticReview(project.critic_review || null)
+      setOriginalScript(project.original_script || project.script || '')
+      setApproved(project.approved || false)
       // Show agents as all-completed since this is a restored session
       setAgents([
         { id: 'writer',     name: 'Writer Agent',       role: 'Script & Narrative',  icon: '✍️', status: 'completed', completedAt: 'saved' },
@@ -104,6 +113,9 @@ export function ProjectDataProvider({ children }) {
       if (data.id) {
         setActiveProjectId(data.id)
       }
+      setCriticReview(data.criticReview || null)
+      setOriginalScript(data.originalScript || '')
+      setApproved(data.approved || false)
     } catch (err) {
       setError(err.message)
     }
@@ -165,6 +177,9 @@ export function ProjectDataProvider({ children }) {
     setStoryboard([])
     setProductionPlan(null)
     setProductionType(prodType)
+    setCriticReview(null)
+    setOriginalScript('')
+    setApproved(false)
     setAgents([
       { id: "writer",     name: "Writer Agent",       role: "Script & Narrative", icon: "✍️", status: "active" },
       { id: "storyboard", name: "Storyboard Agent",   role: "Visual Planning",    icon: "🎨", status: "waiting" },
@@ -214,6 +229,8 @@ export function ProjectDataProvider({ children }) {
             { id: "planner",    name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
             { id: "critic",     name: "Critic Agent",       role: "Quality Review",     icon: "🔍", status: "active" }
           ])
+        } else if (event.type === 'critic_review') {
+          setCriticReview(event.data)
         } else if (event.type === 'complete') {
           setAgents([
             { id: "writer",     name: "Writer Agent",       role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
@@ -303,6 +320,9 @@ export function ProjectDataProvider({ children }) {
       setAgents(prod.agents);
       setProductionType(prod.productionType || 'Short Film');
       setActiveProjectId(null);
+      setCriticReview(prod.criticReview || null);
+      setOriginalScript(prod.script || '');
+      setApproved(prod.approved || false);
     }
   }, []);
 
@@ -334,6 +354,51 @@ export function ProjectDataProvider({ children }) {
     fetchSavedProjects()
   }, [fetchAll, fetchSavedProjects])
 
+  // Approve the current project
+  const approveProject = useCallback(async () => {
+    setApproved(true)
+    if (activeProjectId) {
+      try {
+        await updateProjectApproval(activeProjectId, true)
+        fetchSavedProjects()
+      } catch (err) {
+        console.error('Failed to approve project in database:', err)
+      }
+    }
+  }, [activeProjectId, fetchSavedProjects])
+
+  // Refine the current script based on review suggestions
+  const refineProject = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      let refinedData;
+      if (activeProjectId) {
+        // Run Editor Agent on DB project
+        refinedData = await refineProjectScript(activeProjectId)
+        setScript(refinedData.script)
+        setOriginalScript(refinedData.original_script)
+        setApproved(refinedData.approved)
+        setCriticReview(refinedData.critic_review)
+      } else {
+        // Run Editor Agent on raw script in memory (e.g. mock/featured data)
+        refinedData = await refineRawScript(script, criticReview)
+        setScript(refinedData.refined_script)
+        // Keep original script as the current script before refinement
+        if (!originalScript) {
+          setOriginalScript(script)
+        }
+        setApproved(false)
+      }
+      fetchSavedProjects()
+    } catch (err) {
+      console.error('Failed to refine script:', err)
+      setError(err.message || 'Failed to refine script')
+    } finally {
+      setLoading(false)
+    }
+  }, [activeProjectId, script, criticReview, originalScript, fetchSavedProjects])
+
   const value = {
     hasProject,
     title,
@@ -344,6 +409,9 @@ export function ProjectDataProvider({ children }) {
     loading,
     error,
     productionType,
+    criticReview,
+    originalScript,
+    approved,
     // Saved projects
     savedProjects,
     projectsLoading,
@@ -357,6 +425,8 @@ export function ProjectDataProvider({ children }) {
     removeSavedProject,
     fetchSavedProjects,
     updateScript,
+    approveProject,
+    refineProject,
   }
 
   return (

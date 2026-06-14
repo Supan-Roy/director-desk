@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { marked } from 'marked';
-import { FiFileText, FiImage, FiClipboard, FiEdit3, FiCheck } from 'react-icons/fi';
+import { 
+  FiFileText, FiImage, FiClipboard, FiEdit3, FiCheck,
+  FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar
+} from 'react-icons/fi';
+import { PiSparkle } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useEffect } from 'react';
 
@@ -8,20 +12,25 @@ const tabs = [
   { id: 'script', label: 'Script', icon: FiFileText },
   { id: 'storyboard', label: 'Storyboard', icon: FiImage },
   { id: 'plan', label: 'Plan', icon: FiClipboard },
+  { id: 'review', label: 'Review', icon: FiStar },
 ];
 
 function ScriptTab({ script }) {
-  const { updateScript } = useProjectData();
+  const { updateScript, originalScript } = useProjectData();
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(script || '');
   const [copied, setCopied] = useState(false);
+  const [viewVersion, setViewVersion] = useState('refined');
 
   useEffect(() => {
     setText(script || '');
   }, [script]);
 
+  const hasMultipleVersions = originalScript && script && originalScript !== script;
+  const activeText = viewVersion === 'original' ? (originalScript || script) : text;
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(activeText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -145,35 +154,71 @@ function ScriptTab({ script }) {
 
   return (
     <div className="glass-panel rounded-xl p-8 bg-surface-950/45 border border-white/[0.03] screenplay-prose flex flex-col gap-4">
-      {/* Edit/Copy Action Bar */}
-      <div className="flex justify-end gap-2 border-b border-white/[0.04] pb-3 mb-2">
-        {isEditing ? (
-          <button
-            onClick={handleSave}
-            title="Save script"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-accent text-white hover:bg-accent/90 transition-all"
-          >
-            <FiCheck size={12} />
-            <span>Save</span>
-          </button>
+      {/* Version and Edit/Copy Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.04] pb-3 mb-2">
+        {hasMultipleVersions ? (
+          <div className="flex gap-1 rounded-lg bg-white/[0.02] p-0.5 border border-white/[0.04] text-[9px] uppercase font-bold tracking-wider select-none">
+            <button
+              onClick={() => { setViewVersion('original'); setIsEditing(false); }}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                viewVersion === 'original'
+                  ? 'bg-white/[0.06] text-white'
+                  : 'text-surface-500 hover:text-surface-300'
+              }`}
+            >
+              Original Draft
+            </button>
+            <button
+              onClick={() => { setViewVersion('refined'); }}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                viewVersion === 'refined'
+                  ? 'bg-accent/20 text-accent font-semibold'
+                  : 'text-surface-500 hover:text-surface-300'
+              }`}
+            >
+              Refined Draft
+            </button>
+          </div>
         ) : (
+          <div />
+        )}
+
+        <div className="flex gap-2">
+          {viewVersion === 'refined' && (
+            isEditing ? (
+              <button
+                onClick={handleSave}
+                title="Save script"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-accent text-white hover:bg-accent/90 transition-all"
+              >
+                <FiCheck size={12} />
+                <span>Save</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                title="Edit script manually"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
+              >
+                <FiEdit3 size={12} />
+                <span>Edit</span>
+              </button>
+            )
+          )}
+          {viewVersion === 'original' && (
+            <span className="text-[10px] text-surface-500 italic flex items-center pr-1.5 select-none">
+              Original version is read-only
+            </span>
+          )}
           <button
-            onClick={() => setIsEditing(true)}
-            title="Edit script manually"
+            onClick={handleCopy}
+            title="Copy full script"
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
           >
-            <FiEdit3 size={12} />
-            <span>Edit</span>
+            {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiClipboard size={12} />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
-        )}
-        <button
-          onClick={handleCopy}
-          title="Copy full script"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
-        >
-          {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiClipboard size={12} />}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
-        </button>
+        </div>
       </div>
 
       {isEditing ? (
@@ -185,7 +230,7 @@ function ScriptTab({ script }) {
         />
       ) : (
         <div className="prose prose-invert max-w-none select-text">
-          {renderScriptLines(text)}
+          {renderScriptLines(activeText)}
         </div>
       )}
     </div>
@@ -286,9 +331,146 @@ function ProductionPlanTab({ plan }) {
   );
 }
 
+function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
+  if (!criticReview) {
+    return (
+      <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
+        <p className="text-sm text-surface-600">Review will appear after the Critic Agent completes its review.</p>
+      </div>
+    );
+  }
+
+  const { score, strengths = [], weaknesses = [], suggestions = [] } = criticReview;
+
+  return (
+    <div className="space-y-6">
+      {/* Score and Header Card */}
+      <div className="glass-panel rounded-2xl p-6 bg-surface-950/45 border border-white/[0.04] flex items-center justify-between gap-6 flex-wrap">
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold tracking-wide text-white">Quality Review Report</h4>
+          <p className="text-[11.5px] text-surface-400">Actionable assessment focused on structure, pacing, clarity, and engagement.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] uppercase font-bold tracking-widest text-surface-500">Overall Score</div>
+          <div className="flex items-center justify-center w-14 h-14 rounded-full border border-accent/25 bg-accent/5 text-xl font-extrabold text-accent shadow-[0_0_15px_rgba(139,92,246,0.15)] select-none">
+            {score}/10
+          </div>
+        </div>
+      </div>
+
+      {/* Review Details Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Strengths */}
+        <div className="glass-panel rounded-xl p-5 border border-emerald-500/10 bg-emerald-500/[0.02]">
+          <div className="flex items-center gap-2 mb-3.5 text-emerald-400">
+            <FiCheckSquare size={14} />
+            <h5 className="text-[11px] font-bold uppercase tracking-wider">Strengths</h5>
+          </div>
+          <ul className="space-y-2.5">
+            {strengths.map((str, i) => (
+              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed">
+                <span className="text-emerald-400 mt-1 shrink-0 select-none">•</span>
+                <span>{str}</span>
+              </li>
+            ))}
+            {strengths.length === 0 && (
+              <li className="text-[12px] text-surface-500 italic">No strengths listed.</li>
+            )}
+          </ul>
+        </div>
+
+        {/* Weaknesses */}
+        <div className="glass-panel rounded-xl p-5 border border-rose-500/10 bg-rose-500/[0.02]">
+          <div className="flex items-center gap-2 mb-3.5 text-rose-400">
+            <FiAlertCircle size={14} />
+            <h5 className="text-[11px] font-bold uppercase tracking-wider">Weaknesses</h5>
+          </div>
+          <ul className="space-y-2.5">
+            {weaknesses.map((wk, i) => (
+              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed">
+                <span className="text-rose-400 mt-1 shrink-0 select-none">•</span>
+                <span>{wk}</span>
+              </li>
+            ))}
+            {weaknesses.length === 0 && (
+              <li className="text-[12px] text-surface-500 italic">No weaknesses listed.</li>
+            )}
+          </ul>
+        </div>
+      </div>
+
+      {/* Suggestions */}
+      <div className="glass-panel rounded-xl p-5 border border-white/[0.03] bg-surface-950/20">
+        <div className="flex items-center gap-2 mb-3.5 text-accent">
+          <FiTrendingUp size={14} />
+          <h5 className="text-[11px] font-bold uppercase tracking-wider">Refinement Suggestions</h5>
+        </div>
+        <ul className="space-y-3">
+          {suggestions.map((sug, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-[12px] text-surface-300 leading-relaxed">
+              <span className="text-accent font-mono font-bold mt-0.5 shrink-0 select-none">{i+1}.</span>
+              <span>{sug}</span>
+            </li>
+          ))}
+          {suggestions.length === 0 && (
+            <li className="text-[12px] text-surface-500 italic">No suggestions listed.</li>
+          )}
+        </ul>
+      </div>
+
+      {/* Action Area */}
+      <div className="border-t border-white/[0.04] pt-5 mt-2">
+        {approved ? (
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-400">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15">
+                <FiAward size={15} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold uppercase tracking-wider">Production Approved</span>
+                <span className="text-[10px] text-emerald-500/70">Ready for visual asset and video generation pipelines.</span>
+              </div>
+            </div>
+            <span className="text-xs font-bold bg-emerald-500/10 px-2.5 py-1 rounded-md uppercase tracking-wider select-none">✓ Ready</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onApprove}
+              disabled={loading}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-wider py-3 shadow-[0_0_16px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300 disabled:opacity-40"
+            >
+              <FiCheckSquare size={13} />
+              <span>Continue Production</span>
+            </button>
+            <button
+              onClick={onRefine}
+              disabled={loading}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-accent/25 hover:border-accent/40 bg-accent/5 hover:bg-accent/10 text-accent font-semibold text-xs uppercase tracking-wider py-3 shadow-[0_0_16px_rgba(139,92,246,0.05)] hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all duration-300 disabled:opacity-40"
+            >
+              <PiSparkle size={13} className={loading ? "animate-spin" : ""} />
+              <span>{loading ? "Refining Draft..." : "Refine Draft"}</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TabbedContent() {
   const [activeTab, setActiveTab] = useState('script');
-  const { script, storyboard, productionPlan, productionType } = useProjectData();
+  const { 
+    script, 
+    storyboard, 
+    productionPlan, 
+    productionType, 
+    criticReview, 
+    approved,
+    approveProject,
+    refineProject,
+    loading 
+  } = useProjectData();
 
   return (
     <section>
@@ -323,6 +505,15 @@ export default function TabbedContent() {
         {activeTab === 'script' && <ScriptTab script={script} />}
         {activeTab === 'storyboard' && <StoryboardTab storyboard={storyboard} productionType={productionType} />}
         {activeTab === 'plan' && <ProductionPlanTab plan={productionPlan} />}
+        {activeTab === 'review' && (
+          <ReviewTab 
+            criticReview={criticReview} 
+            approved={approved} 
+            onApprove={approveProject} 
+            onRefine={refineProject} 
+            loading={loading} 
+          />
+        )}
       </div>
     </section>
   );

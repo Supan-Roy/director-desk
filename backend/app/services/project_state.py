@@ -29,9 +29,12 @@ class ProjectState:
         self.title: Optional[str] = None
         self.prompt: Optional[str] = None
         self.script: Optional[str] = None
+        self.original_script: Optional[str] = None
         self.storyboard: list[StoryboardScene] = []
         self.production_plan: Optional[dict] = None
         self.critic_notes: list[str] = []
+        self.critic_review: Optional[dict] = None
+        self.approved: bool = False
         self.production_type: Optional[str] = "Auto Detect"
         self.agents = [
             AgentStatus("writer", "Writer Agent", "Script & Narrative", "✍️"),
@@ -46,9 +49,12 @@ class ProjectState:
         self.title = None
         self.prompt = None
         self.script = None
+        self.original_script = None
         self.storyboard = []
         self.production_plan = None
         self.critic_notes = []
+        self.critic_review = None
+        self.approved = False
         self.production_type = "Auto Detect"
         for agent in self.agents:
             agent.status = "waiting"
@@ -67,15 +73,18 @@ class ProjectState:
         script: str,
         storyboard: list[StoryboardScene],
         production_plan: Optional[dict] = None,
-        critic_notes: Optional[list[str]] = None,
+        critic_review: Optional[dict] = None,
         production_type: Optional[str] = "Auto Detect"
     ):
         self.has_project = True
         self.title = title
         self.script = script
+        self.original_script = script
         self.storyboard = storyboard
         self.production_plan = production_plan
-        self.critic_notes = critic_notes or []
+        self.critic_review = critic_review
+        self.critic_notes = critic_review.get("suggestions", []) if critic_review else []
+        self.approved = False
         self.production_type = production_type
         for agent in self.agents:
             agent.status = "completed"

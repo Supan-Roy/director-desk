@@ -73,3 +73,21 @@ export async function updateProjectScript(id, script) {
   const response = await apiClient.patch(`/api/projects/${id}`, { script })
   return response.data
 }
+
+/** Update the approval status of a saved project. */
+export async function updateProjectApproval(id, approved) {
+  const response = await apiClient.patch(`/api/projects/${id}`, { approved })
+  return response.data
+}
+
+/** Refine the script of a saved project using Editor Agent. */
+export async function refineProjectScript(id) {
+  const response = await apiClient.post(`/api/projects/${id}/refine`)
+  return response.data
+}
+
+/** Refine a raw script dynamically using Editor Agent. */
+export async function refineRawScript(script, criticReview) {
+  const response = await apiClient.post('/api/projects/refine-raw', { script, critic_review: criticReview })
+  return response.data
+}

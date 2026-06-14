@@ -37,7 +37,7 @@ class ShowrunnerService:
             script=result["script"],
             storyboard=result["storyboard"],
             production_plan=result["production_plan"],
-            critic_notes=result["critic_notes"],
+            critic_review=result.get("critic_review"),
             production_type=production_type
         )
 
@@ -46,7 +46,8 @@ class ShowrunnerService:
             script=result["script"],
             storyboard=result["storyboard"],
             production_plan=result["production_plan"],
-            critic_notes=result["critic_notes"]
+            critic_notes=result.get("critic_review", {}).get("suggestions", []),
+            critic_review=result.get("critic_review")
         )
 
     def generate_stream(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect", files: list = None) -> Generator[dict, None, None]:
@@ -120,6 +121,7 @@ class ShowrunnerService:
                 }
             
             project_state.script = script_accumulated
+            project_state.original_script = script_accumulated
             project_state.set_agent_status("writer", "completed", "just now")
 
             # Stage 2: Storyboard Agent generates storyboard text, and parser parses it
@@ -188,11 +190,17 @@ class ShowrunnerService:
                 "data": plan
             }
 
-            # Stage 4: Critic Agent generates review notes
+            # Stage 4: Critic Agent generates structured review
             project_state.set_agent_status("critic", "active")
-            critic_notes = critic_agent.generate_notes(script_accumulated, storyboard_text_accumulated)
-            project_state.critic_notes = critic_notes
+            critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
+            project_state.critic_review = critic_review
+            project_state.critic_notes = critic_review.get("suggestions", [])
             project_state.set_agent_status("critic", "completed", "just now")
+
+            yield {
+                "type": "critic_review",
+                "data": critic_review
+            }
 
             yield {
                 "type": "complete"
@@ -217,6 +225,7 @@ class ShowrunnerService:
             # 2. Script
             script = result["script"]
             project_state.script = script
+            project_state.original_script = script
             
             chunk_size = 40  # characters per chunk
             for i in range(0, len(script), chunk_size):
@@ -278,11 +287,17 @@ class ShowrunnerService:
             
             time.sleep(0.5)
 
-            # 5. Critic notes
-            critic_notes = result["critic_notes"]
-            project_state.critic_notes = critic_notes
+            # 5. Critic review
+            critic_review = result.get("critic_review")
+            project_state.critic_review = critic_review
+            project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
             project_state.set_agent_status("critic", "completed", "just now")
             
+            yield {
+                "type": "critic_review",
+                "data": critic_review
+            }
+
             yield {
                 "type": "complete"
             }
