@@ -40,4 +40,4 @@ pnpm-debug.log*
 
 # Database
 *.db
-backend/*.db
+/backend/director_desk.db
