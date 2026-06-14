@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
 from sqlalchemy.types import TypeDecorator
 
 from app.db.database import Base
@@ -35,6 +35,12 @@ class Project(Base):
     prompt = Column(Text, nullable=True)
 
     script = Column(Text, nullable=True)
+
+    original_script = Column(Text, nullable=True)
+
+    critic_review = Column(JSONType, nullable=True)
+
+    approved = Column(Boolean, default=False, nullable=False)
 
     storyboard = Column(JSONType, nullable=True)       # list of scene dicts
 

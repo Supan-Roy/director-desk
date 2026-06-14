@@ -81,7 +81,13 @@ FADE OUT.`,
       { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "1 min ago" },
       { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "completed", completedAt: "1 min ago" },
       { id: "editor", name: "Editor Agent", role: "Final Assembly", icon: "🎬", status: "active", completedAt: null }
-    ]
+    ],
+    criticReview: {
+      score: 8,
+      strengths: ["Highly atmospheric worldbuilding", "Strong cyberpunk aesthetic", "Great dynamic lighting descriptions"],
+      weaknesses: ["Kaelen's motivation could be clearer in scene 2", "Pacing feels slightly fast at the transition"],
+      suggestions: ["Add a short beat of Kaelen reflecting on his past to establish stakes", "Extend the metropolian overpass scene to show more of the environment"]
+    }
   },
   'quiet-camera': {
     title: 'The Quiet Camera',
@@ -155,7 +161,13 @@ FADE OUT.`,
       { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "4 mins ago" },
       { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "waiting", completedAt: null },
       { id: "editor", name: "Editor Agent", role: "Final Assembly", icon: "🎬", status: "waiting", completedAt: null }
-    ]
+    ],
+    criticReview: {
+      score: 9,
+      strengths: ["Very emotionally resonant dialogue", "Consistent pacing and tone", "Clear and rich environment descriptions"],
+      weaknesses: ["The rocking chair action repeats too frequently", "Lighting transitions could be softer"],
+      suggestions: ["Vary the action cues so Elena does not only rock or touch the camera", "Specify golden hour lighting transitions explicitly in the action block"]
+    }
   },
   'echoes-apollo': {
     title: 'Echoes of Apollo',
@@ -227,7 +239,13 @@ FADE OUT.`,
       { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "9 mins ago" },
       { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "completed", completedAt: "8 mins ago" },
       { id: "editor", name: "Editor Agent", role: "Final Assembly", icon: "completed", completedAt: "8 mins ago" }
-    ]
+    ],
+    criticReview: {
+      score: 7,
+      strengths: ["Strong sci-fi premise", "Stunning visual prompts for the lunar horizon"],
+      weaknesses: ["Miller's dialog is slightly generic for an experienced commander", "The warm signal reveal lacks suspense buildup"],
+      suggestions: ["Give Miller more technical or professional dialogue cues", "Add a scene of Miller struggling with static before receiving the signal"]
+    }
   },
   'last-lighthouse': {
     title: 'The Last Lighthouse',
@@ -298,6 +316,12 @@ FADE OUT.`,
       { id: "storyboard", name: "Storyboard Agent", role: "Visual Planning", icon: "🎨", status: "completed", completedAt: "3 mins ago" },
       { id: "critic", name: "Critic Agent", role: "Quality Review", icon: "🔍", status: "waiting", completedAt: null },
       { id: "editor", name: "Editor Agent", role: "Final Assembly", icon: "🎬", status: "waiting", completedAt: null }
-    ]
+    ],
+    criticReview: {
+      score: 8,
+      strengths: ["Excellent dramatic tension", "Highly vivid storm description", "Great dynamic storyboard sequencing"],
+      weaknesses: ["Alistair's dialogue is too short to show his isolation", "Ghost ship description is sparse"],
+      suggestions: ["Add an action line of Alistair looking at faded lighthouse crew photos", "Describe the torn sails and phantom-like movement of the ghost ship in detail"]
+    }
   }
 };

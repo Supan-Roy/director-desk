@@ -40,8 +40,11 @@ class ProjectRepository:
         production_type: Optional[str] = None,
         prompt: Optional[str] = None,
         script: Optional[str] = None,
+        original_script: Optional[str] = None,
         storyboard: Optional[list] = None,
         production_plan: Optional[dict] = None,
+        critic_review: Optional[dict] = None,
+        approved: bool = False,
     ) -> Project:
         """Persist a new Project and return the saved instance."""
         now = datetime.now(timezone.utc)
@@ -50,8 +53,11 @@ class ProjectRepository:
             production_type=production_type,
             prompt=prompt,
             script=script,
+            original_script=original_script or script,
             storyboard=storyboard,
             production_plan=production_plan,
+            critic_review=critic_review,
+            approved=approved,
             created_at=now,
             updated_at=now,
         )

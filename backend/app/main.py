@@ -36,6 +36,9 @@ def _run_migrations(engine) -> None:
     migrations = [
         # (table, column_name, column_definition)
         ("projects", "updated_at", "DATETIME"),
+        ("projects", "original_script", "TEXT"),
+        ("projects", "critic_review", "TEXT"),
+        ("projects", "approved", "BOOLEAN DEFAULT 0"),
     ]
 
     with engine.connect() as conn:

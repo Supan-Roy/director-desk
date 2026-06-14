@@ -108,16 +108,16 @@ class ShowrunnerAgent:
             format_rules = "Standard screenplay generation rules."
 
         system_prompt = f"""
-        You are a Showrunner Agent. Orchestrate a full pre-production package (Title, Script, Storyboard, Production Plan, Critic Notes) for the following user concept.
+        You are a Showrunner Agent. Orchestrate a full pre-production package (Title, Script, Storyboard, Production Plan, Critic Review) for the following user concept.
         
         Production Format: {production_type}
         
         Concept:
         {prompt}
-
+ 
         Format Generation Rules:
         {format_rules}
-
+ 
         You must output ONLY a valid JSON object matching exactly this schema:
         {{
           "title": "Title of the Production",
@@ -157,17 +157,28 @@ class ShowrunnerAgent:
               }}
             ]
           }},
-          "critic_notes": [
-            "Critic note 1",
-            "Critic note 2"
-          ]
+          "critic_review": {{
+            "score": 8,
+            "strengths": [
+              "Concise strength 1",
+              "Concise strength 2"
+            ],
+            "weaknesses": [
+              "Concise weakness 1",
+              "Concise weakness 2"
+            ],
+            "suggestions": [
+              "Concise suggestion 1",
+              "Concise suggestion 2"
+            ]
+          }}
         }}
-
+ 
         IMPORTANT: If this is an audio-only format (like Podcast or Audio Story), "storyboard" MUST be an empty array [].
         Return ONLY the raw JSON object (no markdown code blocks, no trailing text, no introduction).
         """
         return system_prompt
-
+ 
     def generate_all(self, prompt: str, production_type: str = "Auto Detect") -> dict:
         if production_type == "Auto Detect" or not production_type:
             production_type = self.detect_production_type(prompt)
@@ -187,7 +198,15 @@ class ShowrunnerAgent:
             data = json.loads(response_text)
             
             # Basic validation of expected keys
-            required_keys = ["title", "script", "storyboard", "production_plan", "critic_notes"]
+            if "critic_review" not in data and "critic_notes" in data:
+                data["critic_review"] = {
+                    "score": 7,
+                    "strengths": ["Completed initial draft review."],
+                    "weaknesses": ["Script could be expanded."],
+                    "suggestions": data["critic_notes"]
+                }
+
+            required_keys = ["title", "script", "storyboard", "production_plan", "critic_review"]
             if not all(k in data for k in required_keys):
                 raise ValueError("Missing required keys in JSON response")
                 
@@ -213,6 +232,23 @@ class ShowrunnerAgent:
             fallback_title = f"Generated from: {prompt}"
             is_audio = production_type in ["Podcast", "Audio Story"]
             
+            fallback_critic_review = {
+                "score": 7,
+                "strengths": [
+                    "Good core narrative structure.",
+                    "Well-defined character dialogue blocks."
+                ],
+                "weaknesses": [
+                    "Pacing could be accelerated in the second act.",
+                    "Lighting details are slightly sparse."
+                ],
+                "suggestions": [
+                    "Ensure the pacing aligns well with the visual shot transitions.",
+                    "Consider adding more depth to the environment details.",
+                    "Verify that key lighting and mood descriptors are consistent across scenes."
+                ]
+            }
+
             if is_audio:
                 fallback_script = f"# {fallback_title}\n\n[Episode Intro Music Cues]\n\nHOST\n> Welcome to our session on: {prompt}.\n\nGUEST\n> Thank you for having me today."
                 fallback_storyboard = []
@@ -236,10 +272,6 @@ class ShowrunnerAgent:
                         }
                     ]
                 }
-                fallback_critic_notes = [
-                    "Verify audio level balance between host and guest.",
-                    "Ensure intro music duration is correct."
-                ]
             else:
                 fallback_script = f"# {fallback_title}\n\nSCENE 1: INT. STUDIO - NIGHT\n\nThe director sits in the chair.\n\nDIRECTOR\n> Let's make this show run."
                 fallback_storyboard = [
@@ -265,17 +297,13 @@ class ShowrunnerAgent:
                         }
                     ]
                 }
-                fallback_critic_notes = [
-                    "Check framing for scene 1.",
-                    "Review lighting parameters."
-                ]
                 
             return {
                 "title": fallback_title,
                 "script": fallback_script,
                 "storyboard": fallback_storyboard,
                 "production_plan": fallback_plan,
-                "critic_notes": fallback_critic_notes,
+                "critic_review": fallback_critic_review,
                 "production_type": production_type
             }
 
