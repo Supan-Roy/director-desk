@@ -37,3 +37,7 @@ pnpm-debug.log*
 
 .commandcode/
 .qwen/
+
+# Database
+*.db
+backend/*.db
