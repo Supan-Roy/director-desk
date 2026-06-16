@@ -196,13 +196,11 @@ export default function Sidebar() {
             <div className="flex items-center gap-2">
               <FiFolder size={11} />
               <span>Projects</span>
-              {savedProjects.length > 0 && (
-                <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-black ${
-                  d ? 'bg-accent/15 text-accent' : 'bg-accent/20 text-accent'
-                }`}>
-                  {savedProjects.length}
-                </span>
-              )}
+              <span className={`inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full text-[9px] font-black ${
+                d ? 'bg-accent/15 text-accent' : 'bg-accent/20 text-accent'
+              }`}>
+                {savedProjects.length}
+              </span>
             </div>
             {projectsOpen
               ? <FiChevronDown size={11} />
