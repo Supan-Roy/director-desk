@@ -157,7 +157,9 @@ export default function Dashboard() {
       </div>
 
       {/* Permanent Studio Sidebar */}
-      <Sidebar />
+      <div className="relative z-30 shrink-0 h-screen">
+        <Sidebar />
+      </div>
 
       {/* Main Studio Viewport */}
       <div className="flex-1 flex flex-col min-w-0 pr-8 pl-8 md:pl-12 transition-all duration-300 relative z-20 overflow-y-auto">

@@ -36,7 +36,7 @@ export function ProjectDataProvider({ children }) {
 
   // ── Saved projects (sidebar list) ──────────────────────────────────────
   const [savedProjects, setSavedProjects] = useState([])
-  const [projectsLoading, setProjectsLoading] = useState(false)
+  const [projectsLoading, setProjectsLoading] = useState(true)
   const [activeProjectId, setActiveProjectId] = useState(null)
 
   const fetchSavedProjects = useCallback(async () => {
