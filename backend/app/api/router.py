@@ -6,6 +6,7 @@ from app.api.routes.rendering import router as rendering_router
 from app.api.routes.storyboard import router as storyboard_router
 from app.api.routes.script import router as script_router
 from app.api.routes.project import router as project_router
+from app.api.routes.editor import router as editor_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -14,3 +15,4 @@ api_router.include_router(storyboard_router)
 api_router.include_router(planning_router)
 api_router.include_router(rendering_router)
 api_router.include_router(project_router)
+api_router.include_router(editor_router)
