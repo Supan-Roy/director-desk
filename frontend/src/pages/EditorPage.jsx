@@ -22,7 +22,11 @@ import {
   FiImage,
   FiLoader,
   FiDisc,
-  FiSettings
+  FiSettings,
+  FiMaximize,
+  FiMinimize,
+  FiCornerUpLeft,
+  FiCornerUpRight
 } from 'react-icons/fi'
 import { useEditor } from '../context/EditorContext'
 import { useProjectData } from '../hooks/useProjectData'
@@ -80,7 +84,11 @@ export default function EditorPage() {
     addTextOverlay,
     triggerExport,
     loadDirectorDeskAssets,
-    resetExport
+    resetExport,
+    undo,
+    redo,
+    canUndo,
+    canRedo
   } = useEditor()
 
   const [activeTab, setActiveTab] = useState('media') // media, overlays
@@ -88,10 +96,62 @@ export default function EditorPage() {
   const fileInputRef = useRef(null)
   const logoInputRef = useRef(null)
   const previewVideoRef = useRef(null)
+  const previewAudioRef = useRef(null)
   const timelineScrollRef = useRef(null)
   const [customText, setCustomText] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
   const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
+  const [isMuted, setIsMuted] = useState(false)
+  const [playerVolume, setPlayerVolume] = useState(1.0)
+  const previewContainerRef = useRef(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showControls, setShowControls] = useState(true)
+  const controlsTimeoutRef = useRef(null)
+
+  const resetControlsTimeout = () => {
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false)
+    }, 5000)
+  }
+
+  useEffect(() => {
+    resetControlsTimeout()
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
+    }
+  }, [isPlaying])
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
+  const toggleFullscreen = () => {
+    const container = previewContainerRef.current
+    if (!container) return
+
+    if (!document.fullscreenElement) {
+      container.requestFullscreen().then(() => {
+        setIsFullscreen(true)
+      }).catch((err) => {
+        console.error("Error enabling fullscreen:", err)
+      })
+    } else {
+      document.exitFullscreen()
+      setIsFullscreen(false)
+    }
+  }
 
   const handleTimelineResizeMouseDown = (e) => {
     e.preventDefault()
@@ -162,13 +222,53 @@ export default function EditorPage() {
       if (Math.abs(video.currentTime - sourceTime) > 0.2) {
         video.currentTime = sourceTime
       }
+      
+      // Sync volume and mute settings
+      video.volume = (activeVideoClip.volume !== undefined ? activeVideoClip.volume : 1.0) * playerVolume
+      video.muted = isMuted
+
       if (isPlaying && video.paused) {
         video.play().catch(() => {})
       } else if (!isPlaying && !video.paused) {
         video.pause()
       }
     }
-  }, [currentTime, activeVideoClip, isPlaying])
+  }, [currentTime, activeVideoClip, isPlaying, playerVolume, isMuted])
+
+  // Synchronize browser native audio playback with the context's playhead time
+  useEffect(() => {
+    const audio = previewAudioRef.current
+    if (audio) {
+      if (activeAudioClip) {
+        // Only set src if it changed
+        const currentSrc = audio.getAttribute('src') || ''
+        const targetSrc = activeAudioClip.url
+        if (!currentSrc.endsWith(targetSrc)) {
+          audio.src = targetSrc
+        }
+        
+        const sourceTime = activeAudioClip.sourceStart + (currentTime - activeAudioClip.start)
+        if (Math.abs(audio.currentTime - sourceTime) > 0.2) {
+          audio.currentTime = sourceTime
+        }
+        
+        // Sync volume and mute settings
+        audio.volume = (activeAudioClip.volume !== undefined ? activeAudioClip.volume : 1.0) * playerVolume
+        audio.muted = isMuted
+
+        if (isPlaying && audio.paused) {
+          audio.play().catch(() => {})
+        } else if (!isPlaying && !audio.paused) {
+          audio.pause()
+        }
+      } else {
+        if (!audio.paused) {
+          audio.pause()
+        }
+        audio.src = ''
+      }
+    }
+  }, [currentTime, activeAudioClip, isPlaying, playerVolume, isMuted])
 
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || [])
@@ -591,17 +691,24 @@ export default function EditorPage() {
           {/* Center Column: Real-time Video Preview Player */}
           <div className="flex-1 flex flex-col bg-black/40 relative">
             <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
-              
-              {/* Preview Window Monitor */}
+                  {/* Preview Window Monitor */}
               <div 
-                className="relative aspect-video w-full max-w-[480px] bg-[#030305] border-t border-x border-white/[0.04] rounded-t-2xl shadow-[0_24px_50px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center"
+                ref={previewContainerRef}
+                onMouseMove={resetControlsTimeout}
+                onMouseEnter={resetControlsTimeout}
+                onTouchStart={resetControlsTimeout}
+                className={`relative bg-[#030305] shadow-[0_24px_50px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center transition-all ${
+                  isFullscreen 
+                    ? 'w-screen h-screen max-w-none rounded-none border-none' 
+                    : 'w-full max-w-[480px] border border-white/[0.04] rounded-none aspect-video'
+                }`}
               >
                 {/* Visual Video Stream Tag */}
                 {activeVideoClip ? (
                   <video
                     ref={previewVideoRef}
                     src={activeVideoClip.url}
-                    muted // browser auto-play policy requires mute or click
+                    muted={isMuted}
                     className="w-full h-full object-contain"
                     style={{
                       filter: `brightness(${1.0 + activeVideoClip.brightness}) contrast(${activeVideoClip.contrast}) blur(${activeVideoClip.blur}px)`,
@@ -613,6 +720,12 @@ export default function EditorPage() {
                     <span>No active video clip at playhead</span>
                   </div>
                 )}
+
+                {/* Audio sync player */}
+                <audio
+                  ref={previewAudioRef}
+                  className="hidden"
+                />
 
                 {/* Subtitle / Text overlays layer */}
                 {activeTexts.map((txt) => (
@@ -642,63 +755,90 @@ export default function EditorPage() {
                     }}
                   />
                 )}
-              </div>
 
-              {/* Seek and Play Controls right under video preview */}
-              <div className="w-full max-w-[480px] bg-[#0c0c14] border-x border-b border-white/[0.04] rounded-b-2xl p-4 space-y-3 shadow-lg z-10 flex flex-col">
-                {/* Seek Bar (Slider) */}
-                <div className="flex items-center gap-3 w-full">
-                  <span className="font-mono text-[10px] text-surface-400 w-12 shrink-0">{formatTime(currentTime)}</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max={totalDuration}
-                    step="0.05"
-                    value={currentTime}
-                    onChange={(e) => {
-                      setCurrentTime(parseFloat(e.target.value) || 0)
-                      setIsPlaying(false) // pause on scrubbing
-                    }}
-                    className="flex-1 accent-accent h-1.5 bg-white/10 rounded-lg cursor-pointer"
-                  />
-                  <span className="font-mono text-[10px] text-surface-400 w-12 text-right shrink-0">{formatTime(totalDuration)}</span>
-                </div>
-
-                {/* Quick controls right under video */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      className="w-8 h-8 rounded-full bg-accent hover:bg-purple-600 text-white flex items-center justify-center cursor-pointer transition-colors shadow-lg"
-                    >
-                      {isPlaying ? <FiPause size={12} /> : <FiPlay size={12} className="ml-0.5" />}
-                    </button>
-                    <button
-                      onClick={() => setCurrentTime(0.0)}
-                      title="Rewind to Start"
-                      className="p-1.5 rounded-lg text-surface-400 hover:text-white transition-colors cursor-pointer"
-                    >
-                      <FiRotateCcw size={12} />
-                    </button>
+                {/* Controls Overlay inside video preview */}
+                <div 
+                  className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-40 transition-opacity duration-300 flex flex-col space-y-2.5 ${
+                    showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                  }`}
+                >
+                  {/* Seek Bar (Slider) */}
+                  <div className="flex items-center gap-2.5 w-full">
+                    <span className="font-mono text-[9px] text-white shrink-0">{formatTime(currentTime)}</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max={totalDuration}
+                      step="0.05"
+                      value={currentTime}
+                      onChange={(e) => {
+                        setCurrentTime(parseFloat(e.target.value) || 0)
+                        setIsPlaying(false) // pause on scrubbing
+                      }}
+                      className="flex-1 accent-accent h-1 bg-white/20 rounded-lg cursor-pointer"
+                    />
+                    <span className="font-mono text-[9px] text-white text-right shrink-0">{formatTime(totalDuration)}</span>
                   </div>
 
-                  <span className="text-[10px] text-surface-500 font-mono">
-                    Sequence Preview
-                  </span>
+                  {/* Control Buttons Row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                         onClick={() => setIsPlaying(!isPlaying)}
+                         className="w-7 h-7 rounded-full bg-accent hover:bg-purple-600 text-white flex items-center justify-center cursor-pointer transition-colors shadow-lg"
+                      >
+                        {isPlaying ? <FiPause size={10} /> : <FiPlay size={10} className="ml-0.5" />}
+                      </button>
+                      <button
+                        onClick={() => setCurrentTime(0.0)}
+                        title="Rewind to Start"
+                        className="p-1 rounded-lg text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <FiRotateCcw size={11} />
+                      </button>
+
+                      {/* Player Volume Controls */}
+                      <div className="h-3 w-px bg-white/10 mx-0.5" />
+
+                      <button
+                        onClick={() => setIsMuted(!isMuted)}
+                        title={isMuted ? "Unmute" : "Mute"}
+                        className="p-1 rounded-lg text-neutral-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                      >
+                        {isMuted ? <FiVolumeX size={12} className="text-red-400" /> : <FiVolume2 size={12} />}
+                      </button>
+
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={playerVolume}
+                        onChange={(e) => {
+                          setPlayerVolume(parseFloat(e.target.value))
+                          if (isMuted) setIsMuted(false)
+                        }}
+                        className="w-12 accent-accent h-1 bg-white/20 rounded-lg cursor-pointer"
+                        title={`Volume: ${Math.round(playerVolume * 100)}%`}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        onClick={toggleFullscreen}
+                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                        className="p-1 rounded-lg text-neutral-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                      >
+                        {isFullscreen ? <FiMinimize size={12} /> : <FiMaximize size={12} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-
             </div>
 
             {/* Playback Control Bar */}
-            <div className="h-14 border-t flex items-center justify-between px-6 shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-black/10">
-              {/* Time Indicators */}
-              <div className="font-mono text-[11px] text-surface-400">
-                <span className="text-white font-bold">{formatTime(currentTime)}</span>
-                <span className="mx-1.5">/</span>
-                <span>{formatTime(totalDuration)}</span>
-              </div>
-
+            <div className="h-14 border-t flex items-center justify-end px-6 shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-black/10">
               {/* Tracks operations */}
               <div className="flex items-center gap-2">
                 <button
@@ -826,6 +966,25 @@ export default function EditorPage() {
                           step="0.5"
                           value={selectedClip.blur}
                           onChange={(e) => updateClipProperties(selectedClip.id, 'video', { blur: parseFloat(e.target.value) })}
+                          className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                        />
+                      </div>
+
+                      <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500 pt-2">Audio Controls</p>
+                      
+                      {/* Volume */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                          <span>Volume</span>
+                          <span>{Math.round((selectedClip.volume ?? 1.0) * 100)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="2"
+                          step="0.05"
+                          value={selectedClip.volume ?? 1.0}
+                          onChange={(e) => updateClipProperties(selectedClip.id, 'video', { volume: parseFloat(e.target.value) })}
                           className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
                         />
                       </div>
@@ -1053,6 +1212,28 @@ export default function EditorPage() {
 
               <div className="h-4 w-px bg-white/[0.08]" />
 
+              {/* Undo / Redo Controls */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={undo}
+                  disabled={!canUndo}
+                  title="Undo"
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-surface-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer flex items-center justify-center border border-white/[0.05]"
+                >
+                  <FiCornerUpLeft size={11} />
+                </button>
+                <button
+                  onClick={redo}
+                  disabled={!canRedo}
+                  title="Redo"
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-surface-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer flex items-center justify-center border border-white/[0.05]"
+                >
+                  <FiCornerUpRight size={11} />
+                </button>
+              </div>
+
+              <div className="h-4 w-px bg-white/[0.08]" />
+
               {/* Snap Settings */}
               <div className="flex items-center gap-1.5">
                 <input
@@ -1115,7 +1296,7 @@ export default function EditorPage() {
                 }}
               >
                 {/* 1-second ticks on the ruler */}
-                {Array.from({ length: Math.ceil(totalDuration) + 15 }).map((_, i) => (
+                {Array.from({ length: totalDuration > 0 ? Math.ceil(totalDuration) + 15 : 0 }).map((_, i) => (
                   <div
                     key={i}
                     className="absolute bottom-0 h-2 border-l border-white/10 text-[7.5px] font-mono text-surface-600 pl-1 leading-none pb-0.5"

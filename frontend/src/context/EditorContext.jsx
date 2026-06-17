@@ -74,6 +74,65 @@ export function EditorProvider({ children }) {
     enabled: false
   })
 
+  // Undo/Redo history state
+  const [history, setHistory] = useState([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const isUndoRedoRef = useRef(false)
+
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      return
+    }
+    const snapshot = {
+      videoTrack: JSON.parse(JSON.stringify(videoTrack)),
+      audioTrack: JSON.parse(JSON.stringify(audioTrack)),
+      textTrack: JSON.parse(JSON.stringify(textTrack)),
+      logo: JSON.parse(JSON.stringify(logo))
+    }
+    setHistory((prev) => {
+      const cleanPrev = prev.slice(0, historyIndex + 1)
+      const nextHistory = [...cleanPrev, snapshot]
+      setHistoryIndex(nextHistory.length - 1)
+      return nextHistory
+    })
+  }, [videoTrack, audioTrack, textTrack, logo])
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1
+      const prevState = history[prevIndex]
+      if (prevState) {
+        isUndoRedoRef.current = true
+        setVideoTrack(prevState.videoTrack)
+        setAudioTrack(prevState.audioTrack)
+        setTextTrack(prevState.textTrack)
+        setLogo(prevState.logo)
+        setHistoryIndex(prevIndex)
+        setTimeout(() => {
+          isUndoRedoRef.current = false
+        }, 0)
+      }
+    }
+  }, [history, historyIndex])
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1
+      const nextState = history[nextIndex]
+      if (nextState) {
+        isUndoRedoRef.current = true
+        setVideoTrack(nextState.videoTrack)
+        setAudioTrack(nextState.audioTrack)
+        setTextTrack(nextState.textTrack)
+        setLogo(nextState.logo)
+        setHistoryIndex(nextIndex)
+        setTimeout(() => {
+          isUndoRedoRef.current = false
+        }, 0)
+      }
+    }
+  }, [history, historyIndex])
+
   // Playback control state
   const [currentTime, setCurrentTime] = useState(0.0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -105,7 +164,7 @@ export function EditorProvider({ children }) {
     ...videoTrack.map((c) => c.end),
     ...audioTrack.map((c) => c.end),
     ...textTrack.map((t) => t.end),
-    10.0
+    0.0
   )
 
   // Play/Pause ticker
@@ -663,7 +722,11 @@ export function EditorProvider({ children }) {
     addTextOverlay,
     triggerExport,
     loadDirectorDeskAssets,
-    resetExport
+    resetExport,
+    undo,
+    redo,
+    canUndo: historyIndex > 0,
+    canRedo: historyIndex < history.length - 1
   }
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>
