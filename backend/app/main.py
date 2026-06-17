@@ -72,6 +72,13 @@ from app.api.routes.showrunner import router as showrunner_router
 app.include_router(api_router, prefix="/api")
 app.include_router(showrunner_router, prefix="/api", tags=["Showrunner"])
 
+from fastapi.staticfiles import StaticFiles
+import os
+
+os.makedirs("static/uploads", exist_ok=True)
+os.makedirs("static/exports", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.get("/")
 def root():
