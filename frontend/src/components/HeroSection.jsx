@@ -151,6 +151,275 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
   );
 }
 
+const prefixesPool = [
+  "A visually striking and highly detailed depiction of ",
+  "A cinematic and atmosphere-rich rendering of ",
+  "An evocative, character-focused scene featuring ",
+  "A high-fidelity atmospheric close-up of ",
+  "A beautifully composed cinematic shot of ",
+  "A stunning, photorealistic representation of ",
+  "An atmospheric and breathtaking view showcasing ",
+  "A dramatic, masterfully lit scene of ",
+  "An epic, high-contrast visual focus on ",
+  "A professional, studio-quality capture of "
+];
+
+const stylesPool = {
+  noir: [
+    "monochromatic drama, heavy rain-slicked streets, deep shadows, high-contrast chiascuro lighting, vintage film grain, classic 1940s detective film look",
+    "stark high-contrast monochrome cinematography, shadow-drenched alleys, retro film noir texture, moody low-key lighting",
+    "classic film-noir aesthetic, deep black-and-white silhouettes, smoky atmosphere, wet pavement reflections, dramatic key light",
+    "monochrome cinematic masterpiece, dark atmospheric shadows, film noir lighting, vintage camera lenses, wet asphalt glare",
+    "moody high-contrast black and white styling, volumetric smoke, silhouette lighting, classic noir cinema feel"
+  ],
+  cyberpunk: [
+    "neon neo-noir aesthetic, glowing cyan and magenta light leaks, massive holographic commercial displays, rain-slicked asphalt reflecting colorful signs, volumetric atmospheric purple haze",
+    "futuristic cyberpunk landscape, buzzing neon elements, neon purple and teal backlight, damp city streets, holographic projections",
+    "cyberpunk atmospheric styling, high-tech low-life mood, shimmering electric signage, dense steam venting, blue and magenta highlights",
+    "dystopian cyberpunk city view, flickering neon streetlights, glowing interface displays, volumetric atmospheric fog, neon highlights",
+    "high-tech futuristic aesthetic, neon-drenched background, iridescent glow, cybernetic atmosphere, holographic ads"
+  ],
+  space: [
+    "cosmic realism, vast stellar background, hyper-detailed spacesuit reflections, majestic glowing orange nebula clouds, sharp anamorphic lens flare",
+    "epic sci-fi cosmic scale, starry deep-space atmosphere, colorful nebulae dust, reflective helmet visor detail, volumetric solar flares",
+    "hyper-detailed astronaut sci-fi setting, cinematic deep space void, glowing cosmic dust, spectacular lens flares, space odyssey aesthetic",
+    "interstellar explorer scenery, majestic galaxy background, cosmic dust clouds, extreme definition space background, soft nebula light",
+    "breathtaking deep-space view, distant star systems, stellar gas glow, high-fidelity space suit detail, anamorphic flares"
+  ],
+  documentary: [
+    "photorealistic textures, observational documentary cinematography, soft natural sunlight, organic handheld camera feel, shallow depth of field, raw human emotion",
+    "authentic documentary handheld capture, naturalistic lighting, high-fidelity real-world textures, candid cinematography look",
+    "observational direct-cinema style, natural ambient illumination, sharp details, real-life documentary framing",
+    "candid journalistic documentary aesthetic, raw real-world details, soft natural light, handheld camera motion tracking",
+    "hyper-realistic documentary style, natural key lights, highly detailed textures, observational human element"
+  ],
+  none: [
+    "natural cinematic realism, clean professional studio lighting, rich color grade",
+    "crisp cinematic lighting, natural realistic color-grading, professional studio presentation",
+    "clean cinematic presentation, photorealistic rendering, natural atmospheric light",
+    "balanced studio lighting, neutral high-definition colors, clean visual design",
+    "photorealistic rendering, natural ambient illumination, professional color grading"
+  ]
+};
+
+const cameraPool = {
+  static: [
+    "shot on a locked tripod, steady framing, stable cinematic composition",
+    "fixed camera position, locked-off shot, steady cinematic frame",
+    "stable tripod framing, stationary camera perspective",
+    "steady locked-off camera composition, balanced still shot",
+    "motionless tripod shoot, steady camera perspective"
+  ],
+  pan: [
+    "slow cinematic panning camera movement, sweeping across the scene to reveal environmental depth",
+    "smooth horizontal camera pan, sweeping view revealing detailed background elements",
+    "cinematic panning movement, slow side-to-side camera drift",
+    "horizontal pan movement, sweeping camera angle, reveals dramatic scene details",
+    "slow left-to-right camera sweep, smooth panning motion"
+  ],
+  zoom: [
+    "slow smooth zoom-in focusing on subtle details, rising dramatic tension, narrow focus lock",
+    "gradual cinematic zoom-in, tightening focus on the subject, shallow depth of field",
+    "slow dolly-in camera effect, magnifying subtle micro-details",
+    "smooth zoom-in camera tracking, focuses on essential subject elements",
+    "gradual lens focal shift, slow zoom, increases perspective intimacy"
+  ],
+  crane: [
+    "sweeping overhead crane shot, elevating high, epic aerial perspective, grand cinematic scale",
+    "smooth rising crane movement, high-angle establishing view, sweeping perspective",
+    "vertical crane boom shot, elevating camera perspective, epic cinematic layout",
+    "sweeping jib arm camera lift, high angle viewpoint, majestic scale reveal",
+    "rising overhead camera movement, crane perspective, dramatic environmental reveal"
+  ]
+};
+
+const qualityPool = {
+  draft: [
+    "draft concept visual, raw prototype render",
+    "concept draft styling, quick pre-visualization render",
+    "raw prototype concept sketch",
+    "fast preview rendering, draft style concept visualization",
+    "pre-vis layout render, draft grade visual design"
+  ],
+  high: [
+    "ultra-sharp 4k resolution, raytraced highlights, high-fidelity textures, photorealistic render",
+    "crisp 4k quality, realistic lighting and textures, detailed render style",
+    "high-fidelity 4k visualization, raytraced reflection details, photorealistic finish",
+    "stunning 4k resolution, highly detailed texture mapping, advanced render finish",
+    "photorealistic 4k output, raytraced environmental lights, high-end production render"
+  ],
+  master: [
+    "master-grade cinematic render, arri alexa 65 look, anamorphic lens flare, flawless 8k quality, perfect color-graded raw footage",
+    "flawless 8k master print quality, arri alexa cinematic style, anamorphic flares, professionally color graded raw feed",
+    "exquisite 8k master grade, anamorphic cinematic look, rich dynamic range, perfect color-graded output",
+    "flawless 8k cinematic masterpiece, authentic arri alexa 65 style, professional color graded raw profile",
+    "ultra high-definition 8k master, perfect cinematic color grading, raw camera details, flawless render quality"
+  ]
+};
+
+const prodTypePool = {
+  "Auto Detect": [],
+  "Short Film": [
+    "cinematic storytelling scene, narrative focus, dramatic tone",
+    "narrative-driven short film sequence, dramatic character scene",
+    "cinematic storytelling tone, dramatic short film mood",
+    "short film character study scene, dramatic atmosphere, cinematic storytelling",
+    "cinematic drama short scene, narratively rich layout, short film style"
+  ],
+  "Trailer": [
+    "epic cinematic trailer aesthetic, high-impact fast pacing, dramatic visual hook, intense scale",
+    "action-packed film trailer style, high-energy editing cues, epic scale visualization",
+    "blockbuster trailer style, dramatic fast-paced sequence, cinematic punchy visual",
+    "high-impact movie trailer aesthetic, fast pacing editing, dramatic scale hook",
+    "epic scale promotional trailer vibe, fast-paced transitions, intense cinematic energy"
+  ],
+  "Documentary": [
+    "authentic documentary style, candid observational journalism, raw non-fiction essence, genuine real-world environment, documentary language narration atmosphere",
+    "observational documentary vibe, raw realistic scene, candid human storytelling, documentary narration tone",
+    "direct non-fiction documentary setting, raw authenticity, real-world detail, documentary voiceover atmosphere",
+    "authentic documentary language, candid real-world recording, observational camera style, non-fiction setting",
+    "candid observational documentary, real-life human environment, documentary narration voiceover atmosphere"
+  ],
+  "Podcast": [
+    "studio podcast vibe, intimate vocal microphone setup, podcast language dialogue clarity, crisp high-end studio acoustics, professional audio broadcasting atmosphere",
+    "intimate studio podcast recording, broadcast microphone close-up, clean acoustics, warm studio atmosphere",
+    "professional broadcast podcast layout, speech-focused audio setup, warm room acoustics, radio studio lighting",
+    "high-fidelity podcast language broadcast, professional studio atmosphere, vocal microphone setup",
+    "broadcast studio podcast layout, speech-focused acoustic treatment, warm room lighting, professional setup"
+  ],
+  "Drama": [
+    "character-driven dramatic storytelling scene, intense emotional nuance, cinematic narrative pacing",
+    "emotionally charged dramatic sequence, character study framing, deep atmospheric tension",
+    "intense dramatic screenplay scene, expressive actor framing, cinematic narrative depth",
+    "character study drama layout, deep emotional acting focus, cinematic scene pacing",
+    "dramatic actor composition, intense character-driven scene, deep emotional nuance"
+  ],
+  "Series Episode": [
+    "episodic high-production television drama aesthetic, streaming quality",
+    "premium streaming series episode look, television drama style",
+    "high-budget television series aesthetic, cinematic episodic quality",
+    "episodic streaming drama format, high production value television style",
+    "high-end television drama series view, premium streaming aesthetic quality"
+  ],
+  "Educational Show": [
+    "engaging educational presentation style, clear explanatory graphics, highly-informative visual layout, educational language narration, professional host presentation",
+    "informative educational show layout, clear diagrams and overlays, educational narration clarity, studio host setup",
+    "instructive presentation vibe, clear graphic callouts, educational voiceover quality, professional explanation setup",
+    "educational language instruction, clear graphic overlays, informative show presentation, professional studio layout",
+    "structured educational layout, clear explanation diagrams, educational voiceover quality, professional broadcast setup"
+  ],
+  "Interview": [
+    "two-camera talking-head interview setup, key light illumination, professional journalistic framing, depth of field blur",
+    "professional interview setup, three-point lighting layout, talking-head frame, journalistic profile",
+    "two-camera interview scene, key light profile, clean back-to-camera background blur, media interview style",
+    "journalistic talking-head interview, three-point studio lighting, soft blurred background",
+    "professional interview setup, clean key light focus, two-camera interview layout, media profiling style"
+  ],
+  "YouTube Video": [
+    "vibrant engaging content creation style, clean focus lock, eye-catching vlog-style visual presentation",
+    "modern content creator aesthetic, vibrant colorful palette, clean focus tracking, engaging vlog visual",
+    "popular video vlog style, high-energy framing, colorful setting, crisp focus lock",
+    "engaging content creator style, vibrant colors, vlog framing presentation, clean focus track",
+    "creative vlog-style video presentation, colorful design layout, high-energy content presentation"
+  ],
+  "Audio Story": [
+    "immersive auditory narrative scene, rich soundscape descriptions, evocative storytelling atmosphere",
+    "audiobook narrative setting, sound-evocative scene descriptions, rich storytelling vibe",
+    "voice-narrated story ambiance, deep atmospheric setting, rich auditory worldbuilding details",
+    "audio-first narrative scene, rich soundscape descriptions, voiceover-driven ambiance",
+    "immersive voice-narrated story setting, sound-evocative scene backdrop, rich auditory details"
+  ]
+};
+
+function enhancePromptText(userPrompt, prodType, styleId, cameraId, qualityId) {
+  let text = userPrompt.trim();
+
+  // 1. Recover the original user prompt by cleaning any known pre-defined prefixes
+  prefixesPool.forEach(prefix => {
+    if (text.toLowerCase().startsWith(prefix.toLowerCase())) {
+      text = text.substring(prefix.length);
+    }
+  });
+
+  // Decapitalize the recovered text's first letter so it blends perfectly into a new prefix
+  if (text.length > 0) {
+    text = text.charAt(0).toLowerCase() + text.slice(1);
+  }
+
+  // 2. Recover the original user prompt by cleaning any known pre-defined pool values
+  const allPoolPhrases = [];
+  [stylesPool, cameraPool, qualityPool, prodTypePool].forEach(pool => {
+    Object.values(pool).forEach(arr => {
+      arr.forEach(phrase => {
+        allPoolPhrases.push(phrase);
+      });
+    });
+  });
+
+  // Sort by length descending to clean more specific strings first
+  allPoolPhrases.sort((a, b) => b.length - a.length);
+
+  allPoolPhrases.forEach(phrase => {
+    const escaped = phrase.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`\\s*,?\\s*${escaped}\\s*,?\\s*`, 'gi');
+    text = text.replace(regex, ', ');
+  });
+
+  // Strip any old style/aspect tags or [Aspect:...] blocks from the end
+  text = text.replace(/\[Aspect:[^\]]+\]/gi, '');
+
+  // Clean double commas and spaces
+  text = text
+    .replace(/,\s*,/g, ',')
+    .replace(/^[\s,]+|[\s,.]+$/g, '')
+    .trim();
+
+  // 3. Fallbacks if base prompt is empty
+  let basePrompt = text;
+  if (!basePrompt) {
+    const starters = {
+      cyberpunk: "A futuristic cyberpunk street merchant demonstrating a glowing digital device",
+      noir: "A mysterious detective smoking in the rainy night alley under flickering neon",
+      space: "An astronaut discovering a colossal crystalline monolith on a distant desert planet",
+      documentary: "An elderly weaver meticulously operating a wooden loom in a sunlit studio",
+      none: "A breathtaking cinematic shot of an ancient lighthouse standing tall against stormy ocean waves"
+    };
+    basePrompt = starters[styleId] || starters.none;
+  } else {
+    // Wrap with a random prefix
+    const randomPrefix = prefixesPool[Math.floor(Math.random() * prefixesPool.length)];
+    basePrompt = `${randomPrefix}${basePrompt}`;
+  }
+
+  // 4. Select a random option from each pool for style, camera, quality, and production type
+  const styleArr = stylesPool[styleId] || stylesPool.none;
+  const styleText = styleArr[Math.floor(Math.random() * styleArr.length)];
+
+  const cameraArr = cameraPool[cameraId] || cameraPool.static;
+  const cameraText = cameraArr[Math.floor(Math.random() * cameraArr.length)];
+
+  const qualityArr = qualityPool[qualityId] || qualityPool.high;
+  const qualityText = qualityArr[Math.floor(Math.random() * qualityArr.length)];
+
+  const prodArr = prodTypePool[prodType] || [];
+  const prodText = prodArr.length > 0 ? prodArr[Math.floor(Math.random() * prodArr.length)] : "";
+
+  let enhancedParts = [basePrompt];
+  if (styleText) enhancedParts.push(styleText);
+  if (cameraText) enhancedParts.push(cameraText);
+  if (prodText) enhancedParts.push(prodText);
+  if (qualityText) enhancedParts.push(qualityText);
+
+  let result = enhancedParts.join(", ");
+  result = result.replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim();
+
+  if (!result.endsWith(".")) {
+    result += ".";
+  }
+
+  return result;
+}
+
 export default function HeroSection({
   prompt,
   setPrompt,
@@ -172,10 +441,22 @@ export default function HeroSection({
   
   const { generate, loading, hasProject, productionType: contextProductionType } = useProjectData();
   const [selectedProdType, setSelectedProdType] = useState('Auto Detect');
+  
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   // Multimodal file states
   const [attachedFiles, setAttachedFiles] = useState([]);
   const fileInputRef = useRef(null);
+
+  const handleEnhance = () => {
+    if (isEnhancing || loading) return;
+    setIsEnhancing(true);
+    setTimeout(() => {
+      const enhanced = enhancePromptText(prompt, selectedProdType, style, camera, quality);
+      setPrompt(enhanced);
+      setIsEnhancing(false);
+    }, 450); // Small realistic delay for UI satisfaction
+  };
 
   const handleOrbClick = () => {
     if (!loading && fileInputRef.current) {
@@ -458,12 +739,18 @@ export default function HeroSection({
               {/* Sparkles Action */}
               <button 
                 type="button"
+                onClick={handleEnhance}
                 className={`hover:text-accent p-2 rounded-lg transition-colors cursor-pointer shrink-0 mt-1 ${
                   isDayMode ? 'text-neutral-500' : 'text-surface-500'
-                }`}
+                } ${isEnhancing ? 'animate-pulse text-accent' : ''}`}
                 title="Enhance Prompt"
+                disabled={loading || isEnhancing}
               >
-                <PiSparkle size={16} />
+                {isEnhancing ? (
+                  <FiLoader size={16} className="animate-spin text-accent" />
+                ) : (
+                  <PiSparkle size={16} />
+                )}
               </button>
             </div>
 
