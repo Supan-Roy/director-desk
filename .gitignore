@@ -41,3 +41,7 @@ pnpm-debug.log*
 # Database
 *.db
 /backend/director_desk.db
+
+# Backend Media Storage
+backend/static/uploads/
+backend/static/exports/
