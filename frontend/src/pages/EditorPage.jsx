@@ -594,7 +594,7 @@ export default function EditorPage() {
               
               {/* Preview Window Monitor */}
               <div 
-                className="relative aspect-video w-full max-w-[640px] bg-[#030305] border-t border-x border-white/[0.04] rounded-t-2xl shadow-[0_24px_50px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center"
+                className="relative aspect-video w-full max-w-[480px] bg-[#030305] border-t border-x border-white/[0.04] rounded-t-2xl shadow-[0_24px_50px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center"
               >
                 {/* Visual Video Stream Tag */}
                 {activeVideoClip ? (
@@ -645,7 +645,7 @@ export default function EditorPage() {
               </div>
 
               {/* Seek and Play Controls right under video preview */}
-              <div className="w-full max-w-[640px] bg-[#0c0c14] border-x border-b border-white/[0.04] rounded-b-2xl p-4 space-y-3 shadow-lg z-10 flex flex-col">
+              <div className="w-full max-w-[480px] bg-[#0c0c14] border-x border-b border-white/[0.04] rounded-b-2xl p-4 space-y-3 shadow-lg z-10 flex flex-col">
                 {/* Seek Bar (Slider) */}
                 <div className="flex items-center gap-3 w-full">
                   <span className="font-mono text-[10px] text-surface-400 w-12 shrink-0">{formatTime(currentTime)}</span>

@@ -113,6 +113,11 @@ def resolve_filepath(url_or_path: str) -> str:
             if os.path.exists(path):
                 return path
 
+    # Check frontend public root
+    public_path = os.path.abspath(os.path.join("..", "frontend", "public", clean_url.lstrip("/")))
+    if os.path.exists(public_path):
+        return public_path
+
     # Check directly inside static uploads
     filename = os.path.basename(clean_url)
     uploads_path = os.path.join("static", "uploads", filename)
@@ -350,7 +355,7 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             # Try to resolve Windows font, fallback to standard sans
             font_part = ""
             if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-                font_part = ":fontfile='C\\\\:/Windows/Fonts/arial.ttf'"
+                font_part = ":fontfile='C\\:/Windows/Fonts/arial.ttf'"
             
             v_text_label = f"v_text_{idx}"
             filter_parts.append(
