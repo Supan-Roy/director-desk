@@ -560,22 +560,38 @@ export default function EditorPage() {
   const [presetPage, setPresetPage] = useState(0)
   const [effectsPage, setEffectsPage] = useState(0)
   const [logoPreset, setLogoPreset] = useState(logo.position)
+  const [customText, setCustomText] = useState('')
+  const [subSearchQuery, setSubSearchQuery] = useState('')
+  const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
+  const [isMuted, setIsMuted] = useState(false)
+  const [playerVolume, setPlayerVolume] = useState(1.0)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showControls, setShowControls] = useState(true)
+
   const fileInputRef = useRef(null)
   const logoInputRef = useRef(null)
   const subtitleInputRef = useRef(null)
   const previewVideoRef = useRef(null)
   const previewAudioRef = useRef(null)
   const timelineScrollRef = useRef(null)
-  const [customText, setCustomText] = useState('')
-  const [subSearchQuery, setSubSearchQuery] = useState('')
-  const [logoUploading, setLogoUploading] = useState(false)
-  const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
-  const [isMuted, setIsMuted] = useState(false)
-  const [playerVolume, setPlayerVolume] = useState(1.0)
+  const confirmClearAllRef = useRef(null)
   const previewContainerRef = useRef(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showControls, setShowControls] = useState(true)
   const controlsTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    if (!confirmClearAll) return
+    const handleClickOutside = (event) => {
+      if (confirmClearAllRef.current && !confirmClearAllRef.current.contains(event.target)) {
+        setConfirmClearAll(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [confirmClearAll])
 
   const resetControlsTimeout = () => {
     setShowControls(true)
@@ -1572,8 +1588,42 @@ export default function EditorPage() {
                 <div className="space-y-4">
                   {/* Subtitle File Management Controls */}
                   <div className="space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Subtitle Settings</p>
-                    
+                    <div className="flex justify-between items-center">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Subtitle Settings</p>
+                      {textTrack.length > 0 && (
+                        <div ref={confirmClearAllRef}>
+                          {confirmClearAll ? (
+                            <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-0.5 rounded-lg border border-red-500/20">
+                              <span className="text-[8.5px] font-bold text-red-400 uppercase tracking-wider">Clear all?</span>
+                              <button
+                                onClick={() => {
+                                  setTextTrack([])
+                                  setConfirmClearAll(false)
+                                }}
+                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmClearAll(false)}
+                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white/10 text-neutral-200 hover:bg-white/20 transition-colors cursor-pointer"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmClearAll(true)}
+                              className="text-[9px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Clear all subtitles"
+                            >
+                              <FiTrash2 size={10} />
+                              <span>Clear All</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => subtitleInputRef.current?.click()}
