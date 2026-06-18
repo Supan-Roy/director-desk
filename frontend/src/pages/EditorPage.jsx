@@ -26,7 +26,9 @@ import {
   FiMaximize,
   FiMinimize,
   FiCornerUpLeft,
-  FiCornerUpRight
+  FiCornerUpRight,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi'
 import { useEditor } from '../context/EditorContext'
 import { useProjectData } from '../hooks/useProjectData'
@@ -88,7 +90,9 @@ export default function EditorPage() {
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    splitLeft,
+    splitRight
   } = useEditor()
 
   const [activeTab, setActiveTab] = useState('media') // media, overlays
@@ -152,6 +156,48 @@ export default function EditorPage() {
       setIsFullscreen(false)
     }
   }
+
+  // Keyboard shortcut listener for spacebar, enter, and arrow keys
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeEl = document.activeElement
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.tagName === 'SELECT' ||
+          activeEl.isContentEditable)
+      ) {
+        return
+      }
+
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault()
+        setIsPlaying((prev) => !prev)
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        setCurrentTime((prev) => Math.max(0, prev - 5))
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        setCurrentTime((prev) => Math.min(totalDuration, prev + 5))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setPlayerVolume((prev) => {
+          const next = Math.min(1.0, prev + 0.1)
+          if (next > 0) setIsMuted(false)
+          return next
+        })
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setPlayerVolume((prev) => Math.max(0.0, prev - 0.1))
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [totalDuration, setIsPlaying, setCurrentTime, setPlayerVolume, setIsMuted])
 
   const handleTimelineResizeMouseDown = (e) => {
     e.preventDefault()
@@ -837,30 +883,6 @@ export default function EditorPage() {
               </div>
             </div>
 
-            {/* Playback Control Bar */}
-            <div className="h-14 border-t flex items-center justify-end px-6 shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-black/10">
-              {/* Tracks operations */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={splitClipAtPlayhead}
-                  disabled={!selectedClipId || selectedTrackType === 'text'}
-                  title="Split Selected Clip"
-                  className="px-3 py-1.5 rounded-lg border border-white/[0.08] text-[10px] font-bold uppercase tracking-wider hover:bg-white/5 transition-colors disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <FiScissors size={10} />
-                  <span>Split</span>
-                </button>
-                <button
-                  onClick={() => deleteClip(selectedClipId, selectedTrackType)}
-                  disabled={!selectedClipId}
-                  title="Delete Selected Clip"
-                  className="px-3 py-1.5 rounded-lg border border-red-500/20 text-[10px] font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <FiTrash2 size={10} />
-                  <span>Delete</span>
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Right Panel: Properties & Effects controls */}
@@ -1204,10 +1226,10 @@ export default function EditorPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => addTextOverlay("New Text overlay", currentTime, currentTime + 4.0)}
-                className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-surface-200 flex items-center gap-1.5 cursor-pointer border border-white/[0.05]"
+                title="Add Text Overlay"
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-surface-200 cursor-pointer flex items-center justify-center border border-white/[0.05]"
               >
                 <FiType size={11} />
-                <span>Add Text</span>
               </button>
 
               <div className="h-4 w-px bg-white/[0.08]" />
@@ -1229,6 +1251,57 @@ export default function EditorPage() {
                   className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-surface-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer flex items-center justify-center border border-white/[0.05]"
                 >
                   <FiCornerUpRight size={11} />
+                </button>
+              </div>
+
+              <div className="h-4 w-px bg-white/[0.08]" />
+
+              {/* Clip Actions (Split Left, Split, Split Right, Delete) */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={splitLeft}
+                  disabled={!selectedClipId || selectedTrackType === 'text'}
+                  title="Split Left (Trim start to playhead)"
+                  className="p-1.5 rounded-lg border border-white/[0.08] text-surface-200 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-white/5"
+                >
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                    <path d="M 7 5 H 4 V 19 H 7" strokeDasharray="3 2" opacity="0.35" />
+                    <path d="M 17 5 H 20 V 19 H 17" />
+                  </svg>
+                </button>
+                
+                <button
+                  onClick={splitClipAtPlayhead}
+                  disabled={!selectedClipId || selectedTrackType === 'text'}
+                  title="Split Clip at Playhead"
+                  className="p-1.5 rounded-lg border border-white/[0.08] text-surface-200 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-white/5"
+                >
+                  <FiScissors size={11} />
+                </button>
+
+                <button
+                  onClick={splitRight}
+                  disabled={!selectedClipId || selectedTrackType === 'text'}
+                  title="Split Right (Trim playhead to end)"
+                  className="p-1.5 rounded-lg border border-white/[0.08] text-surface-200 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-white/5"
+                >
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                    <path d="M 7 5 H 4 V 19 H 7" />
+                    <path d="M 17 5 H 20 V 19 H 17" strokeDasharray="3 2" opacity="0.35" />
+                  </svg>
+                </button>
+
+                <div className="h-4 w-px bg-white/[0.08] mx-1" />
+
+                <button
+                  onClick={() => deleteClip(selectedClipId, selectedTrackType)}
+                  disabled={!selectedClipId}
+                  title="Delete Selected Clip"
+                  className="p-1.5 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-red-500/5"
+                >
+                  <FiTrash2 size={11} />
                 </button>
               </div>
 
