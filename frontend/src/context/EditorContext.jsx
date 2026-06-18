@@ -145,6 +145,7 @@ export function EditorProvider({ children }) {
 
   // Export properties
   const [resolution, setResolution] = useState('1080p')
+  const [exportFormat, setExportFormat] = useState('mp4')
   const [isExporting, setIsExporting] = useState(false)
   const [exportTaskId, setExportTaskId] = useState(null)
   const [exportProgress, setExportProgress] = useState(0)
@@ -225,6 +226,11 @@ export function EditorProvider({ children }) {
       throw err
     }
   }
+
+  // Delete asset from library
+  const deleteAsset = useCallback((assetId) => {
+    setAssets((prev) => prev.filter((a) => a.id !== assetId))
+  }, [])
 
   // Snap checking helper
   const getSnappedTime = useCallback((time, currentClipId, tracks) => {
@@ -579,6 +585,7 @@ export function EditorProvider({ children }) {
 
     const payload = {
       resolution,
+      format: exportFormat,
       videoTrack,
       audioTrack,
       textTrack,
@@ -780,6 +787,7 @@ export function EditorProvider({ children }) {
     selectedClipId,
     selectedTrackType,
     resolution,
+    exportFormat,
     isExporting,
     exportProgress,
     exportStatus,
@@ -797,7 +805,9 @@ export function EditorProvider({ children }) {
     setSelectedClipId,
     setSelectedTrackType,
     setResolution,
+    setExportFormat,
     uploadAsset,
+    deleteAsset,
     addAssetToTimeline,
     splitClipAtPlayhead,
     splitLeft,
