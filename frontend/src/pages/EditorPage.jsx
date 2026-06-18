@@ -600,6 +600,7 @@ export default function EditorPage() {
     setExportFormat,
     uploadAsset,
     deleteAsset,
+    setAssets,
     addAssetToTimeline,
     addVfxToTimeline,
     splitClipAtPlayhead,
@@ -631,6 +632,7 @@ export default function EditorPage() {
   const [vfxSearchQuery, setVfxSearchQuery] = useState('')
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [confirmClearAllVfx, setConfirmClearAllVfx] = useState(false)
+  const [confirmClearAllAssets, setConfirmClearAllAssets] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
   const [isMuted, setIsMuted] = useState(false)
@@ -646,6 +648,7 @@ export default function EditorPage() {
   const timelineScrollRef = useRef(null)
   const confirmClearAllRef = useRef(null)
   const confirmClearAllVfxRef = useRef(null)
+  const confirmClearAllAssetsRef = useRef(null)
   const previewContainerRef = useRef(null)
   const controlsTimeoutRef = useRef(null)
 
@@ -674,6 +677,19 @@ export default function EditorPage() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [confirmClearAllVfx])
+
+  useEffect(() => {
+    if (!confirmClearAllAssets) return
+    const handleClickOutside = (event) => {
+      if (confirmClearAllAssetsRef.current && !confirmClearAllAssetsRef.current.contains(event.target)) {
+        setConfirmClearAllAssets(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [confirmClearAllAssets])
 
   const resetControlsTimeout = () => {
     setShowControls(true)
@@ -1366,10 +1382,14 @@ export default function EditorPage() {
             <span className="text-[10px] font-extrabold tracking-[0.25em] uppercase text-surface-500">
               Studio Post-Production
             </span>
-            <span className="text-surface-700">/</span>
-            <span className="text-[11.5px] font-bold text-accent truncate max-w-[200px]">
-              {hasProject ? projectTitle : 'Standalone Sequence'}
-            </span>
+            {hasProject && projectTitle && (
+              <>
+                <span className="text-surface-700">/</span>
+                <span className="text-[11.5px] font-bold text-accent truncate max-w-[200px]">
+                  {projectTitle}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -1520,7 +1540,41 @@ export default function EditorPage() {
 
                   {/* Assets Grid */}
                   <div className="space-y-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Asset Inventory</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Asset Inventory</p>
+                      {assets.length > 0 && (
+                        <div ref={confirmClearAllAssetsRef}>
+                          {confirmClearAllAssets ? (
+                            <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-0.5 rounded-lg border border-red-500/20">
+                              <span className="text-[8.5px] font-bold text-red-400 uppercase tracking-wider">Clear all?</span>
+                              <button
+                                onClick={() => {
+                                  setAssets([])
+                                  setConfirmClearAllAssets(false)
+                                }}
+                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmClearAllAssets(false)}
+                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white/10 text-neutral-200 hover:bg-white/20 transition-colors cursor-pointer"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmClearAllAssets(true)}
+                              title="Delete All Assets"
+                              className="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                            >
+                              <FiTrash2 size={11} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       {assets.map((asset) => (
                         <div

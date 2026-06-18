@@ -878,6 +878,7 @@ export function EditorProvider({ children }) {
     setExportFormat,
     uploadAsset,
     deleteAsset,
+    setAssets,
     addAssetToTimeline,
     addVfxToTimeline,
     splitClipAtPlayhead,
