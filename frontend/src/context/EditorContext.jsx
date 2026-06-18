@@ -555,7 +555,14 @@ export function EditorProvider({ children }) {
       x: 'center',
       y: 'bottom',
       fontSize: 28,
-      fontColor: '#ffffff'
+      fontColor: '#ffffff',
+      fontFamily: 'Sofia Sans',
+      bold: false,
+      italic: false,
+      align: 'center',
+      shadowEnabled: true,
+      shadowColor: '#000000',
+      shadowBlur: 4
     }
     setTextTrack((prev) => [...prev, newText])
     setSelectedClipId(newText.id)
@@ -725,7 +732,14 @@ export function EditorProvider({ children }) {
         x: 'center',
         y: 'bottom',
         fontSize: 26,
-        fontColor: '#f3f4f6'
+        fontColor: '#f3f4f6',
+        fontFamily: 'Sofia Sans',
+        bold: false,
+        italic: false,
+        align: 'center',
+        shadowEnabled: true,
+        shadowColor: '#000000',
+        shadowBlur: 4
       }
       setTextTrack((prev) => [...prev, newText])
 
