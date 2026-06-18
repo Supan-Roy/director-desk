@@ -331,6 +331,78 @@ export function EditorProvider({ children }) {
     setSelectedClipId(rightClip.id)
   }, [selectedClipId, selectedTrackType, videoTrack, audioTrack, currentTime])
 
+  // Split Left (Trim left side of playhead)
+  const splitLeft = useCallback(() => {
+    if (!selectedClipId || !selectedTrackType) return
+
+    let setClips = null
+    let clips = []
+    if (selectedTrackType === 'video') {
+      clips = videoTrack
+      setClips = setVideoTrack
+    } else if (selectedTrackType === 'audio') {
+      clips = audioTrack
+      setClips = setAudioTrack
+    } else {
+      return
+    }
+
+    const clip = clips.find((c) => c.id === selectedClipId)
+    if (!clip || currentTime <= clip.start || currentTime >= clip.end) return
+
+    const splitOffset = currentTime - clip.start
+    const splitSourceTime = clip.sourceStart + splitOffset
+
+    setClips((prev) =>
+      prev.map((c) => {
+        if (c.id === selectedClipId) {
+          return {
+            ...c,
+            start: currentTime,
+            sourceStart: splitSourceTime
+          }
+        }
+        return c
+      })
+    )
+  }, [selectedClipId, selectedTrackType, videoTrack, audioTrack, currentTime])
+
+  // Split Right (Trim right side of playhead)
+  const splitRight = useCallback(() => {
+    if (!selectedClipId || !selectedTrackType) return
+
+    let setClips = null
+    let clips = []
+    if (selectedTrackType === 'video') {
+      clips = videoTrack
+      setClips = setVideoTrack
+    } else if (selectedTrackType === 'audio') {
+      clips = audioTrack
+      setClips = setAudioTrack
+    } else {
+      return
+    }
+
+    const clip = clips.find((c) => c.id === selectedClipId)
+    if (!clip || currentTime <= clip.start || currentTime >= clip.end) return
+
+    const splitOffset = currentTime - clip.start
+    const splitSourceTime = clip.sourceStart + splitOffset
+
+    setClips((prev) =>
+      prev.map((c) => {
+        if (c.id === selectedClipId) {
+          return {
+            ...c,
+            end: currentTime,
+            sourceEnd: splitSourceTime
+          }
+        }
+        return c
+      })
+    )
+  }, [selectedClipId, selectedTrackType, videoTrack, audioTrack, currentTime])
+
   // Delete selected clip
   const deleteClip = useCallback((clipId, trackType) => {
     if (trackType === 'video') {
@@ -714,6 +786,8 @@ export function EditorProvider({ children }) {
     uploadAsset,
     addAssetToTimeline,
     splitClipAtPlayhead,
+    splitLeft,
+    splitRight,
     deleteClip,
     duplicateClip,
     moveClip,
