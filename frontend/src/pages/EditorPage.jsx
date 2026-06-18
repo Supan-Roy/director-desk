@@ -58,6 +58,7 @@ export default function EditorPage() {
     selectedClipId,
     selectedTrackType,
     resolution,
+    exportFormat,
     isExporting,
     exportProgress,
     exportStatus,
@@ -75,7 +76,9 @@ export default function EditorPage() {
     setSelectedClipId,
     setSelectedTrackType,
     setResolution,
+    setExportFormat,
     uploadAsset,
+    deleteAsset,
     addAssetToTimeline,
     splitClipAtPlayhead,
     deleteClip,
@@ -342,13 +345,14 @@ export default function EditorPage() {
         : 'none',
       position: 'absolute',
       zIndex: 45, // Set above controls overlay (z-40) to prevent click interception and allow dragging
-      width: txt.width || 'auto',
+      width: txt.width && txt.width !== 'auto' ? txt.width : 'max-content',
       height: txt.height || 'auto',
       minWidth: txt.width && txt.width !== 'auto' ? 'none' : 'max-content', // Prevent text from getting squashed when dragged close to the right screen boundary
       display: 'flex',
       alignItems: 'center',
       justifyContent: txt.align === 'left' ? 'flex-start' : txt.align === 'right' ? 'flex-end' : 'center',
       wordBreak: 'break-word',
+      whiteSpace: 'pre-wrap',
       overflow: 'hidden',
     }
     
@@ -615,7 +619,7 @@ export default function EditorPage() {
           <div className="flex items-center gap-4">
             {/* Resolution Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Output</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Resolution</span>
               <select
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
@@ -629,6 +633,25 @@ export default function EditorPage() {
                 <option value="720p">720p (HD)</option>
                 <option value="480p">480p (SD)</option>
                 <option value="360p">360p (Low)</option>
+              </select>
+            </div>
+
+            {/* Format Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Format</span>
+              <select
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value)}
+                className={`text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
+                  isDayMode 
+                    ? 'bg-white border-black/10 text-neutral-800' 
+                    : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                }`}
+              >
+                <option value="mp4">MP4</option>
+                <option value="mkv">MKV</option>
+                <option value="mov">MOV</option>
+                <option value="avi">AVI</option>
               </select>
             </div>
 
@@ -646,7 +669,7 @@ export default function EditorPage() {
               ) : (
                 <>
                   <FiDownload size={12} />
-                  <span>Export MP4</span>
+                  <span>Export</span>
                 </>
               )}
             </button>
@@ -749,6 +772,13 @@ export default function EditorPage() {
                               className="p-1 rounded bg-accent/20 text-accent hover:bg-accent/30 cursor-pointer"
                             >
                               <FiPlus size={11} />
+                            </button>
+                            <button
+                              onClick={() => deleteAsset(asset.id)}
+                              title="Delete Asset"
+                              className="p-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 cursor-pointer"
+                            >
+                              <FiTrash2 size={11} />
                             </button>
                           </div>
                         </div>
@@ -1915,7 +1945,7 @@ export default function EditorPage() {
             </div>
             
             <p className="text-[11px] text-surface-400 leading-relaxed">
-              Generating dynamic FFmpeg filters and assembling timeline operations. Do not close this window.
+              Assembling timeline tracks and exporting video. Do not close this window.
             </p>
 
             {/* Progress Bar */}
@@ -1941,10 +1971,10 @@ export default function EditorPage() {
           <div className="bg-[#090912] border border-white/[0.08] rounded-2xl p-6 w-[420px] max-w-full text-center space-y-4 shadow-[0_24px_60px_rgba(0,0,0,0.8)]">
             <FiCheckCircle size={44} className="mx-auto text-emerald-400" />
             
-            <h3 className="text-base font-bold uppercase tracking-wider text-white">Render Completed!</h3>
+            <h3 className="text-base font-bold uppercase tracking-wider text-white">Export Completed!</h3>
             
             <p className="text-[11.5px] text-surface-400 leading-relaxed">
-              Your video clip has been successfully rendered through FFmpeg. The output MP4 file is ready for download.
+              Your video clip has been successfully exported. The file is ready for download.
             </p>
 
             <video 
@@ -1956,11 +1986,11 @@ export default function EditorPage() {
             <div className="flex gap-3 pt-2">
               <a
                 href={exportUrl}
-                download={`export_${Date.now()}.mp4`}
+                download={`export_${Date.now()}.${exportFormat}`}
                 className="flex-1 py-2.5 rounded-xl bg-accent text-white font-bold uppercase tracking-widest text-[10.5px] flex items-center justify-center gap-2 hover:bg-purple-600 transition-all"
               >
                 <FiDownload size={12} />
-                <span>Download MP4</span>
+                <span>Download {exportFormat.toUpperCase()}</span>
               </a>
               <button
                 onClick={resetExport}
@@ -1979,10 +2009,10 @@ export default function EditorPage() {
           <div className="bg-[#090912] border border-white/[0.08] rounded-2xl p-6 w-[420px] max-w-full text-center space-y-4 shadow-[0_24px_60px_rgba(0,0,0,0.8)]">
             <FiAlertCircle size={44} className="mx-auto text-red-400" />
             
-            <h3 className="text-base font-bold uppercase tracking-wider text-white">Rendering Failed</h3>
+            <h3 className="text-base font-bold uppercase tracking-wider text-white">Export Failed</h3>
             
             <p className="text-[11.5px] text-surface-400 leading-relaxed">
-              An error occurred during FFmpeg subprocess execution. Details below:
+              An error occurred during video rendering. Details below:
             </p>
 
             <div className="p-3 bg-red-950/20 border border-red-900/30 rounded-lg text-left text-[10px] font-mono text-red-300 max-h-32 overflow-y-auto">

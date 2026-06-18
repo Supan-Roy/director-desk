@@ -62,6 +62,7 @@ class LogoInfo(BaseModel):
 
 class ExportPayload(BaseModel):
     resolution: str  # '360p', '480p', '720p', or '1080p'
+    format: Optional[str] = "mp4"  # 'mp4', 'mkv', 'avi', 'mov'
     videoTrack: List[ClipInfo]
     audioTrack: List[ClipInfo]
     textTrack: List[TextInfo]
@@ -213,7 +214,12 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             res_w, res_h = (640, 360)
         else:
             res_w, res_h = (1280, 720)
-        output_filepath = f"static/exports/{task_id}.mp4"
+
+        # Resolve output format extension
+        ext = payload.format.lower() if payload.format else "mp4"
+        if ext not in ["mp4", "mkv", "avi", "mov"]:
+            ext = "mp4"
+        output_filepath = f"static/exports/{task_id}.{ext}"
 
         # Resolve inputs and total duration
         total_duration = 0.0
@@ -343,26 +349,51 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
         }
 
         for idx, text in enumerate(payload.textTrack):
-            # Coordinates presets and expressions
+            # Coordinates presets and expressions matching frontend positioning
             x_expr = "(w-tw)/2"
-            if text.x != "center":
+            if text.x == "center":
+                if text.align == "left":
+                    x_expr = "w*0.10"
+                elif text.align == "right":
+                    x_expr = "w*0.90-tw"
+                else:
+                    x_expr = "(w-tw)/2"
+            else:
                 try:
-                    val = float(text.x)
-                    x_expr = f"w*{val}" if val <= 1.0 else str(val)
+                    x_str = text.x.strip()
+                    is_percent = False
+                    if x_str.endswith('%'):
+                        x_str = x_str[:-1].strip()
+                        is_percent = True
+                    val = float(x_str)
+                    if is_percent:
+                        x_expr = f"w*{val/100:.4f}-tw/2"
+                    else:
+                        x_expr = f"w*{val}" if val <= 1.0 else str(val)
                 except ValueError:
                     x_expr = "20"
 
-            y_expr = "h-th-60"
+            y_expr = "h*0.78-th"  # Default bottom offset (22% bottom margin)
             if text.y == "top":
-                y_expr = "60"
-            elif text.y != "bottom" and text.y != "center":
-                try:
-                    val = float(text.y)
-                    y_expr = f"h*{val}" if val <= 1.0 else str(val)
-                except ValueError:
-                    y_expr = "h-th-60"
+                y_expr = "h*0.10"
             elif text.y == "center":
                 y_expr = "(h-th)/2"
+            elif text.y == "bottom":
+                y_expr = "h*0.78-th"
+            else:
+                try:
+                    y_str = text.y.strip()
+                    is_percent = False
+                    if y_str.endswith('%'):
+                        y_str = y_str[:-1].strip()
+                        is_percent = True
+                    val = float(y_str)
+                    if is_percent:
+                        y_expr = f"h*{val/100:.4f}-th/2"
+                    else:
+                        y_expr = f"h*{val}" if val <= 1.0 else str(val)
+                except ValueError:
+                    y_expr = "h*0.78-th"
 
             # Clean and escape text for drawtext
             clean_text = text.text.replace("'", "'\\\\''").replace(":", "\\:")
@@ -503,7 +534,7 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
         if process.returncode == 0:
             rendering_tasks[task_id]["status"] = "completed"
             rendering_tasks[task_id]["progress"] = 100
-            rendering_tasks[task_id]["url"] = f"/static/exports/{task_id}.mp4"
+            rendering_tasks[task_id]["url"] = f"/static/exports/{task_id}.{ext}"
             logger.info(f"Video export task {task_id} completed successfully.")
         else:
             rendering_tasks[task_id]["status"] = "failed"
