@@ -34,6 +34,16 @@ class ClipInfo(BaseModel):
     volume: Optional[float] = 1.0
     fadeIn: Optional[float] = 0.0
     fadeOut: Optional[float] = 0.0
+    grayscale: Optional[bool] = False
+    sepia: Optional[bool] = False
+    invert: Optional[bool] = False
+    saturation: Optional[float] = 1.0
+    hueRotate: Optional[float] = 0.0
+    mirrorH: Optional[bool] = False
+    mirrorV: Optional[bool] = False
+    vignette: Optional[float] = 0.0
+    edgeDetect: Optional[bool] = False
+    sharpen: Optional[bool] = False
 
 
 class TextInfo(BaseModel):
@@ -285,6 +295,37 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
                 # scale blur relative to resolution
                 sigma = min(20, max(0.1, clip.blur * 2))
                 effects.append(f"gblur=sigma={sigma}")
+            
+            # Grayscale / Sepia / Invert
+            if clip.grayscale:
+                effects.append("format=gray")
+            if clip.sepia:
+                effects.append("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131")
+            if clip.invert:
+                effects.append("negate")
+                
+            # Saturation and Hue Rotate
+            if (clip.saturation is not None and clip.saturation != 1.0) or (clip.hueRotate is not None and clip.hueRotate != 0.0):
+                sat = clip.saturation if clip.saturation is not None else 1.0
+                hue_deg = clip.hueRotate if clip.hueRotate is not None else 0.0
+                effects.append(f"hue=h={hue_deg}:s={sat}")
+                
+            # Mirror transforms
+            if clip.mirrorH:
+                effects.append("hflip")
+            if clip.mirrorV:
+                effects.append("vflip")
+                
+            # Vignette overlay
+            if clip.vignette is not None and clip.vignette > 0.0:
+                angle = clip.vignette * 0.5
+                effects.append(f"vignette=angle={angle}")
+                
+            # Edge Detect & Sharpen
+            if clip.edgeDetect:
+                effects.append("edgedetect")
+            if clip.sharpen:
+                effects.append("unsharp=5:5:1.0:5:5:0.0")
             
             # Fade-in/out
             if clip.fadeIn > 0.0:
