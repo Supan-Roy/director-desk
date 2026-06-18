@@ -66,6 +66,7 @@ export function EditorProvider({ children }) {
   const [videoTrack, setVideoTrack] = useState([])
   const [audioTrack, setAudioTrack] = useState([])
   const [textTrack, setTextTrack] = useState([])
+  const [vfxTrack, setVfxTrack] = useState([])
   const [logo, setLogo] = useState({
     url: null,
     position: 'top-right',
@@ -87,6 +88,7 @@ export function EditorProvider({ children }) {
       videoTrack: JSON.parse(JSON.stringify(videoTrack)),
       audioTrack: JSON.parse(JSON.stringify(audioTrack)),
       textTrack: JSON.parse(JSON.stringify(textTrack)),
+      vfxTrack: JSON.parse(JSON.stringify(vfxTrack)),
       logo: JSON.parse(JSON.stringify(logo))
     }
     setHistory((prev) => {
@@ -95,7 +97,7 @@ export function EditorProvider({ children }) {
       setHistoryIndex(nextHistory.length - 1)
       return nextHistory
     })
-  }, [videoTrack, audioTrack, textTrack, logo])
+  }, [videoTrack, audioTrack, textTrack, vfxTrack, logo])
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
@@ -106,6 +108,7 @@ export function EditorProvider({ children }) {
         setVideoTrack(prevState.videoTrack)
         setAudioTrack(prevState.audioTrack)
         setTextTrack(prevState.textTrack)
+        setVfxTrack(prevState.vfxTrack || [])
         setLogo(prevState.logo)
         setHistoryIndex(prevIndex)
         setTimeout(() => {
@@ -124,6 +127,7 @@ export function EditorProvider({ children }) {
         setVideoTrack(nextState.videoTrack)
         setAudioTrack(nextState.audioTrack)
         setTextTrack(nextState.textTrack)
+        setVfxTrack(nextState.vfxTrack || [])
         setLogo(nextState.logo)
         setHistoryIndex(nextIndex)
         setTimeout(() => {
@@ -141,7 +145,7 @@ export function EditorProvider({ children }) {
 
   // Selections
   const [selectedClipId, setSelectedClipId] = useState(null)
-  const [selectedTrackType, setSelectedTrackType] = useState(null) // 'video', 'audio', 'text'
+  const [selectedTrackType, setSelectedTrackType] = useState(null) // 'video', 'audio', 'text', 'vfx'
 
   // Export properties
   const [resolution, setResolution] = useState('1080p')
@@ -165,6 +169,7 @@ export function EditorProvider({ children }) {
     ...videoTrack.map((c) => c.end),
     ...audioTrack.map((c) => c.end),
     ...textTrack.map((t) => t.end),
+    ...vfxTrack.map((v) => v.end),
     0.0
   )
 
@@ -427,6 +432,8 @@ export function EditorProvider({ children }) {
       setAudioTrack((prev) => prev.filter((c) => c.id !== clipId))
     } else if (trackType === 'text') {
       setTextTrack((prev) => prev.filter((c) => c.id !== clipId))
+    } else if (trackType === 'vfx') {
+      setVfxTrack((prev) => prev.filter((c) => c.id !== clipId))
     }
     
     if (selectedClipId === clipId) {
@@ -449,6 +456,9 @@ export function EditorProvider({ children }) {
     } else if (trackType === 'text') {
       currentClips = textTrack
       setClips = setTextTrack
+    } else if (trackType === 'vfx') {
+      currentClips = vfxTrack
+      setClips = setVfxTrack
     } else {
       return
     }
@@ -467,7 +477,7 @@ export function EditorProvider({ children }) {
     setClips((prev) => [...prev, newClip])
     setSelectedClipId(newClip.id)
     setSelectedTrackType(trackType)
-  }, [videoTrack, audioTrack, textTrack])
+  }, [videoTrack, audioTrack, textTrack, vfxTrack])
 
   // Move clip start/end (Dragging or resizing)
   const moveClip = useCallback((clipId, trackType, newStart) => {
@@ -495,6 +505,15 @@ export function EditorProvider({ children }) {
         if (t.id === clipId) {
           const dur = t.end - t.start
           return { ...t, start: newStart, end: newStart + dur }
+        }
+        return t
+      }))
+    } else if (trackType === 'vfx') {
+      setVfxTrack((prev) => prev.map((t) => {
+        if (t.id === clipId) {
+          const dur = t.end - t.start
+          const snappedStart = getSnappedTime(newStart, clipId, { video: videoTrack, audio: audioTrack })
+          return { ...t, start: snappedStart, end: snappedStart + dur }
         }
         return t
       }))
@@ -545,6 +564,17 @@ export function EditorProvider({ children }) {
         }
         return t
       }))
+    } else if (trackType === 'vfx') {
+      setVfxTrack((prev) => prev.map((t) => {
+        if (t.id === clipId) {
+          if (handleType === 'start') {
+            return { ...t, start: Math.min(newTime, t.end - 0.1) }
+          } else {
+            return { ...t, end: Math.max(newTime, t.start + 0.1) }
+          }
+        }
+        return t
+      }))
     }
   }, [])
 
@@ -558,6 +588,8 @@ export function EditorProvider({ children }) {
       setAudioTrack(handleUpdate)
     } else if (trackType === 'text') {
       setTextTrack(handleUpdate)
+    } else if (trackType === 'vfx') {
+      setVfxTrack(handleUpdate)
     }
   }, [])
 
@@ -585,6 +617,31 @@ export function EditorProvider({ children }) {
     setSelectedTrackType('text')
   }, [])
 
+  // Add VFX clip to timeline
+  const addVfxToTimeline = useCallback((vfxType, effectId, name, startOffset = 0) => {
+    const id = `vfx_${effectId}_${Date.now()}`
+    const duration = vfxType === 'camera_fx' ? 2.0 : 5.0
+    const newVfx = {
+      id,
+      name,
+      type: vfxType,
+      effectId,
+      start: startOffset,
+      end: startOffset + duration,
+      x: 'center',
+      y: 'center',
+      scale: 1.0,
+      rotation: 0,
+      opacity: 1.0,
+      blendMode: vfxType === 'camera_fx' ? 'normal' : 'screen',
+      hasAudio: vfxType !== 'camera_fx',
+      audioVolume: 1.0
+    }
+    setVfxTrack((prev) => [...prev, newVfx])
+    setSelectedClipId(id)
+    setSelectedTrackType('vfx')
+  }, [])
+
   // Start FFmpeg Export
   const triggerExport = async () => {
     setIsExporting(true)
@@ -599,6 +656,7 @@ export function EditorProvider({ children }) {
       videoTrack,
       audioTrack,
       textTrack,
+      vfxTrack,
       logo: logo.enabled ? {
         url: logo.url,
         position: logo.position,
@@ -789,6 +847,7 @@ export function EditorProvider({ children }) {
     videoTrack,
     audioTrack,
     textTrack,
+    vfxTrack,
     logo,
     currentTime,
     isPlaying,
@@ -807,6 +866,7 @@ export function EditorProvider({ children }) {
     setVideoTrack,
     setAudioTrack,
     setTextTrack,
+    setVfxTrack,
     setLogo,
     setCurrentTime,
     setIsPlaying,
@@ -819,6 +879,7 @@ export function EditorProvider({ children }) {
     uploadAsset,
     deleteAsset,
     addAssetToTimeline,
+    addVfxToTimeline,
     splitClipAtPlayhead,
     splitLeft,
     splitRight,
