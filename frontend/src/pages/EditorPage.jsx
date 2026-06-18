@@ -630,6 +630,7 @@ export default function EditorPage() {
   const [subSearchQuery, setSubSearchQuery] = useState('')
   const [vfxSearchQuery, setVfxSearchQuery] = useState('')
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [confirmClearAllVfx, setConfirmClearAllVfx] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
   const [isMuted, setIsMuted] = useState(false)
@@ -644,6 +645,7 @@ export default function EditorPage() {
   const previewAudioRef = useRef(null)
   const timelineScrollRef = useRef(null)
   const confirmClearAllRef = useRef(null)
+  const confirmClearAllVfxRef = useRef(null)
   const previewContainerRef = useRef(null)
   const controlsTimeoutRef = useRef(null)
 
@@ -659,6 +661,19 @@ export default function EditorPage() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [confirmClearAll])
+
+  useEffect(() => {
+    if (!confirmClearAllVfx) return
+    const handleClickOutside = (event) => {
+      if (confirmClearAllVfxRef.current && !confirmClearAllVfxRef.current.contains(event.target)) {
+        setConfirmClearAllVfx(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [confirmClearAllVfx])
 
   const resetControlsTimeout = () => {
     setShowControls(true)
@@ -1873,8 +1888,42 @@ export default function EditorPage() {
 
               {activeTab === 'vfx' && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="flex justify-between items-center">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">VFX & Camera FX</p>
+                    {vfxTrack.length > 0 && (
+                      <div ref={confirmClearAllVfxRef}>
+                        {confirmClearAllVfx ? (
+                          <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-0.5 rounded-lg border border-red-500/20">
+                            <span className="text-[8.5px] font-bold text-red-400 uppercase tracking-wider">Remove all?</span>
+                            <button
+                              onClick={() => {
+                                setVfxTrack([])
+                                setConfirmClearAllVfx(false)
+                              }}
+                              className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={() => setConfirmClearAllVfx(false)}
+                              className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white/10 text-neutral-200 hover:bg-white/20 transition-colors cursor-pointer"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmClearAllVfx(true)}
+                            className="text-[9px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Remove all VFX clips from timeline"
+                          >
+                            <FiTrash2 size={10} />
+                            <span>Remove All</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                     <input
                       type="text"
                       placeholder="Search effects..."
@@ -1886,7 +1935,6 @@ export default function EditorPage() {
                           : 'bg-[#0c0c16] border-white/10 text-neutral-200'
                       }`}
                     />
-                  </div>
 
                   <div className="space-y-4 max-h-[450px] overflow-y-auto pr-1">
                     {VFX_LIBRARY.map((cat) => {
