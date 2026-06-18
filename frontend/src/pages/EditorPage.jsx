@@ -35,6 +35,379 @@ import { useProjectData } from '../hooks/useProjectData'
 import { useTheme } from '../context/ThemeContext'
 import Sidebar from '../components/Sidebar'
 
+const PRESETS = [
+  {
+    id: 'original',
+    name: 'Original / Rec.709',
+    filters: {
+      brightness: 0.0,
+      contrast: 1.0,
+      saturation: 1.0,
+      hueRotate: 0,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'teal_orange',
+    name: 'Teal & Orange',
+    filters: {
+      brightness: 0.05,
+      contrast: 1.15,
+      saturation: 1.3,
+      hueRotate: -10,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.1,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'classic_noir',
+    name: 'Classic Noir',
+    filters: {
+      brightness: -0.05,
+      contrast: 1.3,
+      saturation: 0.0,
+      hueRotate: 0,
+      grayscale: true,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.2,
+      edgeDetect: false,
+      sharpen: true,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'cyberpunk',
+    name: 'Cyberpunk Neon',
+    filters: {
+      brightness: 0.0,
+      contrast: 1.1,
+      saturation: 1.5,
+      hueRotate: 140,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.15,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'vintage',
+    name: 'Vintage Film',
+    filters: {
+      brightness: -0.02,
+      contrast: 0.95,
+      saturation: 0.75,
+      hueRotate: 5,
+      grayscale: false,
+      sepia: true,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.35,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'golden_hour',
+    name: 'Golden Hour',
+    filters: {
+      brightness: 0.1,
+      contrast: 1.05,
+      saturation: 1.25,
+      hueRotate: 10,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'cold_ice',
+    name: 'Moody Blue',
+    filters: {
+      brightness: -0.05,
+      contrast: 1.1,
+      saturation: 0.85,
+      hueRotate: -25,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.25,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'edge_art',
+    name: 'Edge Sketch',
+    filters: {
+      brightness: 0.0,
+      contrast: 1.0,
+      saturation: 1.0,
+      hueRotate: 0,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: true,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'polaroid',
+    name: 'Polaroid Classic',
+    filters: {
+      brightness: 0.05,
+      contrast: 0.9,
+      saturation: 0.8,
+      hueRotate: 5,
+      grayscale: false,
+      sepia: true,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.3,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'dramatic',
+    name: 'Dramatic Contrast',
+    filters: {
+      brightness: -0.08,
+      contrast: 1.4,
+      saturation: 1.1,
+      hueRotate: 0,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: true,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'dreamy',
+    name: 'Dreamy Glow',
+    filters: {
+      brightness: 0.1,
+      contrast: 0.9,
+      saturation: 1.4,
+      hueRotate: 0,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 1.5,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'infrared',
+    name: 'Faux Infrared',
+    filters: {
+      brightness: 0.0,
+      contrast: 1.0,
+      saturation: 1.5,
+      hueRotate: 180,
+      grayscale: false,
+      sepia: false,
+      invert: true,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'solarized',
+    name: 'Solarized Neon',
+    filters: {
+      brightness: 0.0,
+      contrast: 1.5,
+      saturation: 1.6,
+      hueRotate: -60,
+      grayscale: false,
+      sepia: false,
+      invert: true,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'acid',
+    name: 'Acid Trip',
+    filters: {
+      brightness: 0.0,
+      contrast: 1.25,
+      saturation: 2.0,
+      hueRotate: 90,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'bleach',
+    name: 'Bleach Bypass',
+    filters: {
+      brightness: -0.05,
+      contrast: 1.35,
+      saturation: 0.35,
+      hueRotate: 0,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: true,
+      mirrorH: false,
+      mirrorV: false
+    }
+  },
+  {
+    id: 'amber',
+    name: 'Warm Amber Retro',
+    filters: {
+      brightness: 0.05,
+      contrast: 1.05,
+      saturation: 0.7,
+      hueRotate: -15,
+      grayscale: false,
+      sepia: true,
+      invert: false,
+      blur: 0.0,
+      vignette: 0.2,
+      edgeDetect: false,
+      sharpen: false,
+      mirrorH: false,
+      mirrorV: false
+    }
+  }
+]
+
+const CREATIVE_EFFECTS = [
+  {
+    id: 'grayscale',
+    name: 'Grayscale (B&W)',
+    toggleField: 'grayscale',
+    toggleValue: true,
+    filters: { grayscale: true }
+  },
+  {
+    id: 'sepia',
+    name: 'Sepia Tone',
+    toggleField: 'sepia',
+    toggleValue: true,
+    filters: { sepia: true }
+  },
+  {
+    id: 'invert',
+    name: 'Invert Colors',
+    toggleField: 'invert',
+    toggleValue: true,
+    filters: { invert: true }
+  },
+  {
+    id: 'edgeDetect',
+    name: 'Edge Detection',
+    toggleField: 'edgeDetect',
+    toggleValue: true,
+    filters: { edgeDetect: true }
+  },
+  {
+    id: 'sharpen',
+    name: 'Sharpen details',
+    toggleField: 'sharpen',
+    toggleValue: true,
+    filters: { sharpen: true }
+  },
+  {
+    id: 'mirrorH',
+    name: 'Mirror Horizontal',
+    toggleField: 'mirrorH',
+    toggleValue: true,
+    filters: { mirrorH: true }
+  },
+  {
+    id: 'mirrorV',
+    name: 'Mirror Vertical',
+    toggleField: 'mirrorV',
+    toggleValue: true,
+    filters: { mirrorV: true }
+  },
+  {
+    id: 'vignette',
+    name: 'Vignette Lens',
+    toggleField: 'vignette',
+    toggleValue: 0.4,
+    filters: { vignette: 0.4 }
+  },
+  {
+    id: 'blur',
+    name: 'Blur Focus',
+    toggleField: 'blur',
+    toggleValue: 3.0,
+    filters: { blur: 3.0 }
+  }
+]
+
 export default function EditorPage() {
   const navigate = useNavigate()
   const { isDayMode } = useTheme()
@@ -99,6 +472,10 @@ export default function EditorPage() {
   } = useEditor()
 
   const [activeTab, setActiveTab] = useState('media') // media, overlays
+  const [activeInspectorTab, setActiveInspectorTab] = useState('properties') // properties, effects
+  const [applyFiltersToAll, setApplyFiltersToAll] = useState(false)
+  const [presetPage, setPresetPage] = useState(0)
+  const [effectsPage, setEffectsPage] = useState(0)
   const [logoPreset, setLogoPreset] = useState(logo.position)
   const fileInputRef = useRef(null)
   const logoInputRef = useRef(null)
@@ -329,6 +706,108 @@ export default function EditorPage() {
       }
     }
     e.target.value = ''
+  }
+
+  const isActivePreset = (preset) => {
+    if (!selectedClip) return false
+    const tolerance = 0.01
+    const getVal = (val, def) => (val === undefined || val === null ? def : val)
+    
+    return (
+      Math.abs(getVal(selectedClip.brightness, 0) - preset.filters.brightness) < tolerance &&
+      Math.abs(getVal(selectedClip.contrast, 1) - preset.filters.contrast) < tolerance &&
+      Math.abs(getVal(selectedClip.saturation, 1) - preset.filters.saturation) < tolerance &&
+      Math.abs(getVal(selectedClip.hueRotate, 0) - preset.filters.hueRotate) < tolerance &&
+      Math.abs(getVal(selectedClip.blur, 0) - preset.filters.blur) < tolerance &&
+      Math.abs(getVal(selectedClip.vignette, 0) - preset.filters.vignette) < tolerance &&
+      !!selectedClip.mirrorH === !!preset.filters.mirrorH &&
+      !!selectedClip.mirrorV === !!preset.filters.mirrorV &&
+      !!selectedClip.grayscale === !!preset.filters.grayscale &&
+      !!selectedClip.sepia === !!preset.filters.sepia &&
+      !!selectedClip.invert === !!preset.filters.invert &&
+      !!selectedClip.edgeDetect === !!preset.filters.edgeDetect &&
+      !!selectedClip.sharpen === !!preset.filters.sharpen
+    )
+  }
+
+  const isCreativeEffectActive = (effect) => {
+    if (!selectedClip) return false
+    const val = selectedClip[effect.toggleField]
+    if (typeof effect.toggleValue === 'boolean') {
+      return !!val
+    } else {
+      return val > 0
+    }
+  }
+
+  const handleToggleCreativeEffect = (effect) => {
+    if (!selectedClip) return
+    const isActive = isCreativeEffectActive(effect)
+    const nextVal = isActive ? (typeof effect.toggleValue === 'boolean' ? false : 0.0) : effect.toggleValue
+    handleUpdateFilterProperty({ [effect.toggleField]: nextVal })
+  }
+
+  const handleUpdateFilterProperty = (props) => {
+    if (!selectedClip) return
+    if (applyFiltersToAll) {
+      videoTrack.forEach((clip) => {
+        updateClipProperties(clip.id, 'video', props)
+      })
+    } else {
+      updateClipProperties(selectedClip.id, 'video', props)
+    }
+  }
+
+  const handleApplyToAllChange = (checked) => {
+    setApplyFiltersToAll(checked)
+    if (checked && selectedClip) {
+      const filterProps = {
+        brightness: selectedClip.brightness || 0.0,
+        contrast: selectedClip.contrast ?? 1.0,
+        blur: selectedClip.blur || 0.0,
+        grayscale: !!selectedClip.grayscale,
+        sepia: !!selectedClip.sepia,
+        invert: !!selectedClip.invert,
+        saturation: selectedClip.saturation ?? 1.0,
+        hueRotate: selectedClip.hueRotate ?? 0,
+        mirrorH: !!selectedClip.mirrorH,
+        mirrorV: !!selectedClip.mirrorV,
+        vignette: selectedClip.vignette || 0.0,
+        edgeDetect: !!selectedClip.edgeDetect,
+        sharpen: !!selectedClip.sharpen,
+      }
+      videoTrack.forEach((clip) => {
+        if (clip.id !== selectedClip.id) {
+          updateClipProperties(clip.id, 'video', filterProps)
+        }
+      })
+    }
+  }
+
+  const handleResetFilters = () => {
+    if (!selectedClip) return
+    const defaultFilters = {
+      brightness: 0.0,
+      contrast: 1.0,
+      blur: 0.0,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      saturation: 1.0,
+      hueRotate: 0,
+      mirrorH: false,
+      mirrorV: false,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false,
+    }
+    if (applyFiltersToAll) {
+      videoTrack.forEach((clip) => {
+        updateClipProperties(clip.id, 'video', defaultFilters)
+      })
+    } else {
+      updateClipProperties(selectedClip.id, 'video', defaultFilters)
+    }
   }
 
   // Visual position converter for text elements
@@ -967,15 +1446,38 @@ export default function EditorPage() {
               >
                 {/* Visual Video Stream Tag */}
                 {activeVideoClip ? (
-                  <video
-                    ref={previewVideoRef}
-                    src={activeVideoClip.url}
-                    muted={isMuted}
-                    className="w-full h-full object-contain"
-                    style={{
-                      filter: `brightness(${1.0 + activeVideoClip.brightness}) contrast(${activeVideoClip.contrast}) blur(${activeVideoClip.blur}px)`,
-                    }}
-                  />
+                  <>
+                    <video
+                      ref={previewVideoRef}
+                      src={activeVideoClip.url}
+                      muted={isMuted}
+                      className="w-full h-full object-contain transition-transform"
+                      style={{
+                        filter: [
+                          `brightness(${1.0 + (activeVideoClip.brightness || 0)})`,
+                          `contrast(${activeVideoClip.contrast || 1.0})`,
+                          `blur(${activeVideoClip.blur || 0}px)`,
+                          activeVideoClip.grayscale ? 'grayscale(100%)' : '',
+                          activeVideoClip.sepia ? 'sepia(100%)' : '',
+                          activeVideoClip.invert ? 'invert(100%)' : '',
+                          activeVideoClip.saturation !== undefined ? `saturate(${activeVideoClip.saturation})` : '',
+                          activeVideoClip.hueRotate !== undefined ? `hue-rotate(${activeVideoClip.hueRotate}deg)` : '',
+                          activeVideoClip.edgeDetect ? 'grayscale(100%) contrast(500%) invert(100%)' : '',
+                          activeVideoClip.sharpen ? 'contrast(1.15) brightness(1.03)' : '',
+                        ].filter(Boolean).join(' '),
+                        transform: `scaleX(${activeVideoClip.mirrorH ? -1 : 1}) scaleY(${activeVideoClip.mirrorV ? -1 : 1})`
+                      }}
+                    />
+                    {/* Vignette Overlay */}
+                    {activeVideoClip.vignette > 0 && (
+                      <div 
+                        className="absolute inset-0 pointer-events-none z-10"
+                        style={{
+                          background: `radial-gradient(circle, transparent 40%, rgba(0,0,0,${activeVideoClip.vignette}) 100%)`
+                        }}
+                      />
+                    )}
+                  </>
                 ) : (
                   <div className="text-center text-surface-600 text-xs p-4 flex flex-col items-center gap-2 font-mono">
                     <FiDisc size={20} className="animate-spin text-surface-600" />
@@ -1160,10 +1662,35 @@ export default function EditorPage() {
 
           {/* Right Panel: Properties & Effects controls */}
           <div className="w-80 border-l flex flex-col shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-black/[0.15]">
-            <div className="p-4 border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] flex items-center gap-2 text-accent">
+            <div className="p-4 border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] flex items-center gap-2 text-accent shrink-0">
               <FiSliders size={13} />
               <span className="text-[11px] font-bold uppercase tracking-wider text-surface-300">Property inspector</span>
             </div>
+
+            {selectedClip && selectedTrackType === 'video' && (
+              <div className="flex border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] p-2 gap-1 bg-black/5 shrink-0">
+                <button
+                  onClick={() => setActiveInspectorTab('properties')}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                    activeInspectorTab === 'properties'
+                      ? 'bg-white/5 text-white-force'
+                      : 'text-surface-500 hover:text-surface-300'
+                  }`}
+                >
+                  Properties
+                </button>
+                <button
+                  onClick={() => setActiveInspectorTab('effects')}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                    activeInspectorTab === 'effects'
+                      ? 'bg-white/5 text-white-force'
+                      : 'text-surface-500 hover:text-surface-300'
+                  }`}
+                >
+                  Filters & Effects
+                </button>
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {selectedClip ? (
@@ -1177,114 +1704,429 @@ export default function EditorPage() {
 
                   <div className="h-px bg-white/[0.04] my-2" />
 
-                  {/* Sizing Details */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className={selectedTrackType === 'text' ? 'col-span-2' : ''}>
-                      <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Timeline Start</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={selectedClip.start ? selectedClip.start.toFixed(1) : '0.0'}
-                        onChange={(e) => moveClip(selectedClip.id, selectedTrackType, parseFloat(e.target.value) || 0)}
-                        className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
-                          isDayMode 
-                            ? 'bg-white border-black/10 text-neutral-800' 
-                            : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                        }`}
-                      />
+                  {/* Render Tab Contents */}
+                  {selectedTrackType === 'video' && activeInspectorTab === 'effects' ? (
+                    // Filters & Effects Tab
+                    <div className="space-y-4">
+
+                      {/* Reset and Apply to All Toolbar */}
+                      <div className="flex flex-col gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={handleResetFilters}
+                            className="py-1.5 px-3 rounded-lg border border-red-500/20 text-[10px] font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <span>Reset All Effects</span>
+                          </button>
+                        </div>
+                        <div className="h-px bg-white/[0.04] my-0.5" />
+                        <div className="flex justify-between items-center text-[10.5px] text-surface-400">
+                          <span className="font-semibold">Apply to all timeline clips</span>
+                          <input 
+                            type="checkbox"
+                            checked={applyFiltersToAll}
+                            onChange={(e) => handleApplyToAllChange(e.target.checked)}
+                            className="accent-accent cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-white/[0.04] my-2" />
+
+                      {/* Creative Presets Gallery */}
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-[9.5px] font-bold uppercase tracking-widest text-surface-500">
+                          <span>Creative Presets</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {PRESETS.slice(presetPage * 4, (presetPage + 1) * 4).map((preset) => {
+                            const active = isActivePreset(preset);
+                            return (
+                              <div
+                                key={preset.id}
+                                onClick={() => handleUpdateFilterProperty(preset.filters)}
+                                className={`relative aspect-video rounded-xl overflow-hidden border cursor-pointer group transition-all duration-300 ${
+                                  active
+                                    ? 'border-accent shadow-[0_0_12px_rgba(139,92,246,0.3)] ring-1 ring-accent'
+                                    : 'border-white/10 hover:border-white/30 bg-black/40'
+                                }`}
+                              >
+                                {/* Preset Live Video Preview */}
+                                <video
+                                  src={selectedClip.url}
+                                  muted
+                                  className="w-full h-full object-cover select-none pointer-events-none"
+                                  style={{
+                                    filter: [
+                                      `brightness(${1.0 + (preset.filters.brightness || 0)})`,
+                                      `contrast(${preset.filters.contrast || 1.0})`,
+                                      `blur(${preset.filters.blur || 0}px)`,
+                                      preset.filters.grayscale ? 'grayscale(100%)' : '',
+                                      preset.filters.sepia ? 'sepia(100%)' : '',
+                                      preset.filters.invert ? 'invert(100%)' : '',
+                                      preset.filters.saturation !== undefined ? `saturate(${preset.filters.saturation})` : '',
+                                      preset.filters.hueRotate !== undefined ? `hue-rotate(${preset.filters.hueRotate}deg)` : '',
+                                      preset.filters.edgeDetect ? 'grayscale(100%) contrast(500%) invert(100%)' : '',
+                                      preset.filters.sharpen ? 'contrast(1.15) brightness(1.03)' : '',
+                                    ].filter(Boolean).join(' '),
+                                    transform: `scaleX(${preset.filters.mirrorH ? -1 : 1}) scaleY(${preset.filters.mirrorV ? -1 : 1})`
+                                  }}
+                                  ref={(el) => {
+                                    if (el) {
+                                      const clipTime = Math.max(0, Math.min(selectedClip.end - selectedClip.start, currentTime - selectedClip.start))
+                                      const targetTime = selectedClip.sourceStart + clipTime
+                                      if (Math.abs(el.currentTime - targetTime) > 0.3) {
+                                        el.currentTime = targetTime
+                                      }
+                                    }
+                                  }}
+                                />
+                                {/* Preset Vignette Overlay */}
+                                {preset.filters.vignette > 0 && (
+                                  <div
+                                    className="absolute inset-0 pointer-events-none z-10"
+                                    style={{
+                                      background: `radial-gradient(circle, transparent 40%, rgba(0,0,0,${preset.filters.vignette}) 100%)`
+                                    }}
+                                  />
+                                )}
+                                {/* Glassmorphic Banner */}
+                                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/55 to-transparent p-1 px-2 text-[9px] font-bold text-white tracking-wide truncate transition-colors duration-300 group-hover:from-black/90">
+                                  {preset.name}
+                                </div>
+                                {/* Active Checkmark Badge */}
+                                {active && (
+                                  <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-accent text-white flex items-center justify-center shadow-lg">
+                                    <FiCheckCircle size={10} />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Presets Pagination Controls */}
+                        <div className="flex items-center justify-between pt-1">
+                          <button
+                            onClick={() => setPresetPage(p => Math.max(0, p - 1))}
+                            disabled={presetPage === 0}
+                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                          >
+                            Prev
+                          </button>
+                          <button
+                            onClick={() => setPresetPage(p => Math.min(Math.ceil(PRESETS.length / 4) - 1, p + 1))}
+                            disabled={presetPage === Math.ceil(PRESETS.length / 4) - 1}
+                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-white/[0.04] my-2" />
+
+                      {/* Color & Light adjustments */}
+                      <div className="space-y-3">
+                        <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Color & Light</p>
+                        
+                        {/* Brightness */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                            <span>Brightness</span>
+                            <span>{selectedClip.brightness > 0 ? '+' : ''}{Math.round(selectedClip.brightness * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="-0.5"
+                            max="0.5"
+                            step="0.05"
+                            value={selectedClip.brightness || 0.0}
+                            onChange={(e) => handleUpdateFilterProperty({ brightness: parseFloat(e.target.value) })}
+                            className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Contrast */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                            <span>Contrast</span>
+                            <span>{Math.round((selectedClip.contrast ?? 1.0) * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="1.5"
+                            step="0.05"
+                            value={selectedClip.contrast ?? 1.0}
+                            onChange={(e) => handleUpdateFilterProperty({ contrast: parseFloat(e.target.value) })}
+                            className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Saturation */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                            <span>Saturation</span>
+                            <span>{Math.round((selectedClip.saturation ?? 1.0) * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.0"
+                            max="3.0"
+                            step="0.1"
+                            value={selectedClip.saturation ?? 1.0}
+                            onChange={(e) => handleUpdateFilterProperty({ saturation: parseFloat(e.target.value) })}
+                            className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Hue Rotate */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                            <span>Hue Rotate</span>
+                            <span>{selectedClip.hueRotate ?? 0}°</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="-180"
+                            max="180"
+                            step="5"
+                            value={selectedClip.hueRotate ?? 0}
+                            onChange={(e) => handleUpdateFilterProperty({ hueRotate: parseInt(e.target.value) })}
+                            className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-white/[0.04] my-2" />
+
+                      {/* Lens & Focus */}
+                      <div className="space-y-3">
+                        <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Lens & Focus</p>
+
+                        {/* Blur */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                            <span>Blur Strength</span>
+                            <span>{selectedClip.blur || 0}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="10"
+                            step="0.5"
+                            value={selectedClip.blur || 0.0}
+                            onChange={(e) => handleUpdateFilterProperty({ blur: parseFloat(e.target.value) })}
+                            className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Vignette */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                            <span>Vignette Strength</span>
+                            <span>{Math.round((selectedClip.vignette || 0.0) * 100)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={selectedClip.vignette || 0.0}
+                            onChange={(e) => handleUpdateFilterProperty({ vignette: parseFloat(e.target.value) })}
+                            className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-white/[0.04] my-2" />
+
+                      {/* Creative Effects Gallery */}
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-[9.5px] font-bold uppercase tracking-widest text-surface-500">
+                          <span>Creative Effects</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {CREATIVE_EFFECTS.slice(effectsPage * 4, (effectsPage + 1) * 4).map((effect) => {
+                            const active = isCreativeEffectActive(effect);
+                            return (
+                              <div
+                                key={effect.id}
+                                onClick={() => handleToggleCreativeEffect(effect)}
+                                className={`relative aspect-video rounded-xl overflow-hidden border cursor-pointer group transition-all duration-300 ${
+                                  active
+                                    ? 'border-accent shadow-[0_0_12px_rgba(139,92,246,0.3)] ring-1 ring-accent'
+                                    : 'border-white/10 hover:border-white/30 bg-black/40'
+                                }`}
+                              >
+                                {/* Effect Live Video Preview */}
+                                <video
+                                  src={selectedClip.url}
+                                  muted
+                                  className="w-full h-full object-cover select-none pointer-events-none"
+                                  style={{
+                                    filter: [
+                                      effect.id === 'grayscale' ? 'grayscale(100%)' : '',
+                                      effect.id === 'sepia' ? 'sepia(100%)' : '',
+                                      effect.id === 'invert' ? 'invert(100%)' : '',
+                                      effect.id === 'edgeDetect' ? 'grayscale(100%) contrast(500%) invert(100%)' : '',
+                                      effect.id === 'sharpen' ? 'contrast(1.15) brightness(1.03)' : '',
+                                      effect.id === 'blur' ? 'blur(3px)' : '',
+                                    ].filter(Boolean).join(' '),
+                                    transform: `scaleX(${effect.id === 'mirrorH' ? -1 : 1}) scaleY(${effect.id === 'mirrorV' ? -1 : 1})`
+                                  }}
+                                  ref={(el) => {
+                                    if (el) {
+                                      const clipTime = Math.max(0, Math.min(selectedClip.end - selectedClip.start, currentTime - selectedClip.start))
+                                      const targetTime = selectedClip.sourceStart + clipTime
+                                      if (Math.abs(el.currentTime - targetTime) > 0.3) {
+                                        el.currentTime = targetTime
+                                      }
+                                    }
+                                  }}
+                                />
+                                {/* Effect Vignette Overlay */}
+                                {effect.id === 'vignette' && (
+                                  <div
+                                    className="absolute inset-0 pointer-events-none z-10"
+                                    style={{
+                                      background: `radial-gradient(circle, transparent 40%, rgba(0,0,0,0.4) 100%)`
+                                    }}
+                                  />
+                                )}
+                                {/* Glassmorphic Banner */}
+                                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/55 to-transparent p-1 px-2 text-[9px] font-bold text-white tracking-wide truncate transition-colors duration-300 group-hover:from-black/90">
+                                  {effect.name}
+                                </div>
+                                {/* Active Checkmark Badge */}
+                                {active && (
+                                  <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-accent text-white flex items-center justify-center shadow-lg">
+                                    <FiCheckCircle size={10} />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Effects Pagination Controls */}
+                        <div className="flex items-center justify-between pt-1">
+                          <button
+                            onClick={() => setEffectsPage(p => Math.max(0, p - 1))}
+                            disabled={effectsPage === 0}
+                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                          >
+                            Prev
+                          </button>
+                          <button
+                            onClick={() => setEffectsPage(p => Math.min(Math.ceil(CREATIVE_EFFECTS.length / 4) - 1, p + 1))}
+                            disabled={effectsPage === Math.ceil(CREATIVE_EFFECTS.length / 4) - 1}
+                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    {selectedTrackType !== 'text' && (
-                      <div>
-                        <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Trim Start</span>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={selectedClip.sourceStart ? selectedClip.sourceStart.toFixed(1) : '0.0'}
-                          onChange={(e) => trimClip(selectedClip.id, selectedTrackType, 'start', parseFloat(e.target.value) || 0)}
-                          className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
-                            isDayMode 
-                              ? 'bg-white border-black/10 text-neutral-800' 
-                              : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                          }`}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Video Filters */}
-                  {selectedTrackType === 'video' && (
-                    <div className="space-y-3 pt-2">
-                      <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Visual Effects</p>
-                      
-                      {/* Brightness */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-semibold text-surface-400">
-                          <span>Brightness</span>
-                          <span>{selectedClip.brightness > 0 ? '+' : ''}{Math.round(selectedClip.brightness * 100)}%</span>
+                  ) : (
+                    // Properties Tab (For video properties or non-video tracks)
+                    <div className="space-y-4">
+                      {/* Sizing Details */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className={selectedTrackType === 'text' ? 'col-span-2' : ''}>
+                          <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Timeline Start</span>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={selectedClip.start ? selectedClip.start.toFixed(1) : '0.0'}
+                            onChange={(e) => moveClip(selectedClip.id, selectedTrackType, parseFloat(e.target.value) || 0)}
+                            className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
+                              isDayMode 
+                                ? 'bg-white border-black/10 text-neutral-800' 
+                                : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                            }`}
+                          />
                         </div>
-                        <input
-                          type="range"
-                          min="-0.5"
-                          max="0.5"
-                          step="0.05"
-                          value={selectedClip.brightness}
-                          onChange={(e) => updateClipProperties(selectedClip.id, 'video', { brightness: parseFloat(e.target.value) })}
-                          className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
-                        />
+                        {selectedTrackType !== 'text' && (
+                          <div>
+                            <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Trim Start</span>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={selectedClip.sourceStart ? selectedClip.sourceStart.toFixed(1) : '0.0'}
+                              onChange={(e) => trimClip(selectedClip.id, selectedTrackType, 'start', parseFloat(e.target.value) || 0)}
+                              className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
+                                isDayMode 
+                                  ? 'bg-white border-black/10 text-neutral-800' 
+                                  : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                              }`}
+                            />
+                          </div>
+                        )}
                       </div>
 
-                      {/* Contrast */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-semibold text-surface-400">
-                          <span>Contrast</span>
-                          <span>{Math.round(selectedClip.contrast * 100)}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0.5"
-                          max="1.5"
-                          step="0.05"
-                          value={selectedClip.contrast}
-                          onChange={(e) => updateClipProperties(selectedClip.id, 'video', { contrast: parseFloat(e.target.value) })}
-                          className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
-                        />
-                      </div>
+                      {/* Video specific audio & fade properties */}
+                      {selectedTrackType === 'video' && (
+                        <div className="space-y-3">
+                          <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Audio Controls</p>
+                          
+                          {/* Volume */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                              <span>Volume</span>
+                              <span>{Math.round((selectedClip.volume ?? 1.0) * 100)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="2"
+                              step="0.05"
+                              value={selectedClip.volume ?? 1.0}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'video', { volume: parseFloat(e.target.value) })}
+                              className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                            />
+                          </div>
 
-                      {/* Blur */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-semibold text-surface-400">
-                          <span>Blur Strength</span>
-                          <span>{selectedClip.blur}px</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="10"
-                          step="0.5"
-                          value={selectedClip.blur}
-                          onChange={(e) => updateClipProperties(selectedClip.id, 'video', { blur: parseFloat(e.target.value) })}
-                          className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
-                        />
-                      </div>
+                          <div className="h-px bg-white/[0.04] my-2" />
 
-                      <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500 pt-2">Audio Controls</p>
-                      
-                      {/* Volume */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-semibold text-surface-400">
-                          <span>Volume</span>
-                          <span>{Math.round((selectedClip.volume ?? 1.0) * 100)}%</span>
+                          <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Transitions</p>
+
+                          {/* Video Fade in / out */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Fade In (s)</span>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={selectedClip.fadeIn || 0}
+                                onChange={(e) => updateClipProperties(selectedClip.id, 'video', { fadeIn: parseFloat(e.target.value) || 0 })}
+                                className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
+                                  isDayMode 
+                                    ? 'bg-white border-black/10 text-neutral-800' 
+                                    : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                                }`}
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Fade Out (s)</span>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={selectedClip.fadeOut || 0}
+                                onChange={(e) => updateClipProperties(selectedClip.id, 'video', { fadeOut: parseFloat(e.target.value) || 0 })}
+                                className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
+                                  isDayMode 
+                                    ? 'bg-white border-black/10 text-neutral-800' 
+                                    : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                                }`}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="2"
-                          step="0.05"
-                          value={selectedClip.volume ?? 1.0}
-                          onChange={(e) => updateClipProperties(selectedClip.id, 'video', { volume: parseFloat(e.target.value) })}
-                          className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
-                        />
-                      </div>
+                      )}
                     </div>
                   )}
 

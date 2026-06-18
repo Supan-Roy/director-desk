@@ -277,7 +277,17 @@ export function EditorProvider({ children }) {
       blur: 0.0,
       volume: 1.0,
       fadeIn: 0.0,
-      fadeOut: 0.0
+      fadeOut: 0.0,
+      grayscale: false,
+      sepia: false,
+      invert: false,
+      saturation: 1.0,
+      hueRotate: 0.0,
+      mirrorH: false,
+      mirrorV: false,
+      vignette: 0.0,
+      edgeDetect: false,
+      sharpen: false
     }
 
     if (trackType === 'video') {
