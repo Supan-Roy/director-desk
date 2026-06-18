@@ -103,14 +103,22 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
   const [projectsOpen, setProjectsOpen] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   const activeProjectId = (() => {
     const match = location.pathname.match(/^\/projects\/([a-z0-9]+)$/);
     return match ? decodeId(match[1]) : null;
   })();
 
-  const handleDelete = async (e, id) => {
+  const handleDelete = (e, project) => {
     e.stopPropagation();
+    setProjectToDelete(project);
+  };
+
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
+    const id = projectToDelete.id;
+    setProjectToDelete(null);
     setDeletingId(id);
     await removeSavedProject(id);
     setDeletingId(null);
@@ -340,7 +348,7 @@ export default function Sidebar() {
 
                       {/* Delete button — visible on hover */}
                       <button
-                        onClick={(e) => handleDelete(e, project.id)}
+                        onClick={(e) => handleDelete(e, project)}
                         disabled={deletingId === project.id}
                         title="Delete project"
                         className={`shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-150 rounded-md p-1 -mr-1 -mt-0.5 ${
@@ -427,6 +435,52 @@ export default function Sidebar() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {projectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setProjectToDelete(null)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+          />
+          
+          {/* Modal Content */}
+          <div className={`relative z-55 w-full max-w-sm rounded-2xl border p-6 shadow-2xl transition-all duration-300 scale-100 flex flex-col gap-4 animate-scale-in ${
+            d 
+              ? 'bg-[#fcfbfa] border-neutral-200 text-neutral-800' 
+              : 'bg-[#0b0b14]/95 border-white/[0.08] text-white shadow-black/80'
+          }`}>
+            <div className="flex items-center gap-3 text-red-500">
+              <FiTrash2 size={20} className="shrink-0" />
+              <h3 className="text-sm font-bold uppercase tracking-wider">Delete Production</h3>
+            </div>
+            
+            <p className={`text-[12px] leading-relaxed ${d ? 'text-gray-600' : 'text-surface-400'}`}>
+              Are you sure you want to delete <strong className={d ? 'text-gray-900' : 'text-white'}>"{projectToDelete.title}"</strong>? This action cannot be undone.
+            </p>
+            
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => setProjectToDelete(null)}
+                className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer text-center ${
+                  d 
+                    ? 'border-gray-200 hover:bg-gray-50 text-gray-500' 
+                    : 'border-white/10 hover:bg-white/5 text-neutral-300'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white shadow-lg cursor-pointer transition-colors text-center"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
