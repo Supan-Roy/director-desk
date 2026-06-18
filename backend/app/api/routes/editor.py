@@ -70,12 +70,30 @@ class LogoInfo(BaseModel):
     opacity: float  # 0.0 to 1.0
 
 
+class VfxInfo(BaseModel):
+    id: str
+    name: str
+    type: str  # 'environment', 'cinematic', 'action', 'sci-fi', 'fantasy', 'camera_fx'
+    effectId: str
+    start: float
+    end: float
+    x: Optional[str] = "center"
+    y: Optional[str] = "center"
+    scale: Optional[float] = 1.0
+    rotation: Optional[float] = 0.0
+    opacity: Optional[float] = 1.0
+    blendMode: Optional[str] = "normal"  # 'normal', 'screen', 'add', 'lighten', 'multiply'
+    hasAudio: Optional[bool] = False
+    audioVolume: Optional[float] = 1.0
+
+
 class ExportPayload(BaseModel):
     resolution: str  # '360p', '480p', '720p', or '1080p'
     format: Optional[str] = "mp4"  # 'mp4', 'mkv', 'avi', 'mov'
     videoTrack: List[ClipInfo]
     audioTrack: List[ClipInfo]
     textTrack: List[TextInfo]
+    vfxTrack: List[VfxInfo] = []
     logo: Optional[LogoInfo] = None
 
 
@@ -239,6 +257,8 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             total_duration = max(total_duration, clip.end)
         for text in payload.textTrack:
             total_duration = max(total_duration, text.end)
+        for vfx in payload.vfxTrack:
+            total_duration = max(total_duration, vfx.end)
 
         if total_duration <= 0.0:
             total_duration = 5.0  # fallback
@@ -258,6 +278,13 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             add_file(clip.url)
         for clip in payload.audioTrack:
             add_file(clip.url)
+        for vfx in payload.vfxTrack:
+            if vfx.type != "camera_fx":
+                vfx_url = f"/static/overlays/{vfx.effectId}.mp4"
+                add_file(vfx_url)
+            if vfx.hasAudio:
+                sfx_url = f"/static/sfx/{vfx.effectId}.mp3"
+                add_file(sfx_url)
         
         logo_idx = None
         if payload.logo:
@@ -344,6 +371,113 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             filter_parts.append(f"[{current_video_label}][{v_label}] overlay=x=0:y=0:enable='between(t,{clip.start},{clip.end})' [{v_next_label}]")
             current_video_label = v_next_label
 
+        # 1b. VFX overlays and Camera FX processing
+        def resolve_pad_coord(coord, out_dim, in_dim):
+            if not coord:
+                return "0"
+            c_str = str(coord).strip().lower()
+            if c_str == "center":
+                return f"({out_dim}-{in_dim})/2"
+            elif c_str == "top" or c_str == "left":
+                return "20"
+            elif c_str == "bottom" or c_str == "right":
+                return f"{out_dim}-{in_dim}-20"
+            
+            is_percent = False
+            if c_str.endswith('%'):
+                c_str = c_str[:-1].strip()
+                is_percent = True
+                
+            try:
+                val = float(c_str)
+                if is_percent:
+                    return f"{out_dim}*{val/100:.4f}-{in_dim}/2"
+                else:
+                    return f"{out_dim}*{val}" if val <= 1.0 else str(val)
+            except ValueError:
+                return "0"
+
+        for idx, vfx in enumerate(payload.vfxTrack):
+            vfx_dur = vfx.end - vfx.start
+            if vfx_dur <= 0.0:
+                continue
+
+            if vfx.type == "camera_fx":
+                # Camera FX procedurally rendered
+                v_split_label_1 = f"v_cam_split_1_{idx}"
+                v_split_label_2 = f"v_cam_split_2_{idx}"
+                filter_parts.append(f"[{current_video_label}] split=2 [{v_split_label_1}][{v_split_label_2}]")
+                
+                v_fx_in = v_split_label_2
+                v_fx_out = f"v_cam_out_{idx}"
+                
+                cam_filter = ""
+                if vfx.effectId == "screen_shake":
+                    cam_filter = f"crop=w=iw-40:h=ih-40:x='20+15*sin(2*PI*12*(t-{vfx.start}))':y='20+15*cos(2*PI*12*(t-{vfx.start}))',scale={res_w}:{res_h}"
+                elif vfx.effectId == "zoom_punch":
+                    cam_filter = f"zoompan=z='1.0+0.35*exp(-3.5*(t-{vfx.start}))':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':d=1:s={res_w}x{res_h}"
+                elif vfx.effectId == "motion_blur":
+                    cam_filter = "tblend=all_mode=average,gblur=sigma=1.5"
+                elif vfx.effectId == "flash_frame":
+                    v_white_label = f"white_flash_{idx}"
+                    v_white_fade = f"white_fade_{idx}"
+                    filter_parts.append(f"color=c=white:s={res_w}x{res_h}:d={vfx_dur} [{v_white_label}]")
+                    filter_parts.append(f"[{v_white_label}] fade=t=out:st=0:d={vfx_dur} [{v_white_fade}]")
+                    cam_filter = f"[{v_white_fade}] overlay=x=0:y=0"
+                elif vfx.effectId == "speed_ramp":
+                    cam_filter = "setpts=0.5*(PTS-STARTPTS)"
+                elif vfx.effectId == "freeze_frame":
+                    cam_filter = "loop=loop=-1:size=1:start=0"
+                else:
+                    cam_filter = "null"
+                
+                filter_parts.append(f"[{v_fx_in}] {cam_filter} [{v_fx_out}]")
+                
+                v_next_label = f"v_cam_final_{idx}"
+                filter_parts.append(f"[{v_split_label_1}][{v_fx_out}] overlay=x=0:y=0:enable='between(t,{vfx.start},{vfx.end})' [{v_next_label}]")
+                current_video_label = v_next_label
+
+            else:
+                # Video visual overlay compositing
+                vfx_url = f"/static/overlays/{vfx.effectId}.mp4"
+                in_idx = file_to_idx[resolve_filepath(vfx_url)]
+                
+                trim_f = f"[{in_idx}:v] trim=start=0:end={vfx_dur},setpts=PTS-STARTPTS"
+                
+                sc_w = int(res_w * (vfx.scale if vfx.scale is not None else 1.0))
+                sc_h = int(res_h * (vfx.scale if vfx.scale is not None else 1.0))
+                scale_f = f"scale={sc_w}:{sc_h}"
+                
+                rotate_f = ""
+                if vfx.rotation and vfx.rotation != 0.0:
+                    rad = vfx.rotation * math.pi / 180.0
+                    rotate_f = f",rotate={rad}:c=black@0:ow='hypot(iw,ih)':oh='ow'"
+                
+                opacity_f = f",format=pix_fmts=rgba,colorchannelmixer=aa={vfx.opacity if vfx.opacity is not None else 1.0}"
+                
+                v_processed = f"vfx_proc_{idx}"
+                filter_parts.append(f"{trim_f},{scale_f}{rotate_f}{opacity_f} [{v_processed}]")
+                
+                v_next_label = f"vfx_overlay_final_{idx}"
+                blend = (vfx.blendMode or "normal").lower()
+                
+                if blend in ["screen", "add", "lighten", "multiply"]:
+                    pad_color = "white" if blend == "multiply" else "black"
+                    x_pad = resolve_pad_coord(vfx.x, "ow", "iw")
+                    y_pad = resolve_pad_coord(vfx.y, "oh", "ih")
+                    
+                    v_padded = f"vfx_padded_{idx}"
+                    filter_parts.append(f"[{v_processed}] pad={res_w}:{res_h}:{x_pad}:{y_pad}:color={pad_color} [{v_padded}]")
+                    
+                    blend_mode = "addition" if blend == "add" else blend
+                    filter_parts.append(f"[{current_video_label}][{v_padded}] blend=all_mode={blend_mode}:enable='between(t,{vfx.start},{vfx.end})' [{v_next_label}]")
+                else:
+                    x_expr = resolve_pad_coord(vfx.x, "W", "w")
+                    y_expr = resolve_pad_coord(vfx.y, "H", "h")
+                    filter_parts.append(f"[{current_video_label}][{v_processed}] overlay=x='{x_expr}':y='{y_expr}':enable='between(t,{vfx.start},{vfx.end})' [{v_next_label}]")
+                
+                current_video_label = v_next_label
+
         # 2. Audio mixing processing
         delayed_audio_labels = []
         for idx, clip in enumerate(payload.audioTrack):
@@ -370,6 +504,24 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             a_label = f"a_clip_{idx}"
             filter_parts.append(f"{trim_filter}{audio_chain},adelay={delay_ms}|{delay_ms} [{a_label}]")
             delayed_audio_labels.append(f"[{a_label}]")
+
+        # Mix in VFX audio effects
+        for idx, vfx in enumerate(payload.vfxTrack):
+            if vfx.hasAudio:
+                sfx_url = f"/static/sfx/{vfx.effectId}.mp3"
+                in_idx = file_to_idx[resolve_filepath(sfx_url)]
+                vfx_dur = vfx.end - vfx.start
+                if vfx_dur <= 0.0:
+                    continue
+                
+                trim_filter = f"[{in_idx}:a] atrim=start=0:end={vfx_dur},asetpts=PTS-STARTPTS"
+                volume_filter = f"volume={vfx.audioVolume if vfx.audioVolume is not None else 1.0}"
+                delay_ms = int(vfx.start * 1000)
+                adelay_filter = f"adelay={delay_ms}|{delay_ms}"
+                
+                a_vfx_label = f"a_vfx_{idx}"
+                filter_parts.append(f"{trim_filter},{volume_filter},{adelay_filter} [{a_vfx_label}]")
+                delayed_audio_labels.append(f"[{a_vfx_label}]")
 
         # Mix all audio
         current_audio_label = "mixed_a"

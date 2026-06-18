@@ -30,6 +30,7 @@ import {
   FiChevronLeft,
   FiChevronRight
 } from 'react-icons/fi'
+import { apiBaseUrl } from '../services/apiClient'
 import { useEditor } from '../context/EditorContext'
 import { useProjectData } from '../hooks/useProjectData'
 import { useTheme } from '../context/ThemeContext'
@@ -408,6 +409,51 @@ const CREATIVE_EFFECTS = [
   }
 ]
 
+const VFX_LIBRARY = [
+  {
+    category: "Environment",
+    effects: [
+      { id: "rain", name: "Cinematic Rain", type: "environment", icon: "🌧️" },
+      { id: "snow", name: "Gentle Snow", type: "environment", icon: "❄️" },
+      { id: "fog", name: "Mystic Fog", type: "environment", icon: "🌫️" },
+      { id: "sparks", name: "Sparks Overlay", type: "environment", icon: "✨" }
+    ]
+  },
+  {
+    category: "Cinematic",
+    effects: [
+      { id: "lens_flare", name: "Anamorphic Flare", type: "cinematic", icon: "🔆" },
+      { id: "light_leaks", name: "Light Leaks", type: "cinematic", icon: "🌈" }
+    ]
+  },
+  {
+    category: "Action",
+    effects: [
+      { id: "explosion", name: "Explosion", type: "action", icon: "💥" },
+      { id: "fire", name: "Fire Flame", type: "action", icon: "🔥" }
+    ]
+  },
+  {
+    category: "Sci-Fi & Fantasy",
+    effects: [
+      { id: "portal", name: "Time Portal", type: "sci-fi", icon: "🌀" },
+      { id: "glitch", name: "Cyber Glitch", type: "sci-fi", icon: "📺" },
+      { id: "magic", name: "Magic Particles", type: "fantasy", icon: "🔮" }
+    ]
+  },
+  {
+    category: "Procedural Camera FX",
+    effects: [
+      { id: "screen_shake", name: "Screen Shake", type: "camera_fx", icon: "📳" },
+      { id: "zoom_punch", name: "Zoom Punch", type: "camera_fx", icon: "🔍" },
+      { id: "motion_blur", name: "Motion Blur", type: "camera_fx", icon: "💨" },
+      { id: "flash_frame", name: "Flash Frame", type: "camera_fx", icon: "⚡" },
+      { id: "speed_ramp", name: "Speed Ramp", type: "camera_fx", icon: "⏩" },
+      { id: "freeze_frame", name: "Freeze Frame", type: "camera_fx", icon: "⏸️" }
+    ]
+  }
+]
+
 const parseTime = (timeStr) => {
   if (!timeStr) return 0
   const cleanStr = timeStr.trim().replace(',', '.')
@@ -491,6 +537,23 @@ const generateSRTString = (textTrackItems) => {
   return srtContent
 }
 
+const getPosPercent = (val, def) => {
+  if (val === undefined || val === null) return def
+  const str = String(val).trim().toLowerCase()
+  if (str === 'center') return 50
+  if (str === 'left' || str === 'top') return 10
+  if (str === 'right' || str === 'bottom') return 90
+  const parsed = parseFloat(str)
+  return isNaN(parsed) ? def : parsed
+}
+
+const resolveUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/static/')) return `${apiBaseUrl}${url}`
+  return url
+}
+
 export default function EditorPage() {
   const navigate = useNavigate()
   const { isDayMode } = useTheme()
@@ -506,6 +569,7 @@ export default function EditorPage() {
     videoTrack,
     audioTrack,
     textTrack,
+    vfxTrack,
     logo,
     currentTime,
     isPlaying,
@@ -524,6 +588,7 @@ export default function EditorPage() {
     setVideoTrack,
     setAudioTrack,
     setTextTrack,
+    setVfxTrack,
     setLogo,
     setCurrentTime,
     setIsPlaying,
@@ -536,6 +601,7 @@ export default function EditorPage() {
     uploadAsset,
     deleteAsset,
     addAssetToTimeline,
+    addVfxToTimeline,
     splitClipAtPlayhead,
     deleteClip,
     duplicateClip,
@@ -562,6 +628,7 @@ export default function EditorPage() {
   const [logoPreset, setLogoPreset] = useState(logo.position)
   const [customText, setCustomText] = useState('')
   const [subSearchQuery, setSubSearchQuery] = useState('')
+  const [vfxSearchQuery, setVfxSearchQuery] = useState('')
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
@@ -738,13 +805,24 @@ export default function EditorPage() {
         ? audioTrack.find(c => c.id === selectedClipId)
         : selectedTrackType === 'text'
           ? textTrack.find(t => t.id === selectedClipId)
-          : null
+          : selectedTrackType === 'vfx'
+            ? vfxTrack.find(v => v.id === selectedClipId)
+            : null
 
   // Synchronize browser native video playback with the context's playhead time
   useEffect(() => {
     const video = previewVideoRef.current
     if (video && activeVideoClip) {
-      const sourceTime = activeVideoClip.sourceStart + (currentTime - activeVideoClip.start)
+      let sourceTime = activeVideoClip.sourceStart + (currentTime - activeVideoClip.start)
+      
+      // If freeze frame is active, freeze at the start of the freeze frame clip
+      const freezeFx = vfxTrack.find(
+        (v) => v.type === 'camera_fx' && v.effectId === 'freeze_frame' && v.start <= currentTime && v.end >= currentTime
+      )
+      if (freezeFx) {
+        sourceTime = activeVideoClip.sourceStart + (freezeFx.start - activeVideoClip.start)
+      }
+
       // Allow slight difference to avoid jittering
       if (Math.abs(video.currentTime - sourceTime) > 0.2) {
         video.currentTime = sourceTime
@@ -754,13 +832,25 @@ export default function EditorPage() {
       video.volume = (activeVideoClip.volume !== undefined ? activeVideoClip.volume : 1.0) * playerVolume
       video.muted = isMuted
 
-      if (isPlaying && video.paused) {
+      // Set playback speed for speed ramp camera fx
+      const speedRampFx = vfxTrack.find(
+        (v) => v.type === 'camera_fx' && v.effectId === 'speed_ramp' && v.start <= currentTime && v.end >= currentTime
+      )
+      if (speedRampFx) {
+        video.playbackRate = 2.0
+      } else {
+        video.playbackRate = 1.0
+      }
+
+      if (freezeFx) {
+        if (!video.paused) video.pause()
+      } else if (isPlaying && video.paused) {
         video.play().catch(() => {})
       } else if (!isPlaying && !video.paused) {
         video.pause()
       }
     }
-  }, [currentTime, activeVideoClip, isPlaying, playerVolume, isMuted])
+  }, [currentTime, activeVideoClip, isPlaying, playerVolume, isMuted, vfxTrack])
 
   // Synchronize browser native audio playback with the context's playhead time
   useEffect(() => {
@@ -768,9 +858,8 @@ export default function EditorPage() {
     if (audio) {
       if (activeAudioClip) {
         // Only set src if it changed
-        const currentSrc = audio.getAttribute('src') || ''
-        const targetSrc = activeAudioClip.url
-        if (!currentSrc.endsWith(targetSrc)) {
+        const targetSrc = resolveUrl(activeAudioClip.url)
+        if (audio.src !== targetSrc) {
           audio.src = targetSrc
         }
         
@@ -1210,6 +1299,32 @@ export default function EditorPage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${hundredths.toString().padStart(2, '0')}`
   }
 
+  // Camera FX computations
+  const activeCameraFx = vfxTrack.find(
+    (v) => v.type === 'camera_fx' && v.start <= currentTime && v.end >= currentTime
+  )
+  
+  let cameraTransform = ''
+  let cameraFilter = ''
+  let flashOpacity = 0
+  
+  if (activeCameraFx) {
+    const elapsed = currentTime - activeCameraFx.start
+    if (activeCameraFx.effectId === 'screen_shake') {
+      const dx = 15 * Math.sin(2 * Math.PI * 12 * elapsed)
+      const dy = 15 * Math.cos(2 * Math.PI * 12 * elapsed)
+      cameraTransform = `translate(${dx}px, ${dy}px) scale(1.08)`
+    } else if (activeCameraFx.effectId === 'zoom_punch') {
+      const zoomVal = 1.0 + 0.35 * Math.exp(-3.5 * elapsed)
+      cameraTransform = `scale(${zoomVal})`
+    } else if (activeCameraFx.effectId === 'motion_blur') {
+      cameraFilter = 'blur(4px) saturate(1.2)'
+    } else if (activeCameraFx.effectId === 'flash_frame') {
+      const dur = activeCameraFx.end - activeCameraFx.start
+      flashOpacity = Math.max(0, 1.0 - (elapsed / (dur || 1.0)))
+    }
+  }
+
   const filteredSubtitles = textTrack
     .filter((sub) => sub.text && sub.text.toLowerCase().includes(subSearchQuery.toLowerCase()))
     .sort((a, b) => a.start - b.start)
@@ -1339,6 +1454,16 @@ export default function EditorPage() {
               >
                 Subtitles
               </button>
+              <button
+                onClick={() => setActiveTab('vfx')}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
+                  activeTab === 'vfx' 
+                    ? 'bg-white/5 text-white-force' 
+                    : 'text-surface-500 hover:text-surface-300'
+                }`}
+              >
+                VFX
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1448,7 +1573,7 @@ export default function EditorPage() {
                       }`}>
                         <div className="w-12 h-12 rounded bg-black/25 flex items-center justify-center overflow-hidden shrink-0 border border-white/5">
                           {logo.url ? (
-                            <img src={logo.url.startsWith('http') || logo.url.startsWith('/') ? logo.url : `${logo.url}`} alt="logo preview" className="max-w-full max-h-full object-contain" />
+                            <img src={resolveUrl(logo.url)} alt="logo preview" className="max-w-full max-h-full object-contain" />
                           ) : (
                             <FiImage className="text-surface-500" />
                           )}
@@ -1745,6 +1870,57 @@ export default function EditorPage() {
                   </div>
                 </div>
               )}
+
+              {activeTab === 'vfx' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">VFX & Camera FX</p>
+                    <input
+                      type="text"
+                      placeholder="Search effects..."
+                      value={vfxSearchQuery}
+                      onChange={(e) => setVfxSearchQuery(e.target.value)}
+                      className={`w-full text-[11px] font-semibold border rounded-lg p-2 focus:outline-none ${
+                        isDayMode 
+                          ? 'bg-white border-black/10 text-neutral-800' 
+                          : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-4 max-h-[450px] overflow-y-auto pr-1">
+                    {VFX_LIBRARY.map((cat) => {
+                      const matchedEffects = cat.effects.filter(
+                        (eff) =>
+                          eff.name.toLowerCase().includes(vfxSearchQuery.toLowerCase()) ||
+                          cat.category.toLowerCase().includes(vfxSearchQuery.toLowerCase())
+                      );
+                      if (matchedEffects.length === 0) return null;
+                      return (
+                        <div key={cat.category} className="space-y-2">
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-surface-500">{cat.category}</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {matchedEffects.map((eff) => (
+                              <button
+                                key={eff.id}
+                                onClick={() => addVfxToTimeline(eff.type, eff.id, eff.name, currentTime)}
+                                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 text-center transition-all cursor-pointer ${
+                                  isDayMode
+                                    ? 'bg-white border-black/5 hover:bg-neutral-50 hover:border-accent'
+                                    : 'bg-[#0a0a12]/80 border-white/[0.04] hover:bg-white/[0.02] hover:border-accent'
+                                }`}
+                              >
+                                <span className="text-lg">{eff.icon}</span>
+                                <span className="text-[9.5px] font-bold text-surface-300 truncate max-w-full">{eff.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1763,45 +1939,189 @@ export default function EditorPage() {
                     : 'w-full max-w-[480px] border border-white/[0.04] rounded-none aspect-video'
                 }`}
               >
-                {/* Visual Video Stream Tag */}
-                {activeVideoClip ? (
-                  <>
-                    <video
-                      ref={previewVideoRef}
-                      src={activeVideoClip.url}
-                      muted={isMuted}
-                      className="w-full h-full object-contain transition-transform"
-                      style={{
-                        filter: [
-                          `brightness(${1.0 + (activeVideoClip.brightness || 0)})`,
-                          `contrast(${activeVideoClip.contrast || 1.0})`,
-                          `blur(${activeVideoClip.blur || 0}px)`,
-                          activeVideoClip.grayscale ? 'grayscale(100%)' : '',
-                          activeVideoClip.sepia ? 'sepia(100%)' : '',
-                          activeVideoClip.invert ? 'invert(100%)' : '',
-                          activeVideoClip.saturation !== undefined ? `saturate(${activeVideoClip.saturation})` : '',
-                          activeVideoClip.hueRotate !== undefined ? `hue-rotate(${activeVideoClip.hueRotate}deg)` : '',
-                          activeVideoClip.edgeDetect ? 'grayscale(100%) contrast(500%) invert(100%)' : '',
-                          activeVideoClip.sharpen ? 'contrast(1.15) brightness(1.03)' : '',
-                        ].filter(Boolean).join(' '),
-                        transform: `scaleX(${activeVideoClip.mirrorH ? -1 : 1}) scaleY(${activeVideoClip.mirrorV ? -1 : 1})`
-                      }}
-                    />
-                    {/* Vignette Overlay */}
-                    {activeVideoClip.vignette > 0 && (
-                      <div 
-                        className="absolute inset-0 pointer-events-none z-10"
+                {/* Cinematic camera movement and post-processing wrapper */}
+                <div
+                  className="relative w-full h-full flex items-center justify-center overflow-hidden"
+                  style={{
+                    transform: cameraTransform,
+                    filter: cameraFilter,
+                    transition: cameraTransform ? 'none' : 'transform 0.15s ease'
+                  }}
+                >
+                  {/* Visual Video Stream Tag */}
+                  {activeVideoClip ? (
+                    <>
+                      <video
+                        ref={previewVideoRef}
+                        src={resolveUrl(activeVideoClip.url)}
+                        muted={isMuted}
+                        className="w-full h-full object-contain transition-transform"
                         style={{
-                          background: `radial-gradient(circle, transparent 40%, rgba(0,0,0,${activeVideoClip.vignette}) 100%)`
+                          filter: [
+                            `brightness(${1.0 + (activeVideoClip.brightness || 0)})`,
+                            `contrast(${activeVideoClip.contrast || 1.0})`,
+                            `blur(${activeVideoClip.blur || 0}px)`,
+                            activeVideoClip.grayscale ? 'grayscale(100%)' : '',
+                            activeVideoClip.sepia ? 'sepia(100%)' : '',
+                            activeVideoClip.invert ? 'invert(100%)' : '',
+                            activeVideoClip.saturation !== undefined ? `saturate(${activeVideoClip.saturation})` : '',
+                            activeVideoClip.hueRotate !== undefined ? `hue-rotate(${activeVideoClip.hueRotate}deg)` : '',
+                            activeVideoClip.edgeDetect ? 'grayscale(100%) contrast(500%) invert(100%)' : '',
+                            activeVideoClip.sharpen ? 'contrast(1.15) brightness(1.03)' : '',
+                          ].filter(Boolean).join(' '),
+                          transform: `scaleX(${activeVideoClip.mirrorH ? -1 : 1}) scaleY(${activeVideoClip.mirrorV ? -1 : 1})`
                         }}
                       />
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center text-surface-600 text-xs p-4 flex flex-col items-center gap-2 font-mono">
-                    <FiDisc size={20} className="animate-spin text-surface-600" />
-                    <span>No active video clip at playhead</span>
-                  </div>
+                      {/* Vignette Overlay */}
+                      {activeVideoClip.vignette > 0 && (
+                        <div 
+                          className="absolute inset-0 pointer-events-none z-10"
+                          style={{
+                            background: `radial-gradient(circle, transparent 40%, rgba(0,0,0,${activeVideoClip.vignette}) 100%)`
+                          }}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center text-surface-600 text-xs p-4 flex flex-col items-center gap-2 font-mono">
+                      <FiDisc size={20} className="animate-spin text-surface-600" />
+                      <span>No active video clip at playhead</span>
+                    </div>
+                  )}
+
+                  {/* Active VFX visual overlays */}
+                  {vfxTrack
+                    .filter((v) => v.type !== 'camera_fx' && v.start <= currentTime && v.end >= currentTime)
+                    .map((v) => {
+                      const xPercent = getPosPercent(v.x, 50)
+                      const yPercent = getPosPercent(v.y, 50)
+                      return (
+                        <video
+                          key={v.id}
+                          src={resolveUrl(`/static/overlays/${v.effectId}.mp4`)}
+                          muted
+                          loop
+                          playsInline
+                          className="absolute pointer-events-none z-25 object-cover"
+                          style={{
+                            left: `${xPercent}%`,
+                            top: `${yPercent}%`,
+                            width: '100%',
+                            height: '100%',
+                            opacity: v.opacity !== undefined ? v.opacity : 1.0,
+                            mixBlendMode: v.blendMode === 'add' ? 'screen' : (v.blendMode || 'screen'),
+                            transform: `translate(-50%, -50%) scale(${v.scale || 1.0}) rotate(${v.rotation || 0}deg)`
+                          }}
+                          ref={(el) => {
+                            if (el) {
+                              const offset = currentTime - v.start
+                              if (Math.abs(el.currentTime - offset) > 0.25) {
+                                el.currentTime = offset
+                              }
+                              if (isPlaying && el.paused) {
+                                el.play().catch(() => {})
+                              } else if (!isPlaying && !el.paused) {
+                                el.pause()
+                              }
+                            }
+                          }}
+                        />
+                      )
+                    })}
+
+                  {/* Subtitle / Text overlays layer */}
+                  {activeTexts.map((txt) => {
+                    const isSelected = selectedClipId === txt.id
+                    return (
+                      <div
+                        key={txt.id}
+                        style={getTextPositionStyles(txt)}
+                        onMouseDown={(e) => handleTextOverlayMouseDown(e, txt)}
+                        className={`font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] px-4 select-none cursor-move transition-all border relative ${
+                          isSelected 
+                            ? 'border-accent bg-accent/10 border-dashed rounded-lg' 
+                            : 'border-transparent hover:border-white/30 hover:border-dashed rounded-lg'
+                        }`}
+                      >
+                        {txt.text}
+                        
+                        {/* Invisible Corner Resize Handles */}
+                        {isSelected && (
+                          <>
+                            {/* Corner handles */}
+                            <div
+                              onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                              className="w-3.5 h-3.5 absolute top-[-7px] left-[-7px] cursor-nwse-resize z-50 bg-transparent"
+                              title="Drag corner to scale text size"
+                            />
+                            <div
+                              onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                              className="w-3.5 h-3.5 absolute top-[-7px] right-[-7px] cursor-nesw-resize z-50 bg-transparent"
+                              title="Drag corner to scale text size"
+                            />
+                            <div
+                              onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                              className="w-3.5 h-3.5 absolute bottom-[-7px] left-[-7px] cursor-nesw-resize z-50 bg-transparent"
+                              title="Drag corner to scale text size"
+                            />
+                            <div
+                              onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                              className="w-3.5 h-3.5 absolute bottom-[-7px] right-[-7px] cursor-nwse-resize z-50 bg-transparent"
+                              title="Drag corner to scale text size"
+                            />
+
+                            {/* Edge handles for box resizing */}
+                            <div
+                              onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'left')}
+                              className="absolute top-[4px] bottom-[4px] left-[-4px] w-2 cursor-ew-resize z-40 bg-transparent"
+                              title="Drag edge to resize width"
+                            />
+                            <div
+                              onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'right')}
+                              className="absolute top-[4px] bottom-[4px] right-[-4px] w-2 cursor-ew-resize z-40 bg-transparent"
+                              title="Drag edge to resize width"
+                            />
+                            <div
+                              onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'top')}
+                              className="absolute left-[4px] right-[4px] top-[-4px] h-2 cursor-ns-resize z-40 bg-transparent"
+                              title="Drag edge to resize height"
+                            />
+                            <div
+                              onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'bottom')}
+                              className="absolute left-[4px] right-[4px] bottom-[-4px] h-2 cursor-ns-resize z-40 bg-transparent"
+                              title="Drag edge to resize height"
+                            />
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {/* Logo overlay layer */}
+                  {logo.enabled && logo.url && (
+                    <img
+                      src={resolveUrl(logo.url)}
+                      alt="Logo Overlay"
+                      className={`absolute z-30 transition-all ${
+                        logo.position === 'top-left' ? 'top-4 left-4' :
+                        logo.position === 'top-right' ? 'top-4 right-4' :
+                        logo.position === 'bottom-left' ? 'bottom-4 left-4' :
+                        'bottom-4 right-4'
+                      }`}
+                      style={{
+                        width: `${logo.size}px`,
+                        opacity: logo.opacity,
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* White Flash overlay (above wrapper, below controls) */}
+                {flashOpacity > 0 && (
+                  <div 
+                    className="absolute inset-0 bg-white pointer-events-none z-35"
+                    style={{ opacity: flashOpacity }}
+                  />
                 )}
 
                 {/* Audio sync player */}
@@ -1810,91 +2130,31 @@ export default function EditorPage() {
                   className="hidden"
                 />
 
-                {/* Subtitle / Text overlays layer */}
-                {activeTexts.map((txt) => {
-                  const isSelected = selectedClipId === txt.id
-                  return (
-                    <div
-                      key={txt.id}
-                      style={getTextPositionStyles(txt)}
-                      onMouseDown={(e) => handleTextOverlayMouseDown(e, txt)}
-                      className={`font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] px-4 select-none cursor-move transition-all border relative ${
-                        isSelected 
-                          ? 'border-accent bg-accent/10 border-dashed rounded-lg' 
-                          : 'border-transparent hover:border-white/30 hover:border-dashed rounded-lg'
-                      }`}
-                    >
-                      {txt.text}
-                      
-                      {/* Invisible Corner Resize Handles */}
-                      {isSelected && (
-                        <>
-                          {/* Corner handles */}
-                          <div
-                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
-                            className="w-3.5 h-3.5 absolute top-[-7px] left-[-7px] cursor-nwse-resize z-50 bg-transparent"
-                            title="Drag corner to scale text size"
-                          />
-                          <div
-                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
-                            className="w-3.5 h-3.5 absolute top-[-7px] right-[-7px] cursor-nesw-resize z-50 bg-transparent"
-                            title="Drag corner to scale text size"
-                          />
-                          <div
-                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
-                            className="w-3.5 h-3.5 absolute bottom-[-7px] left-[-7px] cursor-nesw-resize z-50 bg-transparent"
-                            title="Drag corner to scale text size"
-                          />
-                          <div
-                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
-                            className="w-3.5 h-3.5 absolute bottom-[-7px] right-[-7px] cursor-nwse-resize z-50 bg-transparent"
-                            title="Drag corner to scale text size"
-                          />
-
-                          {/* Edge handles for box resizing */}
-                          <div
-                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'left')}
-                            className="absolute top-[4px] bottom-[4px] left-[-4px] w-2 cursor-ew-resize z-40 bg-transparent"
-                            title="Drag edge to resize width"
-                          />
-                          <div
-                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'right')}
-                            className="absolute top-[4px] bottom-[4px] right-[-4px] w-2 cursor-ew-resize z-40 bg-transparent"
-                            title="Drag edge to resize width"
-                          />
-                          <div
-                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'top')}
-                            className="absolute left-[4px] right-[4px] top-[-4px] h-2 cursor-ns-resize z-40 bg-transparent"
-                            title="Drag edge to resize height"
-                          />
-                          <div
-                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'bottom')}
-                            className="absolute left-[4px] right-[4px] bottom-[-4px] h-2 cursor-ns-resize z-40 bg-transparent"
-                            title="Drag edge to resize height"
-                          />
-                        </>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {/* Logo overlay layer */}
-                {logo.enabled && logo.url && (
-                  <img
-                    src={logo.url}
-                    alt="Logo Overlay"
-                    className={`absolute z-30 transition-all ${
-                      logo.position === 'top-left' ? 'top-4 left-4' :
-                      logo.position === 'top-right' ? 'top-4 right-4' :
-                      logo.position === 'bottom-left' ? 'bottom-4 left-4' :
-                      'bottom-4 right-4'
-                    }`}
-                    style={{
-                      width: `${logo.size}px`,
-                      opacity: logo.opacity,
-                    }}
-                  />
-                )}
+                {/* Active VFX audio SFX */}
+                {vfxTrack
+                  .filter((v) => v.hasAudio && v.start <= currentTime && v.end >= currentTime)
+                  .map((v) => (
+                    <audio
+                      key={v.id}
+                      src={resolveUrl(`/static/sfx/${v.effectId}.mp3`)}
+                      className="hidden"
+                      ref={(el) => {
+                        if (el) {
+                          const offset = currentTime - v.start
+                          if (Math.abs(el.currentTime - offset) > 0.25) {
+                            el.currentTime = offset
+                          }
+                          el.volume = (v.audioVolume !== undefined ? v.audioVolume : 1.0) * playerVolume
+                          el.muted = isMuted
+                          if (isPlaying && el.paused) {
+                            el.play().catch(() => {})
+                          } else if (!isPlaying && !el.paused) {
+                            el.pause()
+                          }
+                        }
+                      }}
+                    />
+                  ))}
 
                 {/* Controls Overlay inside video preview */}
                 <div 
@@ -2073,7 +2333,7 @@ export default function EditorPage() {
                               >
                                 {/* Preset Live Video Preview */}
                                 <video
-                                  src={selectedClip.url}
+                                  src={resolveUrl(selectedClip.url)}
                                   muted
                                   className="w-full h-full object-cover select-none pointer-events-none"
                                   style={{
@@ -2283,7 +2543,7 @@ export default function EditorPage() {
                               >
                                 {/* Effect Live Video Preview */}
                                 <video
-                                  src={selectedClip.url}
+                                  src={resolveUrl(selectedClip.url)}
                                   muted
                                   className="w-full h-full object-cover select-none pointer-events-none"
                                   style={{
@@ -2751,6 +3011,196 @@ export default function EditorPage() {
                     </div>
                   )}
 
+                  {/* VFX Properties */}
+                  {selectedTrackType === 'vfx' && (
+                    <div className="space-y-3.5 pt-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">VFX Configuration</p>
+                      
+                      {/* Timeline Duration details */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Timeline Start (s)</span>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={selectedClip.start.toFixed(1)}
+                            onChange={(e) => moveClip(selectedClip.id, 'vfx', parseFloat(e.target.value) || 0)}
+                            className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
+                              isDayMode 
+                                ? 'bg-white border-black/10 text-neutral-800' 
+                                : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Duration (s)</span>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={(selectedClip.end - selectedClip.start).toFixed(1)}
+                            onChange={(e) => {
+                              const dur = parseFloat(e.target.value) || 0.2
+                              updateClipProperties(selectedClip.id, 'vfx', { end: selectedClip.start + dur })
+                            }}
+                            className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
+                              isDayMode 
+                                ? 'bg-white border-black/10 text-neutral-800' 
+                                : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      {selectedClip.type !== 'camera_fx' ? (
+                        <>
+                          {/* Scale */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[9.5px] font-semibold text-surface-400 uppercase">
+                              <span>Scale</span>
+                              <span>{Math.round((selectedClip.scale || 1.0) * 100)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="3.0"
+                              step="0.05"
+                              value={selectedClip.scale || 1.0}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { scale: parseFloat(e.target.value) })}
+                              className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                            />
+                          </div>
+
+                          {/* Rotation */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[9.5px] font-semibold text-surface-400 uppercase">
+                              <span>Rotation</span>
+                              <span>{selectedClip.rotation || 0}°</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="-180"
+                              max="180"
+                              step="5"
+                              value={selectedClip.rotation || 0}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { rotation: parseInt(e.target.value) })}
+                              className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                            />
+                          </div>
+
+                          {/* Opacity */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[9.5px] font-semibold text-surface-400 uppercase">
+                              <span>Opacity</span>
+                              <span>{Math.round((selectedClip.opacity !== undefined ? selectedClip.opacity : 1.0) * 100)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0.0"
+                              max="1.0"
+                              step="0.05"
+                              value={selectedClip.opacity !== undefined ? selectedClip.opacity : 1.0}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { opacity: parseFloat(e.target.value) })}
+                              className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                            />
+                          </div>
+
+                          {/* Position X Slider */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[9.5px] font-semibold text-surface-400 uppercase">
+                              <span>Position X</span>
+                              <span>{getPosPercent(selectedClip.x, 50)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={getPosPercent(selectedClip.x, 50)}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { x: `${e.target.value}%` })}
+                              className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                            />
+                          </div>
+
+                          {/* Position Y Slider */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[9.5px] font-semibold text-surface-400 uppercase">
+                              <span>Position Y</span>
+                              <span>{getPosPercent(selectedClip.y, 50)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={getPosPercent(selectedClip.y, 50)}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { y: `${e.target.value}%` })}
+                              className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                            />
+                          </div>
+
+                          {/* Blend Mode Selection */}
+                          <div className="space-y-1">
+                            <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Blend Mode</span>
+                            <select
+                              value={selectedClip.blendMode || 'screen'}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { blendMode: e.target.value })}
+                              className={`w-full text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
+                                isDayMode 
+                                  ? 'bg-white border-black/10 text-neutral-800' 
+                                  : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                              }`}
+                            >
+                              <option value="normal">Normal (Overlay)</option>
+                              <option value="screen">Screen (Light overlays)</option>
+                              <option value="add">Add (Bright Glows)</option>
+                              <option value="lighten">Lighten (Light parts)</option>
+                              <option value="multiply">Multiply (Darken overlays)</option>
+                            </select>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-[9.5px] text-surface-500 italic mt-2">
+                          Procedural Camera FX properties are hardcoded and optimized for cinematic rendering.
+                        </p>
+                      )}
+
+                      <div className="h-px bg-white/[0.04] my-2" />
+
+                      {/* VFX Audio properties */}
+                      {selectedClip.type !== 'camera_fx' && (
+                        <div className="space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9.5px] font-bold uppercase tracking-wider text-surface-400">Play Linked SFX</span>
+                            <input
+                              type="checkbox"
+                              checked={!!selectedClip.hasAudio}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { hasAudio: e.target.checked })}
+                              className="accent-accent cursor-pointer"
+                            />
+                          </div>
+
+                          {selectedClip.hasAudio && (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[9.5px] font-semibold text-surface-400 uppercase">
+                                <span>SFX Volume</span>
+                                <span>{Math.round((selectedClip.audioVolume !== undefined ? selectedClip.audioVolume : 1.0) * 100)}%</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max="2"
+                                step="0.05"
+                                value={selectedClip.audioVolume !== undefined ? selectedClip.audioVolume : 1.0}
+                                onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { audioVolume: parseFloat(e.target.value) })}
+                                className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="h-px bg-white/[0.04] my-2" />
 
                   {/* Actions */}
@@ -2919,7 +3369,8 @@ export default function EditorPage() {
               <div className="h-6 border-b border-white/[0.03] flex items-center px-3 tracking-widest shrink-0">Ruler</div>
               <div className="h-16 border-b border-white/[0.03] flex items-center px-3 tracking-widest">Video v1</div>
               <div className="h-16 border-b border-white/[0.03] flex items-center px-3 tracking-widest">Audio a1</div>
-              <div className="h-16 flex items-center px-3 tracking-widest">Text t1</div>
+              <div className="h-16 border-b border-white/[0.03] flex items-center px-3 tracking-widest">Text t1</div>
+              <div className="h-16 flex items-center px-3 tracking-widest">VFX fx1</div>
             </div>
 
             {/* Scrollable Tracks Canvas */}
@@ -3044,7 +3495,7 @@ export default function EditorPage() {
                 </div>
 
                 {/* Text Track Row */}
-                <div className="h-16 relative flex items-center bg-white/[0.005]">
+                <div className="h-16 border-b border-white/[0.03] relative flex items-center bg-white/[0.005]">
                   {textTrack.map((clip) => {
                     const isSelected = selectedClipId === clip.id
                     return (
@@ -3076,6 +3527,47 @@ export default function EditorPage() {
                         <div
                           className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r-xl cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'text', 'trim-end')}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* VFX Track Row */}
+                <div className="h-16 relative flex items-center bg-white/[0.005]">
+                  {vfxTrack.map((clip) => {
+                    const isSelected = selectedClipId === clip.id
+                    return (
+                      <div
+                        key={clip.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedClipId(clip.id)
+                          setSelectedTrackType('vfx')
+                        }}
+                        className={`absolute h-12 rounded-xl flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                          isSelected
+                            ? 'bg-purple-900/35 border-accent/80 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]'
+                            : 'bg-indigo-950/40 border-indigo-850/30 hover:border-indigo-600/50 text-indigo-200'
+                        }`}
+                        style={{
+                          left: `${clip.start * zoom}px`,
+                          width: `${(clip.end - clip.start) * zoom}px`,
+                        }}
+                        onMouseDown={(e) => handleClipMouseDown(e, clip, 'vfx', 'move')}
+                      >
+                        {/* Trim handlers */}
+                        <div
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l-xl cursor-ew-resize transition-colors"
+                          onMouseDown={(e) => handleClipMouseDown(e, clip, 'vfx', 'trim-start')}
+                        />
+                        <span className="truncate flex-1 select-none pr-2">
+                          {clip.type === 'camera_fx' ? '🎥' : '✨'} {clip.name}
+                        </span>
+                        <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r-xl cursor-ew-resize transition-colors"
+                          onMouseDown={(e) => handleClipMouseDown(e, clip, 'vfx', 'trim-end')}
                         />
                       </div>
                     )

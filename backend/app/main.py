@@ -22,6 +22,13 @@ async def lifespan(app: FastAPI):
     # Run lightweight migrations for columns added after initial schema
     _run_migrations(engine)
 
+    # Pre-generate procedural VFX overlay video assets and SFX audio
+    try:
+        from app.utils.vfx_generator import generate_all_vfx_assets
+        generate_all_vfx_assets()
+    except Exception as exc:
+        logger.error(f"Failed to generate procedural VFX assets on startup: {exc}")
+
     yield
     # (shutdown hooks go here if needed)
 
