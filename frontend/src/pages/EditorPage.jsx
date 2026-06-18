@@ -408,6 +408,89 @@ const CREATIVE_EFFECTS = [
   }
 ]
 
+const parseTime = (timeStr) => {
+  if (!timeStr) return 0
+  const cleanStr = timeStr.trim().replace(',', '.')
+  const match = cleanStr.match(/(?:(\d+):)?(\d+):(\d+)(?:\.(\d+))?/)
+  if (!match) {
+    const rawVal = parseFloat(cleanStr)
+    return isNaN(rawVal) ? 0 : rawVal
+  }
+  const hrs = match[1] ? parseInt(match[1], 10) : 0
+  const mins = parseInt(match[2], 10)
+  const secs = parseInt(match[3], 10)
+  const ms = match[4] ? parseFloat("0." + match[4]) : 0
+  return hrs * 3600 + mins * 60 + secs + ms
+}
+
+const parseSRTOrVTT = (content) => {
+  const blocks = content.split(/\r?\n\r?\n/)
+  const list = []
+  
+  blocks.forEach((block) => {
+    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    if (lines.length < 2) return
+    
+    let timestampLineIdx = -1
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('-->')) {
+        timestampLineIdx = i
+        break
+      }
+    }
+    if (timestampLineIdx === -1) return
+    
+    const times = lines[timestampLineIdx].split('-->')
+    if (times.length < 2) return
+    
+    const start = parseTime(times[0])
+    const end = parseTime(times[1])
+    
+    const textLines = lines.slice(timestampLineIdx + 1)
+    const text = textLines.join('\n').trim()
+    
+    if (text) {
+      list.push({
+        id: `text_srt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        text,
+        start,
+        end,
+        x: 'center',
+        y: 'bottom',
+        fontSize: 24,
+        fontColor: '#ffffff',
+        fontFamily: 'Sofia Sans',
+        bold: false,
+        italic: false,
+        align: 'center',
+        shadowEnabled: true,
+        shadowColor: '#000000',
+        shadowBlur: 4
+      })
+    }
+  })
+  return list
+}
+
+const secondsToSRTTime = (seconds) => {
+  const hrs = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+  const ms = Math.round((seconds % 1) * 1000)
+  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`
+}
+
+const generateSRTString = (textTrackItems) => {
+  const sorted = [...textTrackItems].sort((a, b) => a.start - b.start)
+  let srtContent = ''
+  sorted.forEach((item, index) => {
+    srtContent += `${index + 1}\n`
+    srtContent += `${secondsToSRTTime(item.start)} --> ${secondsToSRTTime(item.end)}\n`
+    srtContent += `${item.text}\n\n`
+  })
+  return srtContent
+}
+
 export default function EditorPage() {
   const navigate = useNavigate()
   const { isDayMode } = useTheme()
@@ -479,10 +562,12 @@ export default function EditorPage() {
   const [logoPreset, setLogoPreset] = useState(logo.position)
   const fileInputRef = useRef(null)
   const logoInputRef = useRef(null)
+  const subtitleInputRef = useRef(null)
   const previewVideoRef = useRef(null)
   const previewAudioRef = useRef(null)
   const timelineScrollRef = useRef(null)
   const [customText, setCustomText] = useState('')
+  const [subSearchQuery, setSubSearchQuery] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
   const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
   const [isMuted, setIsMuted] = useState(false)
@@ -706,6 +791,48 @@ export default function EditorPage() {
       }
     }
     e.target.value = ''
+  }
+
+  const handleSubtitleUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target.result
+      try {
+        const parsed = parseSRTOrVTT(content)
+        if (parsed.length === 0) {
+          alert("Could not find any valid subtitles in this file. Please verify it is in SRT or VTT format.")
+          return
+        }
+        setTextTrack(parsed)
+      } catch (err) {
+        alert("Error parsing subtitle file: " + err.message)
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  const handleExportSRT = () => {
+    if (textTrack.length === 0) {
+      alert("No subtitles/text overlays to export.")
+      return
+    }
+    const srtString = generateSRTString(textTrack)
+    const blob = new Blob([srtString], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'subtitles.srt'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleAddSubtitleAtPlayhead = () => {
+    addTextOverlay("New subtitle", currentTime, currentTime + 3.0)
   }
 
   const isActivePreset = (preset) => {
@@ -1067,6 +1194,10 @@ export default function EditorPage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${hundredths.toString().padStart(2, '0')}`
   }
 
+  const filteredSubtitles = textTrack
+    .filter((sub) => sub.text && sub.text.toLowerCase().includes(subSearchQuery.toLowerCase()))
+    .sort((a, b) => a.start - b.start)
+
   return (
     <div className={`flex h-screen overflow-hidden select-none font-display relative transition-colors duration-500 ${
       isDayMode ? 'bg-[#f0ede8]' : 'bg-[#06060b]'
@@ -1164,23 +1295,33 @@ export default function EditorPage() {
             <div className="flex border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] p-2 gap-1">
               <button
                 onClick={() => setActiveTab('media')}
-                className={`flex-1 py-2 rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-colors ${
+                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
                   activeTab === 'media' 
                     ? 'bg-white/5 text-white-force' 
                     : 'text-surface-500 hover:text-surface-300'
                 }`}
               >
-                Media Library
+                Media
               </button>
               <button
                 onClick={() => setActiveTab('overlays')}
-                className={`flex-1 py-2 rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-colors ${
+                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
                   activeTab === 'overlays' 
                     ? 'bg-white/5 text-white-force' 
                     : 'text-surface-555 hover:text-surface-300'
                 }`}
               >
                 Logo & Text
+              </button>
+              <button
+                onClick={() => setActiveTab('subtitles')}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
+                  activeTab === 'subtitles' 
+                    ? 'bg-white/5 text-white-force' 
+                    : 'text-surface-500 hover:text-surface-300'
+                }`}
+              >
+                Subtitles
               </button>
             </div>
 
@@ -1424,6 +1565,134 @@ export default function EditorPage() {
                     </p>
                   </div>
 
+                </div>
+              )}
+
+              {activeTab === 'subtitles' && (
+                <div className="space-y-4">
+                  {/* Subtitle File Management Controls */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Subtitle Settings</p>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => subtitleInputRef.current?.click()}
+                        className="flex-1 py-2 px-3 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent font-bold uppercase tracking-wider text-[10px] cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <FiUploadCloud size={12} />
+                        <span>Import SRT/VTT</span>
+                      </button>
+                      <input
+                        type="file"
+                        ref={subtitleInputRef}
+                        onChange={handleSubtitleUpload}
+                        accept=".srt,.vtt,.txt"
+                        className="hidden"
+                      />
+                      
+                      <button
+                        onClick={handleExportSRT}
+                        disabled={textTrack.length === 0}
+                        className="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 disabled:opacity-40 disabled:cursor-not-allowed font-bold uppercase tracking-wider text-[10px] cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                        title="Export timeline subtitles to SRT file"
+                      >
+                        <FiDownload size={12} />
+                        <span>Export SRT</span>
+                      </button>
+                    </div>
+                    
+                    <button
+                      onClick={handleAddSubtitleAtPlayhead}
+                      className="w-full py-2 px-4 rounded-xl bg-accent hover:bg-purple-600 text-white font-bold uppercase tracking-widest text-[10px] cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <FiPlus size={11} />
+                      <span>Add Subtitle at Playhead</span>
+                    </button>
+                  </div>
+                  
+                  <div className="h-px bg-white/[0.04] my-2" />
+                  
+                  {/* Search and Interactive editor list */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Subtitle Track Editor</p>
+                    <input
+                      type="text"
+                      placeholder="Search subtitle text..."
+                      value={subSearchQuery}
+                      onChange={(e) => setSubSearchQuery(e.target.value)}
+                      className={`w-full text-[11px] font-semibold border rounded-lg p-2 focus:outline-none ${
+                        isDayMode 
+                          ? 'bg-white border-black/10 text-neutral-800' 
+                          : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                    {filteredSubtitles.length === 0 ? (
+                      <div className="text-center py-8 text-surface-600 text-xs font-mono">
+                        {textTrack.length === 0 ? "No subtitles uploaded yet." : "No matching subtitles found."}
+                      </div>
+                    ) : (
+                      filteredSubtitles.map((sub) => {
+                        const isSelected = selectedClipId === sub.id;
+                        return (
+                          <div
+                            key={sub.id}
+                            onClick={() => {
+                              setSelectedClipId(sub.id);
+                              setSelectedTrackType('text');
+                            }}
+                            className={`p-3 rounded-xl border text-[11px] space-y-2 transition-colors relative group cursor-pointer ${
+                              isSelected
+                                ? 'bg-accent/10 border-accent shadow-[0_0_8px_rgba(139,92,246,0.15)]'
+                                : isDayMode
+                                  ? 'bg-white border-black/5 hover:bg-neutral-50'
+                                  : 'bg-[#0a0a12]/80 border-white/[0.04] hover:bg-white/[0.02]'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center text-[9px] font-mono text-surface-500">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentTime(sub.start);
+                                }}
+                                className="hover:text-accent font-bold cursor-pointer transition-colors"
+                                title="Seek playhead to start time"
+                              >
+                                ⏱️ {formatTime(sub.start)} ➔ {formatTime(sub.end)}
+                              </button>
+                              
+                              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteClip(sub.id, 'text');
+                                  }}
+                                  className="p-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/25 cursor-pointer"
+                                  title="Delete subtitle"
+                                >
+                                  <FiTrash2 size={10} />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <textarea
+                              value={sub.text}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => updateClipProperties(sub.id, 'text', { text: e.target.value })}
+                              className={`w-full text-[10.5px] font-semibold border rounded-lg p-2 focus:outline-none h-14 resize-none ${
+                                isDayMode 
+                                  ? 'bg-neutral-50 border-black/10 text-neutral-800 focus:bg-white' 
+                                  : 'bg-black/30 border-white/5 text-neutral-200 focus:bg-black/55'
+                              }`}
+                              placeholder="Enter subtitle text..."
+                            />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               )}
             </div>
