@@ -45,6 +45,12 @@ class TextInfo(BaseModel):
     y: str  # percentage fraction or pixel or preset 'bottom'/'top'
     fontSize: Optional[int] = 28
     fontColor: Optional[str] = "white"
+    fontFamily: Optional[str] = "Sofia Sans"
+    bold: Optional[bool] = False
+    italic: Optional[bool] = False
+    align: Optional[str] = "center"
+    width: Optional[str] = "auto"
+    height: Optional[str] = "auto"
 
 
 class LogoInfo(BaseModel):
@@ -327,6 +333,15 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             filter_parts.append(f"[canvas_a] acopy [{current_audio_label}]")
 
         # 3. Text drawing
+        font_map = {
+            "sofia sans": "arial.ttf",
+            "poppins": "calibri.ttf",
+            "montserrat": "segoeuib.ttf",
+            "courier new": "cour.ttf",
+            "playfair display": "georgia.ttf",
+            "impact": "impact.ttf"
+        }
+
         for idx, text in enumerate(payload.textTrack):
             # Coordinates presets and expressions
             x_expr = "(w-tw)/2"
@@ -352,14 +367,64 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             # Clean and escape text for drawtext
             clean_text = text.text.replace("'", "'\\\\''").replace(":", "\\:")
             
-            # Try to resolve Windows font, fallback to standard sans
-            font_part = ""
-            if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-                font_part = ":fontfile='C\\:/Windows/Fonts/arial.ttf'"
+            # Convert color code hex format to 0x format for FFmpeg safety
+            color_val = text.fontColor or "white"
+            if color_val.startswith("#"):
+                color_val = color_val.replace("#", "0x")
             
+            # Try to resolve selected font family, bold, and italic combinations
+            font_family = (text.fontFamily or "sofia sans").lower()
+            bold = text.bold
+            italic = text.italic
+            
+            font_name = "arial.ttf"
+            if font_family == "courier new":
+                if bold and italic:
+                    font_name = "courbi.ttf"
+                elif bold:
+                    font_name = "courbd.ttf"
+                elif italic:
+                    font_name = "couri.ttf"
+                else:
+                    font_name = "cour.ttf"
+            elif font_family == "playfair display":  # serif (Georgia fallback)
+                if bold and italic:
+                    font_name = "georgiabi.ttf"
+                elif bold:
+                    font_name = "georgiab.ttf"
+                elif italic:
+                    font_name = "georgiai.ttf"
+                else:
+                    font_name = "georgia.ttf"
+            elif font_family == "impact":
+                font_name = "impact.ttf"
+            else:  # Sans-serif (Arial / Poppins / Montserrat / Sofia Sans)
+                if bold and italic:
+                    font_name = "arialbi.ttf"
+                elif bold:
+                    font_name = "arialbd.ttf"
+                elif italic:
+                    font_name = "ariali.ttf"
+                else:
+                    font_name = "arial.ttf"
+
+            font_path = f"C:/Windows/Fonts/{font_name}"
+            font_part = ""
+            if os.path.exists(font_path):
+                # Escape the colon for Windows absolute paths in FFmpeg
+                font_part = f":fontfile='C\\:/Windows/Fonts/{font_name}'"
+            elif os.path.exists("C:/Windows/Fonts/arial.ttf"):
+                font_part = ":fontfile='C\\:/Windows/Fonts/arial.ttf'"
+
+            # Shadow / Drop shadow outline support
+            shadow_part = ""
+            # Note: We can check if shadow is enabled
+            shadow_color = "black"
+            shadow_part = f":shadowcolor={shadow_color}:shadowx=2:shadowy=2"
+
             v_text_label = f"v_text_{idx}"
             filter_parts.append(
-                f"[{current_video_label}] drawtext=text='{clean_text}':fontsize={text.fontSize}:fontcolor={text.fontColor}{font_part}:x='{x_expr}':y='{y_expr}':enable='between(t,{text.start},{text.end})' [{v_text_label}]"
+                f"[{current_video_label}] drawtext=text='{clean_text}':fontsize={text.fontSize}:fontcolor={color_val}{font_part}{shadow_part}:x='{x_expr}':y='{y_expr}':enable='between(t,{text.start},{text.end})' [{v_text_label}]"
             )
             current_video_label = v_text_label
 

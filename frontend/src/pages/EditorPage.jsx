@@ -331,30 +331,216 @@ export default function EditorPage() {
   // Visual position converter for text elements
   const getTextPositionStyles = (txt) => {
     const style = {
-      fontSize: `${txt.fontSize}px`,
-      color: txt.fontColor,
+      fontSize: `${txt.fontSize || 28}px`,
+      color: txt.fontColor || '#ffffff',
+      fontFamily: txt.fontFamily || 'Sofia Sans',
+      fontWeight: txt.bold ? 'bold' : 'normal',
+      fontStyle: txt.italic ? 'italic' : 'normal',
+      textAlign: txt.align || 'center',
+      textShadow: txt.shadowEnabled 
+        ? `0px 2px ${txt.shadowBlur || 4}px ${txt.shadowColor || '#000000'}` 
+        : 'none',
       position: 'absolute',
-      zIndex: 20,
+      zIndex: 45, // Set above controls overlay (z-40) to prevent click interception and allow dragging
+      width: txt.width || 'auto',
+      height: txt.height || 'auto',
+      minWidth: txt.width && txt.width !== 'auto' ? 'none' : 'max-content', // Prevent text from getting squashed when dragged close to the right screen boundary
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: txt.align === 'left' ? 'flex-start' : txt.align === 'right' ? 'flex-end' : 'center',
+      wordBreak: 'break-word',
+      overflow: 'hidden',
     }
     
+    // Horizontal positioning
     if (txt.x === 'center') {
-      style.left = '50%'
-      style.transform = 'translateX(-50%)'
+      if (txt.align === 'left') {
+        style.left = '10%'
+      } else if (txt.align === 'right') {
+        style.right = '10%'
+      } else {
+        style.left = '50%'
+        style.transform = 'translateX(-50%)'
+      }
     } else {
-      style.left = txt.x.includes('%') || txt.x.includes('w') ? txt.x : `${txt.x}px`
+      const xStr = String(txt.x || 'center')
+      style.left = xStr.includes('%') || xStr.includes('w') ? xStr : `${xStr}px`
+      if (xStr.includes('%')) {
+        style.transform = `${style.transform || ''} translateX(-50%)`
+      }
     }
 
+    // Vertical positioning (default bottom shifted from 10% to 22% to avoid overlapping video seek/controls)
     if (txt.y === 'bottom') {
-      style.bottom = '10%'
+      style.bottom = '22%'
     } else if (txt.y === 'top') {
       style.top = '10%'
     } else if (txt.y === 'center') {
       style.top = '50%'
       style.transform = `${style.transform || ''} translateY(-50%)`
     } else {
-      style.top = txt.y.includes('%') || txt.y.includes('h') ? txt.y : `${txt.y}px`
+      const yStr = String(txt.y || 'bottom')
+      style.top = yStr.includes('%') || yStr.includes('h') ? yStr : `${yStr}px`
+      if (yStr.includes('%')) {
+        style.transform = `${style.transform || ''} translateY(-50%)`
+      }
     }
     return style
+  }
+
+  // Interactive mouse dragging handler for text overlays on the player canvas
+  const handleTextOverlayMouseDown = (e, txt) => {
+    e.stopPropagation()
+    e.preventDefault()
+    
+    setSelectedClipId(txt.id)
+    setSelectedTrackType('text')
+    
+    const container = e.currentTarget.parentElement
+    if (!container) return
+    
+    const rect = container.getBoundingClientRect()
+    const startX = e.clientX
+    const startY = e.clientY
+    
+    // Parse current x and y positions
+    let initialXPercent = 50
+    if (txt.x !== 'center') {
+      const parsedX = parseFloat(txt.x)
+      initialXPercent = isNaN(parsedX) ? 50 : parsedX
+    } else {
+      if (txt.align === 'left') initialXPercent = 10
+      if (txt.align === 'right') initialXPercent = 90
+    }
+    
+    let initialYPercent = 78 // default bottom is 78% (above 22% bottom margin)
+    if (txt.y === 'top') {
+      initialYPercent = 10
+    } else if (txt.y === 'center') {
+      initialYPercent = 50
+    } else if (txt.y === 'bottom') {
+      initialYPercent = 78
+    } else {
+      const parsedY = parseFloat(txt.y)
+      initialYPercent = isNaN(parsedY) ? 78 : parsedY
+    }
+
+    const handleMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const deltaY = moveEvent.clientY - startY
+      
+      const deltaXPercent = (deltaX / rect.width) * 100
+      const deltaYPercent = (deltaY / rect.height) * 100
+      
+      const newXPercent = Math.max(0, Math.min(100, initialXPercent + deltaXPercent))
+      const newYPercent = Math.max(0, Math.min(100, initialYPercent + deltaYPercent))
+      
+      updateClipProperties(txt.id, 'text', {
+        x: `${newXPercent.toFixed(1)}%`,
+        y: `${newYPercent.toFixed(1)}%`
+      })
+    }
+    
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }
+
+  // Interactive mouse resizing handler for text overlays
+  const handleTextOverlayResizeMouseDown = (e, txt) => {
+    e.stopPropagation()
+    e.preventDefault()
+    
+    setSelectedClipId(txt.id)
+    setSelectedTrackType('text')
+    
+    // Find the text container element
+    const textEl = e.currentTarget.parentElement
+    if (!textEl) return
+    
+    const rect = textEl.getBoundingClientRect()
+    // Compute center coordinates of the text box
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    
+    // Initial distance of the cursor from the center of the text box
+    const initialDist = Math.sqrt(Math.pow(startX - centerX, 2) + Math.pow(startY - centerY, 2))
+    const initialFontSize = txt.fontSize || 28
+
+    const handleMouseMove = (moveEvent) => {
+      const currentDist = Math.sqrt(Math.pow(moveEvent.clientX - centerX, 2) + Math.pow(moveEvent.clientY - centerY, 2))
+      const scaleFactor = currentDist / (initialDist || 1)
+      
+      const newFontSize = Math.max(12, Math.min(120, Math.round(initialFontSize * scaleFactor)))
+      updateClipProperties(txt.id, 'text', { fontSize: newFontSize })
+    }
+    
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }
+
+  // Interactive mouse resizing handler for textbox borders (sides and top/bottom edges)
+  const handleTextOverlayEdgeResizeMouseDown = (e, txt, edge) => {
+    e.stopPropagation()
+    e.preventDefault()
+    
+    setSelectedClipId(txt.id)
+    setSelectedTrackType('text')
+    
+    const textEl = e.currentTarget.parentElement
+    if (!textEl) return
+    
+    const rect = textEl.getBoundingClientRect()
+    const initialWidth = rect.width
+    const initialHeight = rect.height
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    
+    const isHorizontal = edge === 'left' || edge === 'right'
+    const isVertical = edge === 'top' || edge === 'bottom'
+    
+    // Determine centering properties to adjust delta scaling
+    const isXCentered = txt.x === 'center' || String(txt.x).includes('50%')
+    const isYCentered = txt.y === 'center' || String(txt.y).includes('50%')
+
+    const handleMouseMove = (moveEvent) => {
+      if (isHorizontal) {
+        const deltaX = moveEvent.clientX - startX
+        const factor = isXCentered ? 2 : 1
+        const direction = edge === 'right' ? 1 : -1
+        const newWidth = Math.max(50, initialWidth + deltaX * direction * factor)
+        updateClipProperties(txt.id, 'text', { width: `${newWidth.toFixed(0)}px` })
+      }
+      
+      if (isVertical) {
+        const deltaY = moveEvent.clientY - startY
+        const factor = isYCentered ? 2 : 1
+        const direction = edge === 'bottom' ? 1 : -1
+        const newHeight = Math.max(25, initialHeight + deltaY * direction * factor)
+        updateClipProperties(txt.id, 'text', { height: `${newHeight.toFixed(0)}px` })
+      }
+    }
+    
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
   }
 
   // Drag-to-move & Drag-to-resize/trim handlers
@@ -774,15 +960,72 @@ export default function EditorPage() {
                 />
 
                 {/* Subtitle / Text overlays layer */}
-                {activeTexts.map((txt) => (
-                  <div
-                    key={txt.id}
-                    style={getTextPositionStyles(txt)}
-                    className="font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] px-4 text-center select-none"
-                  >
-                    {txt.text}
-                  </div>
-                ))}
+                {activeTexts.map((txt) => {
+                  const isSelected = selectedClipId === txt.id
+                  return (
+                    <div
+                      key={txt.id}
+                      style={getTextPositionStyles(txt)}
+                      onMouseDown={(e) => handleTextOverlayMouseDown(e, txt)}
+                      className={`font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] px-4 select-none cursor-move transition-all border relative ${
+                        isSelected 
+                          ? 'border-accent bg-accent/10 border-dashed rounded-lg' 
+                          : 'border-transparent hover:border-white/30 hover:border-dashed rounded-lg'
+                      }`}
+                    >
+                      {txt.text}
+                      
+                      {/* Invisible Corner Resize Handles */}
+                      {isSelected && (
+                        <>
+                          {/* Corner handles */}
+                          <div
+                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                            className="w-3.5 h-3.5 absolute top-[-7px] left-[-7px] cursor-nwse-resize z-50 bg-transparent"
+                            title="Drag corner to scale text size"
+                          />
+                          <div
+                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                            className="w-3.5 h-3.5 absolute top-[-7px] right-[-7px] cursor-nesw-resize z-50 bg-transparent"
+                            title="Drag corner to scale text size"
+                          />
+                          <div
+                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                            className="w-3.5 h-3.5 absolute bottom-[-7px] left-[-7px] cursor-nesw-resize z-50 bg-transparent"
+                            title="Drag corner to scale text size"
+                          />
+                          <div
+                            onMouseDown={(e) => handleTextOverlayResizeMouseDown(e, txt)}
+                            className="w-3.5 h-3.5 absolute bottom-[-7px] right-[-7px] cursor-nwse-resize z-50 bg-transparent"
+                            title="Drag corner to scale text size"
+                          />
+
+                          {/* Edge handles for box resizing */}
+                          <div
+                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'left')}
+                            className="absolute top-[4px] bottom-[4px] left-[-4px] w-2 cursor-ew-resize z-40 bg-transparent"
+                            title="Drag edge to resize width"
+                          />
+                          <div
+                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'right')}
+                            className="absolute top-[4px] bottom-[4px] right-[-4px] w-2 cursor-ew-resize z-40 bg-transparent"
+                            title="Drag edge to resize width"
+                          />
+                          <div
+                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'top')}
+                            className="absolute left-[4px] right-[4px] top-[-4px] h-2 cursor-ns-resize z-40 bg-transparent"
+                            title="Drag edge to resize height"
+                          />
+                          <div
+                            onMouseDown={(e) => handleTextOverlayEdgeResizeMouseDown(e, txt, 'bottom')}
+                            className="absolute left-[4px] right-[4px] bottom-[-4px] h-2 cursor-ns-resize z-40 bg-transparent"
+                            title="Drag edge to resize height"
+                          />
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
 
                 {/* Logo overlay layer */}
                 {logo.enabled && logo.url && (
@@ -898,7 +1141,7 @@ export default function EditorPage() {
                   {/* Clip ID Details */}
                   <div className="space-y-1">
                     <p className="text-[9px] font-bold uppercase tracking-widest text-surface-500">Selected Clip</p>
-                    <p className="font-semibold text-white leading-tight truncate">{selectedClip.name}</p>
+                    <p className="font-semibold text-white leading-tight truncate">{selectedClip.name || selectedClip.text || 'Text Overlay'}</p>
                     <p className="text-[9px] font-mono text-surface-500">Track: {selectedTrackType.toUpperCase()}</p>
                   </div>
 
@@ -906,12 +1149,12 @@ export default function EditorPage() {
 
                   {/* Sizing Details */}
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
+                    <div className={selectedTrackType === 'text' ? 'col-span-2' : ''}>
                       <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Timeline Start</span>
                       <input
                         type="number"
                         step="0.1"
-                        value={selectedClip.start.toFixed(1)}
+                        value={selectedClip.start ? selectedClip.start.toFixed(1) : '0.0'}
                         onChange={(e) => moveClip(selectedClip.id, selectedTrackType, parseFloat(e.target.value) || 0)}
                         className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
                           isDayMode 
@@ -920,20 +1163,22 @@ export default function EditorPage() {
                         }`}
                       />
                     </div>
-                    <div>
-                      <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Trim Start</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={selectedClip.sourceStart.toFixed(1)}
-                        onChange={(e) => trimClip(selectedClip.id, selectedTrackType, 'start', parseFloat(e.target.value) || 0)}
-                        className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
-                          isDayMode 
-                            ? 'bg-white border-black/10 text-neutral-800' 
-                            : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                        }`}
-                      />
-                    </div>
+                    {selectedTrackType !== 'text' && (
+                      <div>
+                        <span className="text-[9.5px] font-semibold text-surface-500 uppercase block">Trim Start</span>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={selectedClip.sourceStart ? selectedClip.sourceStart.toFixed(1) : '0.0'}
+                          onChange={(e) => trimClip(selectedClip.id, selectedTrackType, 'start', parseFloat(e.target.value) || 0)}
+                          className={`w-full text-[11px] font-semibold border rounded-lg px-2 py-1.5 focus:outline-none ${
+                            isDayMode 
+                              ? 'bg-white border-black/10 text-neutral-800' 
+                              : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                          }`}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Video Filters */}
@@ -1071,16 +1316,16 @@ export default function EditorPage() {
 
                   {/* Text Properties */}
                   {selectedTrackType === 'text' && (
-                    <div className="space-y-3 pt-2">
-                      <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Text Config</p>
+                    <div className="space-y-3.5 pt-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Text Customization</p>
                       
                       {/* Text Input */}
                       <div className="space-y-1">
                         <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Content</span>
                         <textarea
-                          value={selectedClip.text}
+                          value={selectedClip.text || ''}
                           onChange={(e) => updateClipProperties(selectedClip.id, 'text', { text: e.target.value })}
-                          className={`w-full text-[11px] font-semibold border rounded-lg p-2 focus:outline-none h-16 resize-none ${
+                          className={`w-full text-[11px] font-semibold border rounded-lg p-2.5 focus:outline-none h-16 resize-none ${
                             isDayMode 
                               ? 'bg-white border-black/10 text-neutral-800' 
                               : 'bg-[#0c0c16] border-white/10 text-neutral-200'
@@ -1088,36 +1333,103 @@ export default function EditorPage() {
                         />
                       </div>
 
-                      {/* Font size */}
+                      {/* Font Family Selection */}
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-semibold text-surface-400">
-                          <span>Font Size</span>
-                          <span>{selectedClip.fontSize}px</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="12"
-                          max="72"
-                          step="1"
-                          value={selectedClip.fontSize}
-                          onChange={(e) => updateClipProperties(selectedClip.id, 'text', { fontSize: parseInt(e.target.value) })}
-                          className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
-                        />
+                        <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Font Style</span>
+                        <select
+                          value={selectedClip.fontFamily || 'Sofia Sans'}
+                          onChange={(e) => updateClipProperties(selectedClip.id, 'text', { fontFamily: e.target.value })}
+                          className={`w-full text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
+                            isDayMode 
+                              ? 'bg-white border-black/10 text-neutral-800' 
+                              : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                          }`}
+                          style={{ fontFamily: selectedClip.fontFamily || 'Sofia Sans' }}
+                        >
+                          <option value="Sofia Sans" style={{ fontFamily: 'Sofia Sans' }}>Sofia Sans (Modern)</option>
+                          <option value="Poppins" style={{ fontFamily: 'Poppins' }}>Poppins (Clean Sans)</option>
+                          <option value="Montserrat" style={{ fontFamily: 'Montserrat' }}>Montserrat (Tech Sans)</option>
+                          <option value="Playfair Display" style={{ fontFamily: 'Playfair Display' }}>Playfair Display (Elegant Serif)</option>
+                          <option value="Courier New" style={{ fontFamily: 'Courier New' }}>Courier New (Screenplay Mono)</option>
+                          <option value="Impact" style={{ fontFamily: 'Impact' }}>Impact (Bold Display)</option>
+                        </select>
                       </div>
 
-                      {/* Font Color */}
-                      <div className="space-y-1">
+                      {/* Font Size & Alignment */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9.5px] font-semibold text-surface-400 uppercase">
+                            <span>Size</span>
+                            <span>{selectedClip.fontSize || 28}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="12"
+                            max="72"
+                            step="1"
+                            value={selectedClip.fontSize || 28}
+                            onChange={(e) => updateClipProperties(selectedClip.id, 'text', { fontSize: parseInt(e.target.value) })}
+                            className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Alignment</span>
+                          <div className="flex rounded-lg overflow-hidden border border-white/10 bg-white/5 p-0.5">
+                            {['left', 'center', 'right'].map((alignOpt) => (
+                              <button
+                                key={alignOpt}
+                                onClick={() => updateClipProperties(selectedClip.id, 'text', { align: alignOpt })}
+                                className={`flex-1 py-1 text-[10px] font-bold uppercase rounded-md transition-colors ${
+                                  (selectedClip.align || 'center') === alignOpt
+                                    ? 'bg-accent text-white'
+                                    : 'text-surface-400 hover:text-white'
+                                }`}
+                              >
+                                {alignOpt === 'left' ? 'L' : alignOpt === 'center' ? 'C' : 'R'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Text Style: Bold & Italic Toggles */}
+                      <div className="flex gap-2.5">
+                        <button
+                          onClick={() => updateClipProperties(selectedClip.id, 'text', { bold: !selectedClip.bold })}
+                          className={`flex-1 py-1.5 border rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                            selectedClip.bold 
+                              ? 'bg-accent/20 border-accent text-white font-black' 
+                              : 'border-white/10 text-surface-400 hover:text-white'
+                          }`}
+                        >
+                          Bold
+                        </button>
+                        <button
+                          onClick={() => updateClipProperties(selectedClip.id, 'text', { italic: !selectedClip.italic })}
+                          className={`flex-1 py-1.5 border rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                            selectedClip.italic 
+                              ? 'bg-accent/20 border-accent text-white italic' 
+                              : 'border-white/10 text-surface-400 hover:text-white'
+                          }`}
+                        >
+                          Italic
+                        </button>
+                      </div>
+
+                      {/* Font Color Picker & Presets */}
+                      <div className="space-y-1.5">
                         <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Text Color</span>
                         <div className="flex gap-2">
                           <input
                             type="color"
-                            value={selectedClip.fontColor.startsWith('#') ? selectedClip.fontColor : '#ffffff'}
+                            value={(selectedClip.fontColor || '#ffffff').startsWith('#') ? selectedClip.fontColor || '#ffffff' : '#ffffff'}
                             onChange={(e) => updateClipProperties(selectedClip.id, 'text', { fontColor: e.target.value })}
                             className="w-8 h-8 rounded border border-white/10 cursor-pointer bg-transparent"
                           />
                           <input
                             type="text"
-                            value={selectedClip.fontColor}
+                            value={selectedClip.fontColor || '#ffffff'}
                             onChange={(e) => updateClipProperties(selectedClip.id, 'text', { fontColor: e.target.value })}
                             className={`flex-1 text-[11px] font-mono border rounded-lg px-2 py-1.5 focus:outline-none ${
                               isDayMode 
@@ -1126,13 +1438,81 @@ export default function EditorPage() {
                             }`}
                           />
                         </div>
+
+                        {/* Premium Preset Palettes */}
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {[
+                            '#ffffff', // White
+                            '#f5f5dc', // Cream
+                            '#fef08a', // Soft Yellow
+                            '#fbbf24', // Yellow
+                            '#f87171', // Red
+                            '#86efac', // Green
+                            '#67e8f9', // Cyan
+                            '#f472b6', // Pink
+                            '#c084fc', // Purple
+                          ].map((colorHex) => (
+                            <button
+                              key={colorHex}
+                              onClick={() => updateClipProperties(selectedClip.id, 'text', { fontColor: colorHex })}
+                              className="w-5 h-5 rounded-full border border-white/20 transition-transform hover:scale-110 cursor-pointer shadow-md"
+                              style={{ backgroundColor: colorHex }}
+                              title={colorHex}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Text Glow / Shadow Customizer */}
+                      <div className="space-y-2 border border-white/5 bg-white/[0.02] p-2.5 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9.5px] font-bold uppercase tracking-wider text-surface-400">Text Shadow / Outline</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedClip.shadowEnabled !== false}
+                            onChange={(e) => updateClipProperties(selectedClip.id, 'text', { shadowEnabled: e.target.checked })}
+                            className="accent-accent cursor-pointer"
+                          />
+                        </div>
+
+                        {selectedClip.shadowEnabled !== false && (
+                          <div className="space-y-2 pt-1 transition-opacity">
+                            {/* Blur range */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[9px] text-surface-500 uppercase font-semibold">
+                                <span>Glow Blur</span>
+                                <span>{selectedClip.shadowBlur || 4}px</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max="15"
+                                step="1"
+                                value={selectedClip.shadowBlur || 4}
+                                onChange={(e) => updateClipProperties(selectedClip.id, 'text', { shadowBlur: parseInt(e.target.value) })}
+                                className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                              />
+                            </div>
+                            
+                            {/* Glow Color */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] text-surface-555 uppercase font-semibold">Glow Color</span>
+                              <input
+                                type="color"
+                                value={selectedClip.shadowColor || '#000000'}
+                                onChange={(e) => updateClipProperties(selectedClip.id, 'text', { shadowColor: e.target.value })}
+                                className="w-6 h-6 rounded border border-white/10 cursor-pointer bg-transparent"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Y alignment */}
                       <div className="space-y-1">
-                        <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Y-Position Align</span>
+                        <span className="text-[9.5px] font-semibold text-surface-400 uppercase font-bold">Y-Position Preset</span>
                         <select
-                          value={selectedClip.y}
+                          value={selectedClip.y || 'bottom'}
                           onChange={(e) => updateClipProperties(selectedClip.id, 'text', { y: e.target.value })}
                           className={`w-full text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
                             isDayMode 
@@ -1140,9 +1520,9 @@ export default function EditorPage() {
                               : 'bg-[#0c0c16] border-white/10 text-neutral-200'
                           }`}
                         >
-                          <option value="top">Top</option>
+                          <option value="top">Top Third</option>
                           <option value="center">Center</option>
-                          <option value="bottom">Bottom</option>
+                          <option value="bottom">Bottom Third</option>
                         </select>
                       </div>
 
