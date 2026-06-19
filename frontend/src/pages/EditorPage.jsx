@@ -668,14 +668,15 @@ export default function EditorPage() {
   }
 
   const getVideoStyle = (clip) => {
-    const isCover = clip.fitMode === 'cover'
     const zoomFactor = clip.zoom || 1.0
-    const panXPercent = - (clip.panX || 0) * (zoomFactor - 1) / 2
-    const panYPercent = - (clip.panY || 0) * (zoomFactor - 1) / 2
+    const panXVal = clip.panX || 0
+    const panYVal = clip.panY || 0
     
-    const transform = isCover 
-      ? `scale(${zoomFactor}) translate(${panXPercent}%, ${panYPercent}%) scaleX(${clip.mirrorH ? -1 : 1}) scaleY(${clip.mirrorV ? -1 : 1})`
-      : `scaleX(${clip.mirrorH ? -1 : 1}) scaleY(${clip.mirrorV ? -1 : 1})`
+    // Calculate object-position percentage based on pan values
+    const posX = 50 + panXVal / 2
+    const posY = 50 + panYVal / 2
+    
+    const transform = `scale(${zoomFactor}) scaleX(${clip.mirrorH ? -1 : 1}) scaleY(${clip.mirrorV ? -1 : 1})`
       
     return {
       filter: [
@@ -691,12 +692,12 @@ export default function EditorPage() {
         clip.sharpen ? 'contrast(1.15) brightness(1.03)' : '',
       ].filter(Boolean).join(' '),
       transform,
+      objectPosition: `${posX}% ${posY}%`,
       transition: 'transform 0.15s ease'
     }
   }
 
   const handleVideoPlayerMouseDown = (e, clip) => {
-    if (clip.fitMode !== 'cover' || (clip.zoom || 1.0) <= 1.0) return
     e.preventDefault()
     e.stopPropagation()
     
@@ -708,12 +709,27 @@ export default function EditorPage() {
     
     const rect = e.currentTarget.getBoundingClientRect()
     
+    // Read the natural video size (videoWidth, videoHeight)
+    const vw = e.currentTarget.videoWidth || rect.width
+    const vh = e.currentTarget.videoHeight || rect.height
+    
+    const isCover = clip.fitMode === 'cover'
+    const scaleFactor = isCover
+      ? Math.max(rect.width / vw, rect.height / vh)
+      : Math.min(rect.width / vw, rect.height / vh)
+      
+    const contentWidth = vw * scaleFactor * zoomFactor
+    const contentHeight = vh * scaleFactor * zoomFactor
+    
+    const overflowX = contentWidth - rect.width
+    const overflowY = contentHeight - rect.height
+    
     const handleMouseMove = (moveEvent) => {
       const deltaX = moveEvent.clientX - startX
       const deltaY = moveEvent.clientY - startY
       
-      const deltaPanX = - (deltaX / rect.width) * (200 / (zoomFactor - 1))
-      const deltaPanY = - (deltaY / rect.height) * (200 / (zoomFactor - 1))
+      const deltaPanX = overflowX > 0 ? - (deltaX / overflowX) * 200 : 0
+      const deltaPanY = overflowY > 0 ? - (deltaY / overflowY) * 200 : 0
       
       const newPanX = Math.max(-100, Math.min(100, Math.round(initialPanX + deltaPanX)))
       const newPanY = Math.max(-100, Math.min(100, Math.round(initialPanY + deltaPanY)))
@@ -2198,12 +2214,8 @@ export default function EditorPage() {
                         src={resolveUrl(activeVideoClip.url)}
                         muted={isMuted}
                         onMouseDown={(e) => handleVideoPlayerMouseDown(e, activeVideoClip)}
-                        className={`w-full h-full transition-transform ${
+                        className={`w-full h-full transition-transform cursor-grab active:cursor-grabbing ${
                           activeVideoClip.fitMode === 'cover' ? 'object-cover' : 'object-contain'
-                        } ${
-                          activeVideoClip.fitMode === 'cover' && (activeVideoClip.zoom || 1.0) > 1.0 
-                            ? 'cursor-grab active:cursor-grabbing' 
-                            : ''
                         }`}
                         style={getVideoStyle(activeVideoClip)}
                       />
