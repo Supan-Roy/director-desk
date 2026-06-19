@@ -24,7 +24,7 @@
   }
 
   body {
-    background: #06060b;
+    background: #050505;
     color: #e2e3e5;
   }
 
@@ -48,34 +48,40 @@
   ::selection {
     background: rgba(139, 92, 246, 0.25);
   }
+
+  /* Custom HTML Select Dropdowns */
+  select {
+    appearance: none !important;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238A8A8A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+    background-size: 10px !important;
+    padding-right: 28px !important;
+  }
 }
 
 @layer components {
-  /* ── Background layers ── */
+  /* ── Matte background layers ── */
   .bg-cinematic {
-    background:
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.08), transparent),
-      radial-gradient(ellipse 60% 40% at 80% 60%, rgba(99, 55, 188, 0.04), transparent),
-      radial-gradient(ellipse 50% 30% at 10% 80%, rgba(139, 92, 246, 0.03), transparent),
-      #06060b;
+    background: #050505;
   }
 
-  /* ── Glass panels ── */
+  /* ── Matte panels ── */
   .glass-panel {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: #0B0B0B;
+    border: 1px solid #1E1E1E;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
   .glass-panel-strong {
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: #101010;
+    border: 1px solid #252525;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
-  /* ── Buttons ── */
+  /* ── Matte Buttons ── */
   .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -85,25 +91,22 @@
     font-size: 0.9rem;
     font-weight: 500;
     color: #fff;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.9) 0%, rgba(124, 58, 237, 0.9) 100%);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 0.75rem;
+    background: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 0.5rem;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.3),
-      0 4px 16px rgba(139, 92, 246, 0.15);
+    transition: all 0.15s ease;
+    box-shadow: none !important;
   }
   .btn-primary:hover {
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.3),
-      0 8px 32px rgba(139, 92, 246, 0.25);
-    transform: translateY(-1px);
-    border-color: rgba(139, 92, 246, 0.5);
+    background: #7c3aed;
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: none !important;
+    transform: none !important;
   }
   .btn-primary:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(139, 92, 246, 0.15);
+    background: #6d28d9;
+    transform: none !important;
   }
   .btn-primary:disabled {
     opacity: 0.4;
@@ -117,23 +120,22 @@
     width: 100%;
     padding: 1.125rem 1.5rem;
     font-size: 1.05rem;
-    color: #e2e3e5;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
+    color: #FFFFFF;
+    background: #0B0B0B;
+    border: 1px solid #1E1E1E;
+    border-radius: 0.5rem;
     outline: none;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease;
     font-family: inherit;
+    box-shadow: none !important;
   }
   .input-cinematic::placeholder {
-    color: rgba(255, 255, 255, 0.2);
+    color: #8A8A8A;
   }
   .input-cinematic:focus {
-    border-color: rgba(139, 92, 246, 0.4);
-    box-shadow:
-      0 0 0 3px rgba(139, 92, 246, 0.06),
-      0 8px 32px rgba(139, 92, 246, 0.08);
-    background: rgba(255, 255, 255, 0.05);
+    border-color: #8b5cf6;
+    background: #101010;
+    box-shadow: none !important;
   }
 
   /* ── Status badges ── */
@@ -256,12 +258,12 @@
     border: 1px solid rgba(251, 191, 36, 0.12);
   }
 
-  /* ── Agent glow ── */
+  /* ── Agent glow (disabled) ── */
   .agent-glow {
-    box-shadow: 0 0 12px rgba(139, 92, 246, 0.15), 0 0 24px rgba(139, 92, 246, 0.05);
+    box-shadow: none !important;
   }
   .agent-glow-green {
-    box-shadow: 0 0 12px rgba(74, 222, 128, 0.12), 0 0 24px rgba(74, 222, 128, 0.04);
+    box-shadow: none !important;
   }
 
   /* ── Animations ── */
@@ -770,5 +772,93 @@
 .hover\:text-white-force:hover {
   color: #ffffff !important;
 }
+
+
+/* ═══════════════════════════════════════════════════
+   MATTE DESIGN SYSTEM OVERRIDES (Linear/Cursor style)
+   ═══════════════════════════════════════════════════ */
+
+/* Global Blur Removal */
+* {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Hide Volumetric Glow Ambient Drifts */
+.animate-drift-light-1,
+.animate-drift-light-2 {
+  display: none !important;
+}
+
+/* Redefine lens flare overlays to be black/matte dark grey */
+.lens-flare-radial {
+  background: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.02), transparent 80%), #050505 !important;
+}
+
+/* Global Background Color Overrides for Compiled Tailwind Arbitrary Hexes */
+.bg-\[\#06060b\] {
+  background-color: #050505 !important;
+}
+.bg-\[\#07070d\]\/80,
+.bg-\[\#090912\],
+.bg-\[\#090911\]\/90,
+.bg-\[\#090910\]\/95,
+.bg-\[\#0b0b14\]\/95,
+.bg-\[\#0b0b14\]\/90 {
+  background-color: #0B0B0B !important;
+}
+.bg-\[\#0c0c16\],
+.bg-\[\#0c0c16\]\/30,
+.bg-\[\#0c0c16\]\/40,
+.bg-\[\#0a0a12\]\/80 {
+  background-color: #101010 !important;
+}
+.bg-\[\#08080f\],
+.bg-\[\#08080f\]\/80,
+.bg-\[\#08080f\]\/90,
+.bg-\[\#080810\]\/45,
+.bg-\[\#080810\]\/80,
+.bg-\[\#040409\] {
+  background-color: #050505 !important;
+}
+.bg-\[\#030305\] {
+  background-color: #050505 !important;
+}
+
+/* Global Border Color Overrides for Compiled Tailwind Arbitrary Borders */
+.border-white\/\[0\.04\],
+.border-white\/\[0\.03\],
+.border-white\/\[0\.05\] {
+  border-color: #1E1E1E !important;
+}
+.border-white\/\[0\.08\],
+.border-white\/10,
+.border-white\/\[0\.06\] {
+  border-color: #252525 !important;
+}
+
+/* Global Shadow/Glow Removals */
+.shadow-lg,
+.shadow-2xl,
+.shadow-\[0_12px_40px_rgba\(139\,92\,246\,0\.15\)\],
+.shadow-\[0_10px_35px_rgba\(0\,0\,0\,0\.95\)\],
+.shadow-\[0_24px_60px_rgba\(0\,0\,0\,0\.8\)\],
+.shadow-\[0_24px_50px_rgba\(0\,0\,0\,0\.8\)\] {
+  box-shadow: none !important;
+}
+
+/* (Cleaned up old group/console and viewfinder overrides to allow direct control in JSX) */
+
+/* Sidebar navigation styling adjustments */
+aside nav button.bg-accent\/10 {
+  box-shadow: none !important;
+  background-color: #101010 !important;
+  border-left: 2px solid #8b5cf6 !important;
+  border-radius: 4px !important;
+}
+aside nav button.bg-accent\/10 .blur-sm {
+  display: none !important;
+}
+
 
 

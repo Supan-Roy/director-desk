@@ -71,7 +71,7 @@ export default function FeaturedProductions() {
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
           Featured Productions
         </h3>
-        <div className="h-px w-24 bg-white/[0.04]" />
+        <div className="h-px w-24 bg-surface-700" />
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -80,25 +80,25 @@ export default function FeaturedProductions() {
           const gradientClass = isImageRight
             ? isDayMode
               ? 'from-white via-white/80 to-transparent'
-              : 'from-[#08080f] via-[#08080f]/80 to-transparent'
+              : 'from-surface-900 via-surface-900/80 to-transparent'
             : isDayMode
               ? 'from-transparent via-white/80 to-white'
-              : 'from-transparent via-[#08080f]/80 to-[#08080f]';
+              : 'from-transparent via-surface-900/80 to-surface-900';
 
           return (
             <div
               key={item.id}
               onClick={() => loadFeatured(item.id)}
-              className={`group relative h-[178px] w-full rounded-2xl border overflow-hidden cursor-pointer shadow-lg transition-all duration-500 flex ${
+              className={`group relative h-[178px] w-full rounded-lg border overflow-hidden cursor-pointer transition-all duration-300 flex ${
                 isImageRight ? 'flex-row-reverse' : 'flex-row'
               } ${
                 isDayMode 
-                  ? 'bg-white border-black/[0.07] hover:border-accent/50 hover:shadow-md' 
-                  : 'bg-[#08080f]/80 border-white/[0.04] hover:border-accent/40 hover:shadow-[0_12px_32px_rgba(139,92,246,0.18)]'
+                  ? 'bg-white border-black/[0.07] hover:border-accent/50' 
+                  : 'bg-surface-900 border-surface-700 hover:border-surface-600 hover:bg-surface-800'
               }`}
             >
               {/* Glossy top-shine reflection */}
-              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20" />
+              <div className="absolute inset-0 bg-white/[0.01] pointer-events-none z-20" />
 
               {/* Landscape image with Hover Zoom */}
               <div className="relative w-[38%] h-full overflow-hidden shrink-0">
@@ -131,7 +131,7 @@ export default function FeaturedProductions() {
 
                 {/* Footer scenes & agents info */}
                 <div className={`flex items-center gap-4 text-[9.5px] font-semibold font-mono border-t pt-2 mt-2 transition-colors duration-300 ${
-                  isDayMode ? 'border-neutral-100 text-neutral-500' : 'border-white/[0.05] text-surface-450'
+                  isDayMode ? 'border-neutral-100 text-neutral-500' : 'border-surface-700 text-surface-400'
                 }`}>
                   <span className="flex items-center gap-1.5">
                     <FiLayers size={10} className="text-accent/80" />

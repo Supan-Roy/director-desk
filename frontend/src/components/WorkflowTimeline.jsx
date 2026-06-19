@@ -37,11 +37,11 @@ export default function WorkflowTimeline() {
         <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
           Agent Pipeline Console
         </h3>
-        <div className="h-px flex-1 bg-white/[0.04]" />
+        <div className="h-px flex-1 bg-surface-700" />
       </div>
 
       {/* Pipeline Schematic Grid */}
-      <div className="glass-panel rounded-2xl px-6 py-5 border border-white/[0.04] bg-surface-950/20 backdrop-blur-md">
+      <div className="rounded-lg border border-surface-700 bg-surface-900 px-6 py-5">
         <div className="flex items-center justify-between overflow-x-auto gap-4">
           {pipelineSteps.map((step, index) => {
             const status = getStepStatus(step);
@@ -51,7 +51,7 @@ export default function WorkflowTimeline() {
               <div key={step.id} className="flex items-center">
                 {/* Step node */}
                 <div className={`pipeline-node ${status}`}>
-                  <div className="pipeline-node-icon relative z-10 shadow-lg">
+                  <div className="pipeline-node-icon relative z-10">
                     {status === 'completed' ? (
                       <FiCheck size={16} />
                     ) : (

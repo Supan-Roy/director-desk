@@ -129,7 +129,7 @@ export default function Sidebar() {
     <aside className={`shrink-0 h-screen border-r flex flex-col select-none transition-all duration-300 ${
       isCollapsed ? 'w-20 items-center' : 'w-64'
     } ${
-      d ? 'bg-white border-black/[0.07]' : 'border-white/[0.04] bg-[#090911]/90'
+      d ? 'bg-white border-black/[0.07]' : 'border-surface-700 bg-surface-950'
     }`}>
 
       {/* ── Logo (fixed, never scrolls away) ── */}
@@ -138,7 +138,7 @@ export default function Sidebar() {
       }`}>
         <div className="flex items-center gap-3">
           <div className={`relative p-1.5 rounded-lg border transition-colors duration-500 ${
-            d ? 'border-purple-200/50 bg-purple-50/60' : 'border-white/[0.06] bg-black/40'
+            d ? 'border-purple-200/50 bg-purple-50/60' : 'border-surface-600 bg-surface-950'
           }`}>
             <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-accent/80" />
             <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-accent/80" />
@@ -147,7 +147,7 @@ export default function Sidebar() {
             <img
               src="/logo.svg"
               alt="Director Desk Logo"
-              className="h-7 w-7 shrink-0 filter drop-shadow-[0_0_6px_rgba(139,92,246,0.35)] transition-transform duration-500 group-hover:scale-105"
+              className="h-7 w-7 shrink-0 transition-transform duration-500 group-hover:scale-105"
             />
           </div>
           {!isCollapsed && (
@@ -204,13 +204,13 @@ export default function Sidebar() {
                 key={item.label}
                 onClick={() => item.path && navigate(item.path)}
                 title={isCollapsed ? item.label : undefined}
-                className={`flex items-center rounded-xl transition-all duration-300 relative group ${
+                className={`flex items-center rounded-lg transition-all duration-300 relative group ${
                   isCollapsed ? 'justify-center w-12 h-12 p-0' : 'w-full gap-3.5 px-3.5 py-2.5 text-[12px] font-medium'
                 } ${
                   isActive
                     ? d
-                      ? 'bg-accent/10 text-accent border-l-2 border-accent shadow-[0_0_15px_rgba(139,92,246,0.08)]'
-                      : 'bg-accent/10 text-white shadow-[0_0_15px_rgba(139,92,246,0.1)] border-l-2 border-accent'
+                      ? 'bg-accent/10 text-accent border-l-2 border-accent'
+                      : 'bg-surface-800 text-white border-l-2 border-accent'
                     : d
                       ? 'text-gray-500 hover:bg-black/[0.04] hover:text-gray-800'
                       : 'text-surface-400 hover:bg-white/[0.02] hover:text-surface-200'
@@ -228,9 +228,6 @@ export default function Sidebar() {
                   }`}
                 />
                 {!isCollapsed && <span className="transition-colors duration-200">{item.label}</span>}
-                {isActive && (
-                  <div className="absolute inset-0 bg-accent/5 rounded-xl pointer-events-none blur-sm" />
-                )}
               </button>
             );
           })}
@@ -249,14 +246,14 @@ export default function Sidebar() {
                 localStorage.setItem('sidebar-collapsed', 'false');
               }}
               title="Show Saved Projects"
-              className={`relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 border border-transparent ${
+              className={`relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200 border border-transparent ${
                 d
                   ? 'text-gray-500 hover:text-gray-800 hover:bg-black/[0.04]'
                   : 'text-surface-400 hover:text-surface-200 hover:bg-white/[0.02]'
               }`}
             >
               <FiFolder size={18} />
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full text-[8px] font-black bg-accent text-white shadow-[0_0_8px_rgba(139,92,246,0.4)]">
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full text-[8px] font-black bg-accent text-white">
                 {savedProjects.length}
               </span>
             </button>
@@ -306,14 +303,14 @@ export default function Sidebar() {
                       key={project.id}
                       onClick={() => navigate(`/projects/${encodeId(project.id)}`)}
                       title={project.title}
-                      className={`group relative w-full flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
+                      className={`group relative w-full flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-200 ${
                         isActive
                           ? d
-                            ? 'bg-accent/10 border border-accent/25 shadow-[0_0_12px_rgba(139,92,246,0.08)]'
-                            : 'bg-accent/10 border border-accent/20 shadow-[0_0_12px_rgba(139,92,246,0.12)]'
+                            ? 'bg-accent/10 border border-accent/25'
+                            : 'bg-surface-800 border border-surface-700 text-white'
                           : d
                             ? 'hover:bg-black/[0.04] border border-transparent hover:border-black/[0.06]'
-                            : 'hover:bg-white/[0.03] border border-transparent hover:border-white/[0.06]'
+                            : 'hover:bg-surface-800/40 border border-transparent hover:border-surface-700'
                       }`}
                     >
                       {/* Type emoji */}
@@ -382,7 +379,7 @@ export default function Sidebar() {
           isCollapsed ? (
             <button
               onClick={reset}
-              className="w-12 h-12 rounded-xl bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 flex items-center justify-center text-red-400 transition-all cursor-pointer"
+              className="w-12 h-12 rounded-lg bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 flex items-center justify-center text-red-400 transition-all cursor-pointer"
               title="Reset Session"
             >
               <FiRefreshCw size={15} className="shrink-0 animate-pulse text-red-400" />
@@ -390,7 +387,7 @@ export default function Sidebar() {
           ) : (
             <button
               onClick={reset}
-              className="flex w-full items-center gap-3 rounded-xl bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 px-3.5 py-2.5 text-[11px] text-red-400 font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer"
+              className="flex w-full items-center gap-3 rounded-lg bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 px-3.5 py-2.5 text-[11px] text-red-400 font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer"
               title="Reset Production Workspace"
             >
               <FiRefreshCw size={13} className="shrink-0 animate-pulse text-red-400" />
@@ -403,14 +400,14 @@ export default function Sidebar() {
         <div className={`h-px shrink-0 transition-all duration-300 ${isCollapsed ? 'w-12 mx-auto' : 'mx-4 w-[calc(100%-2rem)]'} ${d ? 'bg-black/[0.07]' : 'bg-white/[0.04]'}`} />
 
         {/* User Info Card */}
-        <div className={`flex rounded-2xl border shadow-lg relative overflow-hidden group transition-all duration-300 ${
+        <div className={`flex rounded-lg border relative overflow-hidden group transition-all duration-300 ${
           isCollapsed ? 'p-1.5 justify-center w-12 h-12 items-center' : 'flex-col gap-2 p-3.5 w-full'
         } ${
-          d ? 'bg-gray-50/80 border-black/[0.07]' : 'bg-[#080810]/80 border-white/[0.05]'
+          d ? 'bg-gray-50/80 border-black/[0.07]' : 'bg-surface-900 border-surface-700'
         }`}>
           <div className="absolute inset-0 bg-grid-lines opacity-[0.02] pointer-events-none" />
           <div className={`flex items-center gap-3 relative z-10 ${isCollapsed ? 'justify-center' : 'w-full'}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/30 to-accent text-[11px] font-black text-white shadow-[0_0_10px_rgba(139,92,246,0.4)] border border-white/10">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-700 text-[11px] font-black text-white border border-surface-600">
               CD
             </div>
             {!isCollapsed && (
@@ -424,7 +421,7 @@ export default function Sidebar() {
           </div>
           {!isCollapsed && (
             <div className={`flex items-center justify-between border-t pt-2 mt-1 text-[8px] font-mono select-none relative z-10 transition-colors duration-500 ${
-              d ? 'border-black/[0.07] text-gray-400' : 'border-white/[0.05] text-surface-550'
+              d ? 'border-black/[0.07] text-gray-400' : 'border-surface-700 text-surface-400'
             }`}>
               <span className="flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -442,14 +439,14 @@ export default function Sidebar() {
           {/* Backdrop */}
           <div 
             onClick={() => setProjectToDelete(null)}
-            className="absolute inset-0 bg-black/70 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+            className="absolute inset-0 bg-black/80 transition-opacity duration-300 animate-fade-in"
           />
           
           {/* Modal Content */}
-          <div className={`relative z-55 w-full max-w-sm rounded-2xl border p-6 shadow-2xl transition-all duration-300 scale-100 flex flex-col gap-4 animate-scale-in ${
+          <div className={`relative z-55 w-full max-w-sm rounded-lg border p-6 transition-all duration-300 scale-100 flex flex-col gap-4 animate-scale-in ${
             d 
               ? 'bg-[#fcfbfa] border-neutral-200 text-neutral-800' 
-              : 'bg-[#0b0b14]/95 border-white/[0.08] text-white shadow-black/80'
+              : 'bg-surface-900 border-surface-600 text-white shadow-none'
           }`}>
             <div className="flex items-center gap-3 text-red-500">
               <FiTrash2 size={20} className="shrink-0" />
@@ -463,17 +460,17 @@ export default function Sidebar() {
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => setProjectToDelete(null)}
-                className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer text-center ${
+                className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer text-center ${
                   d 
                     ? 'border-gray-200 hover:bg-gray-50 text-gray-500' 
-                    : 'border-white/10 hover:bg-white/5 text-neutral-300'
+                    : 'border-surface-700 hover:bg-surface-800 text-neutral-300'
                 }`}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white shadow-lg cursor-pointer transition-colors text-center"
+                className="flex-1 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white cursor-pointer transition-colors text-center shadow-none"
               >
                 Delete
               </button>

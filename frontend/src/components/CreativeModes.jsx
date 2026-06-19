@@ -191,7 +191,6 @@ export default function CreativeModes({ onSelectTemplate }) {
   const handleSelectTemplate = (tmpl) => {
     // Pick a random prompt from the pool each time
     const randomPrompt = tmpl.prompts[Math.floor(Math.random() * tmpl.prompts.length)];
-    onSelectTemplate?.({ ...tmpl, prompt: randomPrompt });
   };
   const { isDayMode } = useTheme();
 
@@ -202,7 +201,7 @@ export default function CreativeModes({ onSelectTemplate }) {
           <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
             Creative Presets
           </h3>
-          <div className="h-px w-24 bg-white/[0.04]" />
+          <div className="h-px w-24 bg-surface-700" />
         </div>
         <button className="text-[10px] font-bold text-surface-500 hover:text-accent transition-colors flex items-center gap-1.5">
           <span>View all presets</span>
@@ -220,32 +219,29 @@ export default function CreativeModes({ onSelectTemplate }) {
             onMouseEnter={() => handleMouseEnter(tmpl.id)}
             onMouseLeave={handleMouseLeave}
             style={{
-              zIndex: zCard === tmpl.id ? 50 : 1,
-              transform: isHov ? 'scale(1.09) translateY(-6px)' : 'scale(1) translateY(0px)',
-              transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), z-index 0s, box-shadow 0.35s ease, border-color 0.3s ease',
-              boxShadow: isHov
-                ? `0 24px 60px rgba(0,0,0,0.55), 0 0 0 1.5px ${tmpl.accent}55, 0 0 30px ${tmpl.accent}30`
-                : undefined,
+              zIndex: zCard === tmpl.id ? 5 : 1,
+              transform: isHov ? 'translateY(-2px)' : 'translateY(0px)',
+              transition: 'transform 0.2s ease, border-color 0.2s ease',
               willChange: 'transform',
             }}
-            className={`group text-left flex flex-col h-[205px] w-full border shadow-xl relative rounded-2xl overflow-hidden ${
+            className={`group text-left flex flex-col h-[205px] w-full border relative rounded-lg overflow-hidden ${
               isDayMode 
                 ? 'bg-white border-black/[0.07] hover:border-accent/50' 
-                : 'bg-[#08080f]/80 border-white/[0.05] hover:border-accent/40'
+                : 'bg-surface-900 border-surface-700 hover:bg-surface-800 hover:border-surface-600'
             }`}
           >
-            {/* Glossy top-shine reflection */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20" />
+            {/* Glossy top-shine reflection (removed gradient shine for flat style) */}
+            <div className="absolute inset-0 bg-white/[0.01] pointer-events-none z-20" />
 
             {/* Template Visual Header */}
-            <div className="relative h-[125px] w-full overflow-hidden bg-surface-900 shrink-0">
+            <div className="relative h-[125px] w-full overflow-hidden bg-surface-950 shrink-0">
               {tmpl.video ? (
                 <VideoThumbnail src={tmpl.video} isHovered={hoveredCard === tmpl.id} />
               ) : (
                 <img
                   src={tmpl.image}
                   alt={tmpl.title}
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108 filter contrast-[1.05]"
+                  className="h-full w-full object-cover filter contrast-[1.05]"
                 />
               )}
               {/* Category Icon */}
@@ -253,7 +249,7 @@ export default function CreativeModes({ onSelectTemplate }) {
                 className={`absolute left-2.5 top-2.5 z-10 flex h-6.5 w-6.5 items-center justify-center rounded-lg border transition-colors ${
                   isDayMode 
                     ? 'bg-white/90 border-black/10' 
-                    : 'bg-[#0c0c16]/90 border-white/10 group-hover:border-accent/40'
+                    : 'bg-surface-900 border-surface-700 group-hover:border-surface-600'
                 }`}
               >
                 <tmpl.icon size={12} style={{ color: tmpl.accent }} />
@@ -262,7 +258,7 @@ export default function CreativeModes({ onSelectTemplate }) {
               <div className={`absolute right-2.5 top-2.5 z-10 rounded border px-1 py-0.5 text-[7px] font-semibold tracking-wider uppercase font-mono ${
                 isDayMode 
                   ? 'bg-white/90 border-black/10 text-neutral-700' 
-                  : 'bg-black/60 border-white/10 text-surface-300'
+                  : 'bg-black/60 border-surface-700 text-surface-300'
               }`}>
                 {tmpl.tag}
               </div>
