@@ -177,6 +177,30 @@ async def upload_file(request: Request, filename: str = Query(...)):
     safe_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
     filepath = os.path.join("static", "uploads", safe_filename)
 
+    # Guardrail: Check total uploaded size (limit 2GB)
+    MAX_TOTAL_SIZE = 2 * 1024 * 1024 * 1024  # 2 GB
+    current_total = 0
+    existing_file_size = 0
+    
+    uploads_dir = os.path.join("static", "uploads")
+    if os.path.exists(uploads_dir):
+        for entry in os.scandir(uploads_dir):
+            if entry.is_file():
+                try:
+                    size = entry.stat().st_size
+                    current_total += size
+                    if entry.name == safe_filename:
+                        existing_file_size = size
+                except Exception:
+                    pass
+
+    incoming_size = len(body)
+    if current_total - existing_file_size + incoming_size > MAX_TOTAL_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail="Storage limit exceeded: The total size of all uploaded assets cannot exceed 2GB."
+        )
+
     try:
         with open(filepath, "wb") as f:
             f.write(body)
