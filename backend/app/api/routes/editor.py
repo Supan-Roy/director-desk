@@ -388,7 +388,27 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             pan_y = clip.panY if clip.panY is not None else 0.0
 
             if fit == "contain":
-                scale_filter = f"scale={res_w}:{res_h}:force_original_aspect_ratio=decrease,pad={res_w}:{res_h}:(ow-iw)/2:(oh-ih)/2"
+                # Contain mode with zoom and pan support (maintaining natural aspect ratio)
+                crop_w = iw / zoom
+                crop_h = ih / zoom
+                
+                # Clamp crop size to input dimensions
+                crop_w = min(iw, crop_w)
+                crop_h = min(ih, crop_h)
+                
+                # Bounded offsets
+                max_shift_x = (iw - crop_w) / 2
+                x_offset = (iw - crop_w) / 2 + (pan_x / 100.0) * max_shift_x
+                
+                max_shift_y = (ih - crop_h) / 2
+                y_offset = (ih - crop_h) / 2 + (pan_y / 100.0) * max_shift_y
+                
+                crop_w = max(4, int(round(crop_w) // 2) * 2)
+                crop_h = max(4, int(round(crop_h) // 2) * 2)
+                x_offset = int(round(x_offset) // 2) * 2
+                y_offset = int(round(y_offset) // 2) * 2
+                
+                scale_filter = f"crop={crop_w}:{crop_h}:{x_offset}:{y_offset},scale={res_w}:{res_h}:force_original_aspect_ratio=decrease,pad={res_w}:{res_h}:(ow-iw)/2:(oh-ih)/2"
             else:
                 # Cover / Crop, Zoom & Pan mode
                 target_ar = res_w / res_h
