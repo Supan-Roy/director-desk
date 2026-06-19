@@ -593,32 +593,25 @@ export default function HeroSection({
         {isDayMode ? (
           // LIGHT MODE ARTWORK AND OVERLAYS
           <>
-            {/* Cinematic background artwork (Leica/film tone color grade) */}
+            {/* Cinematic background artwork (fully visible) */}
             <div
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none rounded-3xl opacity-[0.55] filter contrast-[1.25] brightness-[0.88] saturate-[0.75]"
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none rounded-lg opacity-[0.85] filter contrast-[1.05] brightness-[0.95]"
               style={{
-                backgroundImage: `url('/images/studio_bg.png')`,
-                mixBlendMode: 'multiply'
+                backgroundImage: `url('/images/studio_bg.png')`
               }}
             />
-            {/* Warm film-tone overlay gradient */}
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-[#e3ded5]/25 via-transparent to-[#ede9e2]/80" />
-            {/* Soft warm radial vignette for readability & keeping silhouettes visible */}
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-radial from-transparent via-[#f0ede8]/30 to-[#f0ede8]/85" />
-            {/* Left/Right side gradient for visual focus */}
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#f0ede8]/50 via-transparent to-[#f0ede8]/50" />
           </>
         ) : (
           // DARK MODE ARTWORK AND OVERLAYS
           <>
             {/* Cinematic background artwork */}
             <div
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-3xl"
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-lg"
               style={{ backgroundImage: `url('/images/studio_bg.png')` }}
             />
             {/* Dark overlay (70-80%) */}
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-b from-black/75 via-transparent to-black/85" />
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-3xl bg-gradient-to-r from-[#06060b]/85 via-transparent to-[#06060b]/85" />
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-b from-black/75 via-transparent to-black/85" />
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-r from-[#050505]/85 via-transparent to-[#050505]/85" />
           </>
         )}
       </>
@@ -634,13 +627,13 @@ export default function HeroSection({
             <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">
               Creative Production Engine
             </span>
-            <h2 className={`text-4xl font-black tracking-tight md:text-5xl lg:text-6xl uppercase font-display transition-colors duration-300 ${
-              isDayMode ? 'text-[#1c1825]' : 'text-white'
+            <h2 className={`text-4xl font-black tracking-tight md:text-5xl lg:text-6xl uppercase font-display transition-colors duration-300 hero-title ${
+              isDayMode ? 'text-white-force' : 'text-white'
             }`}>
               Director Desk
             </h2>
-            <p className={`mx-auto max-w-2xl text-xs font-semibold leading-relaxed font-mono transition-colors duration-300 ${
-              isDayMode ? 'text-neutral-600' : 'text-surface-400'
+            <p className={`mx-auto max-w-2xl text-xs font-semibold leading-relaxed font-mono transition-colors duration-300 hero-subtitle ${
+              isDayMode ? 'text-neutral-200' : 'text-surface-400'
             }`}>
               AI Showrunner Studio. From concept to cut. Collaborative agents for writers, storyboard artists, critics and editors.
             </p>
@@ -658,8 +651,8 @@ export default function HeroSection({
         <div className={`relative rounded-lg border p-5 transition-all duration-200 text-left ${
           isDayMode
             ? focused 
-              ? 'bg-white border-accent shadow-sm' 
-              : 'bg-neutral-50 border-neutral-200 shadow-sm'
+              ? 'bg-white border-accent shadow-[0_4px_20px_rgba(139,92,246,0.12)]' 
+              : 'bg-white border-[#E4E4E7] shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
             : focused 
               ? 'bg-surface-900 border-accent shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
               : 'bg-surface-900 border-surface-700 shadow-none'
@@ -879,10 +872,12 @@ export default function HeroSection({
             <button
               onClick={handleSubmit}
               disabled={!prompt.trim() || loading}
-              className={`flex items-center gap-2 bg-surface-950 border text-white px-6 py-3 rounded-lg text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none shrink-0 ml-auto cursor-pointer ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none shrink-0 ml-auto cursor-pointer ${
                 !prompt.trim() || loading
-                  ? 'opacity-40 cursor-not-allowed border-surface-700'
-                  : 'border-accent hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
+                  ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
+                  : isDayMode
+                    ? 'bg-accent border border-accent text-white-force hover:bg-accent-dim hover:shadow-[0_4px_12px_rgba(139,92,246,0.25)]'
+                    : 'bg-surface-950 border border-accent text-white hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
               }`}
             >
               {loading ? (
@@ -892,7 +887,7 @@ export default function HeroSection({
                 </>
               ) : (
                 <>
-                  <span className="text-[10px] text-accent mr-0.5">▶</span>
+                  <span className={`text-[10px] mr-0.5 ${isDayMode ? 'text-white-force' : 'text-accent'}`}>▶</span>
                   <span>Initiate Production</span>
                 </>
               )}

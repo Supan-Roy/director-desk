@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   const { isDayMode: d } = useTheme()
 
   return (
-    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-500 relative ${d ? 'bg-[#f0ede8]' : 'bg-[#06060b]'}`}>
+    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-500 relative ${d ? 'bg-white' : 'bg-[#06060b]'}`}>
       
       {/* Background ambient glows */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />

@@ -611,7 +611,7 @@ export default function ProjectPage() {
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-500 ${d ? 'bg-[#f0ede8]' : 'bg-[#06060b]'}`}>
+    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-500 ${d ? 'bg-white' : 'bg-[#06060b]'}`}>
       {/* Background glows */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
       <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[130px] pointer-events-none mix-blend-screen animate-drift-light-1" />

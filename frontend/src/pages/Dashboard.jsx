@@ -107,7 +107,7 @@ export default function Dashboard() {
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className={`flex h-screen text-surface-200 select-none overflow-hidden font-display relative transition-colors duration-500 ${isDayMode ? 'bg-[#f0ede8]' : 'bg-[#06060b]'}`}
+      className={`flex h-screen text-surface-200 select-none overflow-hidden font-display relative transition-colors duration-500 ${isDayMode ? 'bg-white' : 'bg-[#06060b]'}`}
     >
       {/* Background radial lens glows */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
