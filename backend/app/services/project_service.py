@@ -90,5 +90,9 @@ class ProjectService:
             )
         return ProjectDetail.model_validate(project)
 
+    def delete_all_projects(self, db: Session) -> None:
+        """Permanently delete all projects."""
+        project_repository.delete_all(db)
+
 
 project_service = ProjectService()

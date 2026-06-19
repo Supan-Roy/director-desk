@@ -128,3 +128,19 @@ def refine_raw_script(payload: dict):
     refined_script = editor_agent.refine_script(script, critic_review)
     return {"refined_script": refined_script}
 
+
+@router.get("/projects/export", response_model=List[ProjectDetail])
+def export_projects(db: Session = Depends(get_db)):
+    """Writely export all saved projects with scripts, storyboards, plans."""
+    from app.db.repository import project_repository
+    projects = project_repository.get_all(db)
+    return [ProjectDetail.model_validate(p) for p in projects]
+
+
+@router.delete("/projects", status_code=204)
+def delete_all_projects(db: Session = Depends(get_db)):
+    """Permanently delete all saved projects and reset workspace."""
+    project_service.delete_all_projects(db)
+    project_state.reset()
+
+

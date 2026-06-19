@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import ProjectPage from './pages/ProjectPage'
 import EditorPage from './pages/EditorPage'
+import SettingsPage from './pages/SettingsPage'
+import PrivacyPage from './pages/PrivacyPage'
 import { EditorProvider } from './context/EditorContext'
 
 function App() {
@@ -15,6 +17,8 @@ function App() {
             <EditorPage />
           </EditorProvider>
         } />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
     </BrowserRouter>
   )

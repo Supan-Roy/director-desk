@@ -196,7 +196,7 @@ export default function Sidebar() {
             { icon: PiRobotBold, label: 'Agents' },
             { icon: FiLayers,    label: 'Templates' },
             { icon: FiDatabase,  label: 'Assets' },
-            { icon: FiSettings,  label: 'Settings' },
+            { icon: FiSettings,  label: 'Settings',    path: '/settings' },
           ].map((item) => {
             const isActive = item.path ? location.pathname === item.path : false;
             return (

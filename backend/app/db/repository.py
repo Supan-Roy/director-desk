@@ -100,5 +100,10 @@ class ProjectRepository:
         db.refresh(project)
         return project
 
+    def delete_all(self, db: Session) -> None:
+        """Permanently delete all project records from database."""
+        db.query(Project).delete()
+        db.commit()
+
 
 project_repository = ProjectRepository()
