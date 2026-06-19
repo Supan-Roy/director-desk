@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { FiSun, FiMoon } from 'react-icons/fi';
 import Sidebar from '../components/Sidebar';
 import HeroSection from '../components/HeroSection';
 import CreativeModes from '../components/CreativeModes';
@@ -75,7 +74,7 @@ function DustParticles() {
 
 export default function Dashboard() {
   const { hasProject, loading } = useProjectData();
-  const { isDayMode, toggleTheme } = useTheme();
+  const { isDayMode } = useTheme();
   const containerRef = useRef(null);
 
   // Shared state for the prompt input controls
@@ -169,21 +168,7 @@ export default function Dashboard() {
             Director Desk <span className="text-surface-700">/</span> <span className="text-surface-300">Production Studio</span>
           </p>
 
-          {/* Day / Night Mode Toggle */}
-          <button
-            id="theme-toggle-btn"
-            onClick={toggleTheme}
-            title={isDayMode ? 'Switch to Night Mode' : 'Switch to Day Mode'}
-            className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300 border ${
-              isDayMode
-                ? 'bg-amber-50 border-amber-200/60 text-amber-500 hover:bg-amber-100 hover:border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.18)]'
-                : 'bg-white/[0.03] border-white/[0.07] text-surface-400 hover:bg-white/[0.07] hover:text-amber-300 hover:border-amber-300/30 hover:shadow-[0_0_12px_rgba(251,191,36,0.12)]'
-            }`}
-          >
-            {isDayMode
-              ? <FiMoon size={13} strokeWidth={2} />
-              : <FiSun size={14} strokeWidth={1.8} />}
-          </button>
+
         </header>
 
         {/* Studio Workspace Canvas */}

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Footer() {
@@ -104,9 +105,9 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 text-[11.5px]">
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <Link to="/privacy" className={`transition-colors duration-200 hover:text-accent`}>
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
