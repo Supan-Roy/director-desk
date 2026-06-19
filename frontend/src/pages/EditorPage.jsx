@@ -923,7 +923,7 @@ export default function EditorPage() {
       try {
         await uploadAsset(file)
       } catch (err) {
-        alert(`Failed to upload file ${file.name}`)
+        alert(`Failed to upload ${file.name}: ${err.message}`)
       }
     }
     e.target.value = ''

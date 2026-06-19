@@ -217,7 +217,19 @@ export function EditorProvider({ children }) {
           'Content-Type': file.type || 'application/octet-stream'
         }
       })
-      if (!response.ok) throw new Error('Upload failed')
+      if (!response.ok) {
+        let errMsg = 'Upload failed'
+        try {
+          const errData = await response.json()
+          errMsg = errData.detail || errMsg
+        } catch (e) {
+          try {
+            const errText = await response.text()
+            if (errText) errMsg = errText
+          } catch (e2) {}
+        }
+        throw new Error(errMsg)
+      }
       const data = await response.json()
       
       setAssets((prev) => {
