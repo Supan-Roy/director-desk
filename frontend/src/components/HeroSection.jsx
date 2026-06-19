@@ -637,13 +637,6 @@ export default function HeroSection({
             }`}>
               AI Showrunner Studio. From concept to cut. Collaborative agents for writers, storyboard artists, critics and editors.
             </p>
-            {/* Showrunner indicator */}
-            <div className="flex items-center justify-center gap-2 pt-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">
-                AI Showrunner Online
-              </span>
-            </div>
           </div>
         )}
 
@@ -874,7 +867,9 @@ export default function HeroSection({
               disabled={!prompt.trim() || loading}
               className={`flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none shrink-0 ml-auto cursor-pointer ${
                 !prompt.trim() || loading
-                  ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
+                  ? isDayMode
+                    ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
+                    : 'cursor-not-allowed border border-[#2A2A2A] bg-[#1A1A1A] text-[#666666]'
                   : isDayMode
                     ? 'bg-accent border border-accent text-white-force hover:bg-accent-dim hover:shadow-[0_4px_12px_rgba(139,92,246,0.25)]'
                     : 'bg-surface-950 border border-accent text-white hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
@@ -887,7 +882,11 @@ export default function HeroSection({
                 </>
               ) : (
                 <>
-                  <span className={`text-[10px] mr-0.5 ${isDayMode ? 'text-white-force' : 'text-accent'}`}>▶</span>
+                  <span className={`text-[10px] mr-0.5 ${
+                    !prompt.trim() || loading
+                      ? isDayMode ? 'text-neutral-400' : 'text-[#666666]'
+                      : isDayMode ? 'text-white-force' : 'text-accent'
+                  }`}>▶</span>
                   <span>Initiate Production</span>
                 </>
               )}

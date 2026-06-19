@@ -6,14 +6,14 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className={`mt-16 border-t py-12 px-6 md:px-8 transition-colors duration-500 rounded-lg ${
+    <footer className={`mt-16 border-t py-12 px-6 md:px-8 transition-colors duration-500 rounded-lg select-text ${
       d ? 'border-neutral-200 bg-white text-neutral-600' : 'border-white/[0.04] text-surface-400'
     }`}>
       <div className="mx-auto max-w-[1400px] flex flex-col md:flex-row justify-between gap-10">
         
         {/* Left column: Branding & Copyright */}
-        <div className="flex flex-col gap-4 select-none max-w-sm">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 max-w-sm">
+          <div className="flex items-center gap-3 select-none">
             <div className={`p-1.5 rounded-lg border transition-colors ${
               d ? 'border-purple-200 bg-purple-50' : 'border-white/[0.06] bg-black/40'
             }`}>
@@ -23,7 +23,7 @@ export default function Footer() {
                 className="h-6 w-6 shrink-0"
               />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col select-none">
               <span className={`text-[12px] font-black tracking-[0.2em] leading-none ${
                 d ? 'text-neutral-900' : 'text-white'
               }`}>
