@@ -16,6 +16,9 @@ router = APIRouter(tags=["editor"])
 # Global task state storage
 rendering_tasks: Dict[str, Dict[str, Any]] = {}
 
+# Global process tracking for cancel support
+active_processes: Dict[str, subprocess.Popen] = {}
+
 # Ensure static directories exist
 os.makedirs("static/uploads", exist_ok=True)
 os.makedirs("static/exports", exist_ok=True)
@@ -258,7 +261,8 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             "status": "rendering",
             "progress": 0,
             "error": None,
-            "url": None
+            "url": None,
+            "output_filepath": None
         }
 
         # Resolve output specifications based on resolution and aspect ratio
@@ -304,6 +308,7 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
         if ext not in ["mp4", "mkv", "avi", "mov"]:
             ext = "mp4"
         output_filepath = f"static/exports/{task_id}.{ext}"
+        rendering_tasks[task_id]["output_filepath"] = output_filepath
 
         # Resolve inputs and total duration
         total_duration = 0.0
@@ -802,6 +807,10 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
 
         logger.info(f"Generated FFmpeg Command for task {task_id}:\n" + " ".join(ffmpeg_cmd))
 
+        if rendering_tasks.get(task_id, {}).get("status") == "cancelled":
+            logger.info(f"Video export task {task_id} was cancelled before starting.")
+            return
+
         # Launch process and parse progress
         process = subprocess.Popen(
             ffmpeg_cmd,
@@ -811,24 +820,40 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             bufsize=1,
             universal_newlines=True
         )
+        active_processes[task_id] = process
 
-        time_regex = re.compile(r"time=(\d+):(\d+):(\d+)\.(\d+)")
-        
-        # Monitor the execution
-        while True:
-            line = process.stdout.readline()
-            if not line:
-                break
+        try:
+            time_regex = re.compile(r"time=(\d+):(\d+):(\d+)\.(\d+)")
             
-            # Parse FFmpeg output for time codes
-            match = time_regex.search(line)
-            if match:
-                h, m, s, ms = match.groups()
-                current_time = int(h) * 3600 + int(m) * 60 + int(s) + float(ms) / 100
-                progress = min(99, int((current_time / total_duration) * 100))
-                rendering_tasks[task_id]["progress"] = progress
+            # Monitor the execution
+            while True:
+                line = process.stdout.readline()
+                if not line:
+                    break
+                
+                # Parse FFmpeg output for time codes
+                match = time_regex.search(line)
+                if match:
+                    h, m, s, ms = match.groups()
+                    current_time = int(h) * 3600 + int(m) * 60 + int(s) + float(ms) / 100
+                    progress = min(99, int((current_time / total_duration) * 100))
+                    
+                    if rendering_tasks.get(task_id, {}).get("status") == "cancelled":
+                        break
+                    rendering_tasks[task_id]["progress"] = progress
 
-        process.wait()
+            process.wait()
+        finally:
+            active_processes.pop(task_id, None)
+
+        if rendering_tasks.get(task_id, {}).get("status") == "cancelled":
+            logger.info(f"Video export task {task_id} was cancelled.")
+            if os.path.exists(output_filepath):
+                try:
+                    os.remove(output_filepath)
+                except Exception as e:
+                    logger.error(f"Failed to remove partial export file {output_filepath}: {e}")
+            return
 
         if process.returncode == 0:
             rendering_tasks[task_id]["status"] = "completed"
@@ -869,3 +894,37 @@ def get_export_status(task_id: str):
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
+
+@router.post("/editor/export/cancel/{task_id}")
+def cancel_export(task_id: str):
+    """Cancels a running export task and kills its FFmpeg process."""
+    task = rendering_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if task.get("status") in ["rendering", "pending"]:
+        task["status"] = "cancelled"
+        
+        # Kill the process if active
+        process = active_processes.pop(task_id, None)
+        if process:
+            try:
+                process.kill()
+                logger.info(f"Killed FFmpeg process for task {task_id}")
+            except Exception as e:
+                logger.error(f"Failed to kill FFmpeg process for task {task_id}: {e}")
+        
+        # Try to delete output file immediately if it exists (run_ffmpeg_render will also try after process exits)
+        output_filepath = task.get("output_filepath")
+        if output_filepath and os.path.exists(output_filepath):
+            try:
+                os.remove(output_filepath)
+                logger.info(f"Removed partial export file for task {task_id}")
+            except Exception as e:
+                # File might be temporarily locked, run_ffmpeg_render will clean it up after wait()
+                logger.warning(f"Could not remove file in endpoint (might be locked): {e}")
+
+        return {"status": "cancelled"}
+    
+    return {"status": task.get("status"), "message": "Task is not in a cancellable state"}

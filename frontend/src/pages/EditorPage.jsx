@@ -17,6 +17,7 @@ import {
   FiDownload,
   FiAlertCircle,
   FiPlus,
+  FiX,
   FiSliders,
   FiType,
   FiImage,
@@ -615,6 +616,7 @@ export default function EditorPage() {
     triggerExport,
     loadDirectorDeskAssets,
     resetExport,
+    cancelExport,
     undo,
     redo,
     canUndo,
@@ -3922,6 +3924,16 @@ export default function EditorPage() {
                   style={{ width: `${exportProgress}%` }}
                 />
               </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={cancelExport}
+                className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold uppercase tracking-widest text-[10.5px] flex items-center justify-center gap-2 transition-all"
+              >
+                <FiX size={12} />
+                <span>Cancel Export</span>
+              </button>
             </div>
           </div>
         </div>
