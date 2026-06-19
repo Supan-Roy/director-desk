@@ -732,6 +732,14 @@ export function EditorProvider({ children }) {
           }
           setExportError(data.error || 'Video rendering failed')
           setIsExporting(false)
+        } else if (data.status === 'cancelled') {
+          if (exportIntervalRef.current) {
+            clearInterval(exportIntervalRef.current)
+            exportIntervalRef.current = null
+          }
+          setExportStatus('idle')
+          setIsExporting(false)
+          setExportTaskId(null)
         }
       } catch (err) {
         console.error(err)
@@ -759,6 +767,34 @@ export function EditorProvider({ children }) {
     setIsExporting(false)
     setExportTaskId(null)
   }, [])
+
+  // Cancel active video export
+  const cancelExport = useCallback(async () => {
+    if (exportIntervalRef.current) {
+      clearInterval(exportIntervalRef.current)
+      exportIntervalRef.current = null
+    }
+
+    const taskId = exportTaskId
+
+    // Reset state locally first for immediate responsiveness
+    setExportStatus('idle')
+    setExportProgress(0)
+    setExportUrl(null)
+    setExportError(null)
+    setIsExporting(false)
+    setExportTaskId(null)
+
+    if (taskId) {
+      try {
+        await fetch(`${apiBaseUrl}/api/editor/export/cancel/${taskId}`, {
+          method: 'POST'
+        })
+      } catch (err) {
+        console.error('Failed to cancel export on backend:', err)
+      }
+    }
+  }, [exportTaskId])
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -917,6 +953,7 @@ export function EditorProvider({ children }) {
     triggerExport,
     loadDirectorDeskAssets,
     resetExport,
+    cancelExport,
     undo,
     redo,
     canUndo: historyIndex > 0,
