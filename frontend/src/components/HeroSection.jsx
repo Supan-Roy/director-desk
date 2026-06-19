@@ -72,8 +72,8 @@ const detailedSuggestions = [
   },
 ];
 
-// Custom styled selector to align with Runway/Linear aesthetic
-function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
+// Custom styled selector to align with professional editing suite aesthetic
+function CustomSelect({ label, value, onChange, options, icon: Icon, disabled }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { isDayMode } = useTheme();
@@ -91,23 +91,32 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
   const activeOption = options.find((o) => o.id === value) || options[0];
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className={`relative ${isOpen ? 'z-30' : 'z-10'}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 rounded-lg px-3 py-2 border text-[11px] font-semibold transition-all cursor-pointer focus:outline-none ${
+        className={`flex items-center gap-3 rounded-lg px-3 py-1.5 border text-left transition-all duration-150 cursor-pointer focus:outline-none min-w-[155px] ${
           disabled ? 'opacity-40 cursor-not-allowed' : ''
         } ${
           isDayMode
-            ? 'bg-black text-white-force border-black/15 hover:bg-neutral-900 shadow-sm'
-            : 'bg-white text-black border-white/10 hover:bg-neutral-100 shadow-sm'
+            ? 'bg-neutral-50 text-neutral-800 border-neutral-200 hover:bg-neutral-100 shadow-sm'
+            : 'bg-surface-900 text-white border-surface-700 hover:bg-surface-800 hover:border-surface-600'
         }`}
         disabled={disabled}
       >
-        <Icon size={12} className={isDayMode ? 'text-neutral-400' : 'text-neutral-500'} />
-        <span>{activeOption.label}</span>
+        <div className={`p-1.5 rounded shrink-0 ${isDayMode ? 'bg-neutral-200 border border-neutral-300 text-neutral-600' : 'bg-surface-800 border border-surface-700 text-surface-300'}`}>
+          <Icon size={12} />
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <span className={`text-[8px] font-bold uppercase tracking-wider leading-none ${isDayMode ? 'text-neutral-400' : 'text-surface-500'}`}>
+            {label}
+          </span>
+          <span className={`text-[11px] font-bold truncate mt-1 leading-tight ${isDayMode ? 'text-neutral-800' : 'text-surface-100'}`}>
+            {activeOption.value || activeOption.label}
+          </span>
+        </div>
         <span 
-          className={`text-[7.5px] ml-1 transition-transform duration-200 ${isDayMode ? 'text-neutral-400' : 'text-neutral-500'}`} 
+          className={`text-[8.5px] ml-1 shrink-0 transition-transform duration-200 ${isDayMode ? 'text-neutral-400' : 'text-surface-400'}`} 
           style={{ transform: isOpen ? 'rotate(180deg)' : 'none', display: 'inline-block' }}
         >
           ▼
@@ -115,10 +124,10 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
       </button>
 
       {isOpen && (
-        <div className={`absolute left-0 top-full mt-1.5 z-50 min-w-[160px] rounded-xl border p-1 backdrop-blur-xl shadow-lg space-y-0.5 ${
+        <div className={`absolute left-0 top-full mt-1.5 z-55 min-w-[185px] rounded-lg border p-1 shadow-2xl space-y-0.5 ${
           isDayMode
-            ? 'bg-black border-white/[0.08] text-white-force shadow-xl'
-            : 'bg-white border-neutral-200/80 text-neutral-800 shadow-xl'
+            ? 'bg-white border-neutral-200 text-neutral-800 shadow-xl'
+            : 'bg-surface-800 border-surface-600 text-surface-200 shadow-black/85'
         }`}>
           {options.map((opt) => {
             const isSelected = opt.id === value;
@@ -130,14 +139,14 @@ function CustomSelect({ value, onChange, options, icon: Icon, disabled }) {
                   onChange(opt.id);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-[11px] transition-all flex items-center justify-between cursor-pointer ${
+                className={`w-full text-left px-3 py-2 rounded text-[11px] transition-all flex items-center justify-between cursor-pointer ${
                   isSelected
                     ? isDayMode
-                      ? 'bg-white/15 text-white-force font-bold'
-                      : 'bg-accent/15 text-accent font-bold'
+                      ? 'bg-neutral-100 text-neutral-900 font-bold'
+                      : 'bg-accent/10 border border-accent/20 text-white font-bold'
                     : isDayMode
-                      ? 'text-neutral-300 hover:bg-white/10 hover:text-white-force'
-                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                      ? 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                      : 'text-surface-300 hover:bg-surface-700 hover:text-white'
                 }`}
               >
                 <span>{opt.label}</span>
@@ -646,164 +655,168 @@ export default function HeroSection({
         )}
 
         {/* Prompt Input / Production Console Box */}
-        <div className={`group/console relative p-[1.5px] rounded-2xl transition-all duration-500 bg-gradient-to-b ${
+        <div className={`relative rounded-lg border p-5 transition-all duration-200 text-left ${
           isDayMode
             ? focused 
-              ? 'from-accent/50 via-accent/25 to-purple-500/10 shadow-[0_12px_32px_rgba(124,58,237,0.12)]' 
-              : 'from-black/[0.08] to-black/[0.02] shadow-[0_8px_30px_rgba(28,24,37,0.06)]'
+              ? 'bg-white border-accent shadow-sm' 
+              : 'bg-neutral-50 border-neutral-200 shadow-sm'
             : focused 
-              ? 'from-accent/60 via-accent/30 to-purple-600/20 shadow-[0_12px_40px_rgba(139,92,246,0.15)]' 
-              : 'from-white/[0.08] to-white/[0.02] shadow-[0_10px_35px_rgba(0,0,0,0.95)]'
+              ? 'bg-surface-900 border-accent shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
+              : 'bg-surface-900 border-surface-700 shadow-none'
         }`}>
-          <div className={`rounded-[15px] p-5 relative transition-all duration-500 ${
-            isDayMode
-              ? 'bg-white/75 border border-white/35 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)] shadow-sm'
-              : 'bg-[#07070d]/80 backdrop-blur-[2px] shadow-[inset_0_2px_12px_rgba(0,0,0,0.9)]'
-          }`}>
-            {/* Hidden File Input */}
-            <input
-              type="file"
-              multiple
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".pdf,.txt,.md,image/*"
-              className="hidden"
-            />
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            multiple
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".pdf,.txt,.md,image/*"
+            className="hidden"
+          />
 
-            {/* Viewfinder corner brackets inside the console */}
-            <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
-              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
-            }`} />
-            <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
-              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
-            }`} />
-            <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
-              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
-            }`} />
-            <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r transition-all duration-500 pointer-events-none group-focus-within/console:scale-105 z-10 ${
-              isDayMode ? 'border-black/[0.15] group-focus-within/console:border-accent/80' : 'border-white/[0.12] group-focus-within/console:border-accent/80'
-            }`} />
- 
-            {/* Row 1: Orb, Input text, Sparkle */}
-            <div className="flex items-start gap-4 relative z-10">
-              
-              {/* AI Production Orb / Camera Focus Spinner */}
-              <div 
-                onClick={!loading ? handleOrbClick : undefined}
-                className={`flex items-center justify-center h-12 w-12 shrink-0 relative select-none ${
-                  !loading ? 'cursor-pointer hover:scale-105 transition-all' : ''
-                }`}
-                title={!loading ? "Upload reference documents or images (PDF, TXT, MD, PNG/JPG)" : "Processing..."}
-              >
-                {/* Outer Volumetric Halo */}
-                <div className={`absolute inset-0 rounded-full blur-md pointer-events-none transition-all duration-500 ${
-                  loading 
-                    ? 'bg-emerald-500/10' 
-                    : focused 
-                      ? 'bg-accent/10' 
-                      : 'bg-accent/5'
-                }`} />
+          {/* Viewfinder corner brackets inside the console */}
+          <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l transition-all duration-200 pointer-events-none z-10 ${
+            isDayMode 
+              ? focused ? 'border-accent' : 'border-neutral-300' 
+              : focused ? 'border-accent' : 'border-surface-700'
+          }`} />
+          <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r transition-all duration-200 pointer-events-none z-10 ${
+            isDayMode 
+              ? focused ? 'border-accent' : 'border-neutral-300' 
+              : focused ? 'border-accent' : 'border-surface-700'
+          }`} />
+          <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l transition-all duration-200 pointer-events-none z-10 ${
+            isDayMode 
+              ? focused ? 'border-accent' : 'border-neutral-300' 
+              : focused ? 'border-accent' : 'border-surface-700'
+          }`} />
+          <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r transition-all duration-200 pointer-events-none z-10 ${
+            isDayMode 
+              ? focused ? 'border-accent' : 'border-neutral-300' 
+              : focused ? 'border-accent' : 'border-surface-700'
+          }`} />
 
-                {/* Stable Outer Ring */}
-                <div className={getOuterRingClass()} />
+          {/* Row 1: Orb, Input text, Sparkle */}
+          <div className="flex items-start gap-4 relative z-10">
+            
+            {/* AI Production Orb / Camera Focus Spinner */}
+            <div 
+              onClick={!loading ? handleOrbClick : undefined}
+              className={`flex items-center justify-center h-12 w-12 shrink-0 relative select-none ${
+                !loading ? 'cursor-pointer hover:scale-105 transition-all' : ''
+              }`}
+              title={!loading ? "Upload reference documents or images (PDF, TXT, MD, PNG/JPG)" : "Processing..."}
+            >
+              {/* Outer Volumetric Halo */}
+              <div className={`absolute inset-0 rounded-full blur-md pointer-events-none transition-all duration-500 ${
+                loading 
+                  ? 'bg-emerald-500/10' 
+                  : focused 
+                    ? 'bg-accent/10' 
+                    : 'bg-accent/5'
+              }`} />
 
-                {/* Stable Middle Ring */}
-                <div className={getMiddleRingClass()} />
+              {/* Stable Outer Ring */}
+              <div className={getOuterRingClass()} />
 
-                {/* Stable Core */}
-                <div className={getCoreClass()}>
-                  {loading ? (
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  ) : (
-                    <div className={`w-1.5 h-1.5 relative ${focused && orbAnimating ? 'animate-pulse' : ''}`}>
-                      <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80" />
-                      <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80" />
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Stable Middle Ring */}
+              <div className={getMiddleRingClass()} />
 
-              {/* Prompt text field */}
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                placeholder="Describe your creative concept or project idea, or drop context files..."
-                className={`flex-1 bg-transparent border-0 outline-none placeholder-neutral-500 text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono transition-colors duration-300 ${
-                  isDayMode ? 'text-neutral-900' : 'text-white'
-                }`}
-                disabled={loading}
-              />
-
-              {/* Sparkles Action */}
-              <button 
-                type="button"
-                onClick={handleEnhance}
-                className={`hover:text-accent p-2 rounded-lg transition-colors cursor-pointer shrink-0 mt-1 ${
-                  isDayMode ? 'text-neutral-500' : 'text-surface-500'
-                } ${isEnhancing ? 'animate-pulse text-accent' : ''}`}
-                title="Enhance Prompt"
-                disabled={loading || isEnhancing}
-              >
-                {isEnhancing ? (
-                  <FiLoader size={16} className="animate-spin text-accent" />
+              {/* Stable Core */}
+              <div className={getCoreClass()}>
+                {loading ? (
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
                 ) : (
-                  <PiSparkle size={16} />
+                  <div className={`w-1.5 h-1.5 relative ${focused && orbAnimating ? 'animate-pulse' : ''}`}>
+                    <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80" />
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
 
-            {/* Attached Files List */}
-            {attachedFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4 px-1 relative z-10">
-                {attachedFiles.map((file, idx) => {
-                  const isImage = file.type.startsWith('image/');
-                  return (
-                    <div 
-                      key={idx} 
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono transition-all ${
-                        isDayMode 
-                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800' 
-                          : 'bg-white/[0.03] border-white/[0.08] text-neutral-300'
-                      }`}
-                    >
-                      {isImage ? (
-                        <div className="w-4 h-4 rounded overflow-hidden shrink-0 border border-white/10">
-                          <img src={file.content} alt={file.name} className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <span className="text-[10px] opacity-60">📄</span>
-                      )}
-                      <span className="truncate max-w-[150px] font-medium" title={file.name}>{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
-                        }}
-                        className={`hover:text-red-500 font-bold ml-1 transition-colors focus:outline-none cursor-pointer ${
-                          isDayMode ? 'text-neutral-400' : 'text-neutral-500'
-                        }`}
-                        title="Remove file"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {/* Prompt text field */}
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder="Describe your creative concept or project idea, or drop context files..."
+              className={`flex-1 bg-transparent border-0 outline-none text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono transition-colors duration-200 ${
+                isDayMode ? 'placeholder-neutral-400 text-neutral-900' : 'placeholder-surface-500 text-white'
+              }`}
+              disabled={loading}
+            />
 
-            {/* Divider */}
-            <div className={`h-px my-4 relative z-10 transition-colors duration-300 ${
-              isDayMode ? 'bg-black/[0.08]' : 'bg-white/[0.04]'
-            }`} />
+            {/* Sparkles Action */}
+            <button 
+              type="button"
+              onClick={handleEnhance}
+              className={`hover:text-accent p-2 rounded-lg transition-colors cursor-pointer shrink-0 mt-1 ${
+                isDayMode ? 'text-neutral-500' : 'text-surface-500'
+              } ${isEnhancing ? 'animate-pulse text-accent' : ''}`}
+              title="Enhance Prompt"
+              disabled={loading || isEnhancing}
+            >
+              {isEnhancing ? (
+                <FiLoader size={16} className="animate-spin text-accent" />
+              ) : (
+                <PiSparkle size={16} />
+              )}
+            </button>
+          </div>
+
+          {/* Attached Files List */}
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4 px-1 relative z-10">
+              {attachedFiles.map((file, idx) => {
+                const isImage = file.type.startsWith('image/');
+                return (
+                  <div 
+                    key={idx} 
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono transition-all ${
+                      isDayMode 
+                        ? 'bg-neutral-50 border-neutral-200 text-neutral-800' 
+                        : 'bg-white/[0.03] border-white/[0.08] text-neutral-300'
+                    }`}
+                  >
+                    {isImage ? (
+                      <div className="w-4 h-4 rounded overflow-hidden shrink-0 border border-white/10">
+                        <img src={file.content} alt={file.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] opacity-60">📄</span>
+                    )}
+                    <span className="truncate max-w-[150px] font-medium" title={file.name}>{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
+                      }}
+                      className={`hover:text-red-500 font-bold ml-1 transition-colors focus:outline-none cursor-pointer ${
+                        isDayMode ? 'text-neutral-400' : 'text-neutral-500'
+                      }`}
+                      title="Remove file"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className={`h-px my-4 relative z-10 transition-colors duration-300 ${
+            isDayMode ? 'bg-black/[0.08]' : 'bg-surface-700'
+          }`} />
 
           {/* Row 2: Selectors & Initiate Production */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-1 relative z-10">
             <div className="flex flex-wrap items-center gap-2.5">
               {/* Production Type Selector */}
               <CustomSelect
+                label="Format"
                 value={selectedProdType}
                 onChange={setSelectedProdType}
                 options={productionTypes}
@@ -813,6 +826,7 @@ export default function HeroSection({
 
               {/* Aspect Ratio Selector */}
               <CustomSelect
+                label="Aspect Ratio"
                 value={aspect}
                 onChange={setAspect}
                 options={aspectRatios}
@@ -822,6 +836,7 @@ export default function HeroSection({
 
               {/* Style Presets Selector */}
               <CustomSelect
+                label="Style Preset"
                 value={style}
                 onChange={setStyle}
                 options={styles}
@@ -831,6 +846,7 @@ export default function HeroSection({
 
               {/* Camera Motion Selector */}
               <CustomSelect
+                label="Camera Motion"
                 value={camera}
                 onChange={setCamera}
                 options={cameraMotions}
@@ -840,6 +856,7 @@ export default function HeroSection({
 
               {/* Quality Preset Selector */}
               <CustomSelect
+                label="Render Quality"
                 value={quality}
                 onChange={setQuality}
                 options={qualities}
@@ -849,6 +866,7 @@ export default function HeroSection({
 
               {/* Orchestration Mode Selector */}
               <CustomSelect
+                label="Orchestration"
                 value={orchestrationMode}
                 onChange={setOrchestrationMode}
                 options={orchestrationModes}
@@ -861,7 +879,11 @@ export default function HeroSection({
             <button
               onClick={handleSubmit}
               disabled={!prompt.trim() || loading}
-              className="btn-primary ml-auto shrink-0 rounded-xl px-5 py-2.5 flex items-center gap-2 bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-500 text-xs font-semibold uppercase tracking-widest transition-all shadow-[0_4px_16px_rgba(139,92,246,0.25)]"
+              className={`flex items-center gap-2 bg-surface-950 border text-white px-6 py-3 rounded-lg text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none shrink-0 ml-auto cursor-pointer ${
+                !prompt.trim() || loading
+                  ? 'opacity-40 cursor-not-allowed border-surface-700'
+                  : 'border-accent hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
+              }`}
             >
               {loading ? (
                 <>
@@ -870,14 +892,13 @@ export default function HeroSection({
                 </>
               ) : (
                 <>
-                  <FiSend size={12} />
+                  <span className="text-[10px] text-accent mr-0.5">▶</span>
                   <span>Initiate Production</span>
                 </>
               )}
             </button>
           </div>
         </div>
-      </div>
 
       {/* Error Notification */}
       {errorMsg && (
