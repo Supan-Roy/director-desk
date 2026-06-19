@@ -1,4 +1,5 @@
 import os
+import math
 import re
 import json
 import logging
@@ -44,6 +45,10 @@ class ClipInfo(BaseModel):
     vignette: Optional[float] = 0.0
     edgeDetect: Optional[bool] = False
     sharpen: Optional[bool] = False
+    fitMode: Optional[str] = "contain"  # 'contain' or 'cover'
+    zoom: Optional[float] = 1.0
+    panX: Optional[float] = 0.0
+    panY: Optional[float] = 0.0
 
 
 class TextInfo(BaseModel):
@@ -90,6 +95,7 @@ class VfxInfo(BaseModel):
 class ExportPayload(BaseModel):
     resolution: str  # '360p', '480p', '720p', or '1080p'
     format: Optional[str] = "mp4"  # 'mp4', 'mkv', 'avi', 'mov'
+    aspectRatio: Optional[str] = "16:9"  # '16:9', '9:16', '4:3', '1.85:1', '2.39:1', '1.43:1', '1.90:1'
     videoTrack: List[ClipInfo]
     audioTrack: List[ClipInfo]
     textTrack: List[TextInfo]
@@ -255,17 +261,43 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             "url": None
         }
 
-        # Resolve output specifications
-        if payload.resolution == "1080p":
-            res_w, res_h = (1920, 1080)
-        elif payload.resolution == "720p":
-            res_w, res_h = (1280, 720)
-        elif payload.resolution == "480p":
-            res_w, res_h = (854, 480)
-        elif payload.resolution == "360p":
-            res_w, res_h = (640, 360)
+        # Resolve output specifications based on resolution and aspect ratio
+        ar_name = payload.aspectRatio or "16:9"
+        
+        # Base height map
+        height_map = {
+            "1080p": 1080,
+            "720p": 720,
+            "480p": 480,
+            "360p": 360
+        }
+        base_h = height_map.get(payload.resolution, 720)
+        
+        if ar_name == "9:16":
+            # Swap width and height for portrait
+            if payload.resolution == "1080p":
+                res_w, res_h = 1080, 1920
+            elif payload.resolution == "720p":
+                res_w, res_h = 720, 1280
+            elif payload.resolution == "480p":
+                res_w, res_h = 480, 854
+            elif payload.resolution == "360p":
+                res_w, res_h = 360, 640
+            else:
+                res_w, res_h = 720, 1280
         else:
-            res_w, res_h = (1280, 720)
+            res_h = base_h
+            # Calculate width based on ratio
+            ratio_map = {
+                "16:9": 16 / 9,
+                "4:3": 4 / 3,
+                "1.85:1": 1.85,
+                "2.39:1": 2.39,
+                "1.43:1": 1.43,
+                "1.90:1": 1.90
+            }
+            ratio = ratio_map.get(ar_name, 16 / 9)
+            res_w = int(round(res_h * ratio / 2)) * 2
 
         # Resolve output format extension
         ext = payload.format.lower() if payload.format else "mp4"
@@ -335,8 +367,58 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             # Trim
             trim_filter = f"[{in_idx}:v] trim=start={clip.sourceStart}:end={clip.sourceEnd},setpts=PTS-STARTPTS"
             
-            # Scale & pad
-            scale_filter = f"scale={res_w}:{res_h}:force_original_aspect_ratio=decrease,pad={res_w}:{res_h}:(ow-iw)/2:(oh-ih)/2"
+            # Scale & pad / crop & zoom & pan
+            filepath = resolve_filepath(clip.url)
+            media_info = get_media_info(filepath)
+            streams = media_info.get("streams", [])
+            video_stream = next((s for s in streams if s.get("codec_type") == "video"), {})
+            iw = int(video_stream.get("width") or 0)
+            ih = int(video_stream.get("height") or 0)
+            if not iw or not ih:
+                iw, ih = res_w, res_h # fallback
+
+            fit = (clip.fitMode or "contain").lower()
+            zoom = clip.zoom if clip.zoom is not None else 1.0
+            pan_x = clip.panX if clip.panX is not None else 0.0
+            pan_y = clip.panY if clip.panY is not None else 0.0
+
+            if fit == "contain":
+                scale_filter = f"scale={res_w}:{res_h}:force_original_aspect_ratio=decrease,pad={res_w}:{res_h}:(ow-iw)/2:(oh-ih)/2"
+            else:
+                # Cover / Crop, Zoom & Pan mode
+                target_ar = res_w / res_h
+                input_ar = iw / ih
+                
+                if input_ar > target_ar:
+                    # wider than target, crop sides
+                    base_crop_h = ih
+                    base_crop_w = ih * target_ar
+                else:
+                    # taller than target, crop top/bottom
+                    base_crop_w = iw
+                    base_crop_h = iw * (1.0 / target_ar)
+                
+                # Apply zoom
+                crop_w = base_crop_w / zoom
+                crop_h = base_crop_h / zoom
+                
+                # Clamp crop size to input dimensions
+                crop_w = min(iw, crop_w)
+                crop_h = min(ih, crop_h)
+                
+                # Bounded offsets
+                max_shift_x = (iw - crop_w) / 2
+                x_offset = (iw - crop_w) / 2 + (pan_x / 100.0) * max_shift_x
+                
+                max_shift_y = (ih - crop_h) / 2
+                y_offset = (ih - crop_h) / 2 + (pan_y / 100.0) * max_shift_y
+                
+                crop_w = max(4, int(round(crop_w) // 2) * 2)
+                crop_h = max(4, int(round(crop_h) // 2) * 2)
+                x_offset = int(round(x_offset) // 2) * 2
+                y_offset = int(round(y_offset) // 2) * 2
+                
+                scale_filter = f"crop={crop_w}:{crop_h}:{x_offset}:{y_offset},scale={res_w}:{res_h}"
             
             # Eq/Brightness/Contrast/Blur
             effects = []
