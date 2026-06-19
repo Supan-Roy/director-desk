@@ -195,7 +195,7 @@ export default function CreativeModes({ onSelectTemplate }) {
   const { isDayMode } = useTheme();
 
   return (
-    <section className="space-y-4 select-none">
+    <section className="space-y-4 select-none creative-presets-section">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
@@ -224,17 +224,13 @@ export default function CreativeModes({ onSelectTemplate }) {
               transition: 'transform 0.2s ease, border-color 0.2s ease',
               willChange: 'transform',
             }}
-            className={`group text-left flex flex-col h-[205px] w-full border relative rounded-lg overflow-hidden ${
-              isDayMode 
-                ? 'bg-white border-black/[0.07] hover:border-accent/50' 
-                : 'bg-surface-900 border-surface-700 hover:bg-surface-800 hover:border-surface-600'
-            }`}
+            className="group text-left flex flex-col h-[205px] w-full border border-white/10 relative rounded-lg overflow-hidden transition-all duration-200 bg-[#111111] hover:border-accent/60 shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
           >
             {/* Glossy top-shine reflection (removed gradient shine for flat style) */}
             <div className="absolute inset-0 bg-white/[0.01] pointer-events-none z-20" />
 
             {/* Template Visual Header */}
-            <div className="relative h-[125px] w-full overflow-hidden bg-surface-950 shrink-0">
+            <div className="relative h-[125px] w-full overflow-hidden bg-black shrink-0">
               {tmpl.video ? (
                 <VideoThumbnail src={tmpl.video} isHovered={hoveredCard === tmpl.id} />
               ) : (
@@ -246,36 +242,22 @@ export default function CreativeModes({ onSelectTemplate }) {
               )}
               {/* Category Icon */}
               <div 
-                className={`absolute left-2.5 top-2.5 z-10 flex h-6.5 w-6.5 items-center justify-center rounded-lg border transition-colors ${
-                  isDayMode 
-                    ? 'bg-white/90 border-black/10' 
-                    : 'bg-surface-900 border-surface-700 group-hover:border-surface-600'
-                }`}
+                className="absolute left-2.5 top-2.5 z-10 flex h-6.5 w-6.5 items-center justify-center rounded-lg border border-white/10 bg-[#0B0B0B]/90 transition-colors group-hover:border-accent/40"
               >
                 <tmpl.icon size={12} style={{ color: tmpl.accent }} />
               </div>
               {/* Status/Format tag */}
-              <div className={`absolute right-2.5 top-2.5 z-10 rounded border px-1 py-0.5 text-[7px] font-semibold tracking-wider uppercase font-mono ${
-                isDayMode 
-                  ? 'bg-white/90 border-black/10 text-neutral-700' 
-                  : 'bg-black/60 border-surface-700 text-surface-300'
-              }`}>
+              <div className="absolute right-2.5 top-2.5 z-10 rounded border border-white/10 px-1 py-0.5 text-[7px] font-semibold tracking-wider uppercase font-mono bg-black/60 text-[#D1D5DB]">
                 {tmpl.tag}
               </div>
             </div>
 
             {/* Template Details */}
             <div className="p-3 flex-1 flex flex-col justify-center relative z-10 min-w-0">
-              <h4 className={`text-[11.5px] font-bold tracking-wide transition-colors leading-tight truncate ${
-                isDayMode 
-                  ? 'text-neutral-900 group-hover:text-accent' 
-                  : 'text-white group-hover:text-accent'
-              }`}>
+              <h4 className="text-[11.5px] font-bold tracking-wide transition-colors leading-tight truncate text-white group-hover:text-accent">
                 {tmpl.title}
               </h4>
-              <p className={`mt-0.5 text-[9.5px] leading-normal font-medium truncate ${
-                isDayMode ? 'text-neutral-500' : 'text-surface-500'
-              }`}>
+              <p className="mt-0.5 text-[9.5px] leading-normal font-medium truncate text-[#D1D5DB]">
                 {tmpl.description}
               </p>
             </div>

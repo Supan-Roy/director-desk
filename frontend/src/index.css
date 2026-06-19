@@ -586,168 +586,202 @@
 /* Body + root background */
 [data-theme="day"] body,
 [data-theme="day"] #root {
-  background: #f0ede8;
-  color: #1c1825;
+  background: #FFFFFF;
+  color: #111111;
 }
 
 /* Scrollbars */
 [data-theme="day"] ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.08);
 }
 [data-theme="day"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
 }
 
-/* Cinematic background radial gradient (lighter, warm-toned) */
+/* Cinematic background radial gradient */
 [data-theme="day"] .bg-cinematic {
   background:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.06), transparent),
     radial-gradient(ellipse 60% 40% at 80% 60%, rgba(124, 58, 237, 0.03), transparent),
     radial-gradient(ellipse 50% 30% at 10% 80%, rgba(251, 191, 36, 0.03), transparent),
-    #f0ede8;
+    #FFFFFF;
 }
 
 /* Override the dark gradient overlay layers */
-[data-theme="day"] .bg-gradient-to-br.from-\[\#040409\] {
-  background: linear-gradient(135deg, #ede9e2, #f0ede8, #edeaff05) !important;
+[data-theme="day"] .bg-gradient-to-br,
+[data-theme="day"] .bg-gradient-to-r.from-\[\#06060b\]\/85 {
+  background: #FFFFFF !important;
+  background-image: none !important;
+  display: none !important;
 }
 
-/* Volumetric ambient blobs — softer warm tones on light */
-[data-theme="day"] .bg-purple-600\/10 {
-  background-color: rgba(139, 92, 246, 0.05) !important;
+/* Vignette — hide completely in day mode for solid white workspace */
+[data-theme="day"] .bg-gradient-radial {
+  display: none !important;
 }
+
+/* Lens flare — hide in day mode */
+[data-theme="day"] .lens-flare-radial {
+  display: none !important;
+}
+
+/* Volumetric ambient lights — hide in day mode */
+[data-theme="day"] .bg-purple-600\/10,
 [data-theme="day"] .bg-blue-600\/8 {
-  background-color: rgba(251, 191, 36, 0.04) !important;
+  display: none !important;
 }
 
-/* Vignette — replace dark-on-dark vignette with soft light edges */
-[data-theme="day"] .bg-gradient-radial.from-transparent {
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(235,231,224,0.7) 100%) !important;
-  opacity: 0.6 !important;
+/* Viewfinder grid lines — hide in day mode */
+[data-theme="day"] .bg-grid-lines {
+  display: none !important;
+}
+
+/* Day Mode Surface Background Tokens mapping (Notion Clean White style) */
+[data-theme="day"] .bg-surface-950 { background-color: #FFFFFF !important; }
+[data-theme="day"] .bg-surface-900 { background-color: #FFFFFF !important; }
+[data-theme="day"] .bg-surface-800 { background-color: #FFFFFF !important; }
+[data-theme="day"] .bg-surface-700 { background-color: #E5E7EB !important; }
+[data-theme="day"] .bg-surface-600 { background-color: #E5E7EB !important; }
+
+/* Arbitrary page background wrappers */
+[data-theme="day"] .bg-\[\#f0ede8\],
+[data-theme="day"] .bg-\[\#06060b\],
+[data-theme="day"] .bg-\[\#08080f\] {
+  background-color: #FFFFFF !important;
 }
 
 /* Glass panels */
 [data-theme="day"] .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(0, 0, 0, 0.07);
+  background: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
 }
 [data-theme="day"] .glass-panel-strong {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(0, 0, 0, 0.09);
-}
-
-/* Main content area */
-[data-theme="day"] .flex-1.flex.flex-col {
-  color: #1c1825;
+  background: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
 }
 
 /* Header border */
 [data-theme="day"] header {
-  border-color: rgba(0, 0, 0, 0.07) !important;
+  border-color: #E5E7EB !important;
 }
 
-/* Header breadcrumb text */
-[data-theme="day"] .header-breadcrumb {
-  color: #8b8699;
-}
-[data-theme="day"] .header-breadcrumb span.text-surface-700 {
-  color: #c5c0d0 !important;
-}
-[data-theme="day"] .header-breadcrumb span.text-surface-300 {
-  color: #3d3656 !important;
-}
-
-/* Surface text classes → dark equivalents in day mode */
-[data-theme="day"] .text-surface-200 { color: #1c1825 !important; }
-[data-theme="day"] .text-surface-300 { color: #3d3656 !important; }
-[data-theme="day"] .text-surface-400 { color: #6b6480 !important; }
-[data-theme="day"] .text-surface-500 { color: #9490a6 !important; }
-
-/* White borders → subtle dark borders */
-[data-theme="day"] .border-white\/\[0\.04\] { border-color: rgba(0,0,0,0.06) !important; }
-[data-theme="day"] .border-white\/\[0\.06\] { border-color: rgba(0,0,0,0.08) !important; }
-[data-theme="day"] .border-white\/\[0\.08\] { border-color: rgba(0,0,0,0.10) !important; }
-
-/* Cards, panels with dark backgrounds */
+/* Cards, panels with dark backgrounds: map to white panels in day mode */
 [data-theme="day"] .bg-\[\#090911\]\/90,
 [data-theme="day"] .bg-\[\#07070d\]\/80,
 [data-theme="day"] .bg-\[\#07070d\],
 [data-theme="day"] .bg-\[\#080810\]\/80 {
-  background-color: rgba(255, 255, 255, 0.92) !important;
+  background-color: #FFFFFF !important;
+  border-color: #E5E7EB !important;
 }
 
-/* Prompt console border gradient — lighter on day */
-[data-theme="day"] .from-white\/\[0\.08\] {
-  --tw-gradient-from: rgba(0,0,0,0.08) !important;
+/* Text overrides in day mode to align with custom color system */
+[data-theme="day"] .text-surface-100,
+[data-theme="day"] .text-surface-200 { color: #111111 !important; }
+[data-theme="day"] .text-surface-300 { color: #4B5563 !important; }
+[data-theme="day"] .text-surface-400 { color: #6B7280 !important; }
+[data-theme="day"] .text-surface-500 { color: #6B7280 !important; }
+
+[data-theme="day"] .text-white {
+  color: #111111 !important;
 }
-[data-theme="day"] .to-white\/\[0\.02\] {
-  --tw-gradient-to: rgba(0,0,0,0.03) !important;
+
+/* Borders */
+[data-theme="day"] .border-white\/\[0\.04\],
+[data-theme="day"] .border-white\/\[0\.06\],
+[data-theme="day"] .border-white\/\[0\.08\],
+[data-theme="day"] .border-white\/10 {
+  border-color: #E5E7EB !important;
+}
+
+/* Header breadcrumb text */
+[data-theme="day"] .header-breadcrumb {
+  color: #4B5563;
+}
+[data-theme="day"] .header-breadcrumb span.text-surface-700 {
+  color: #E5E7EB !important;
+}
+[data-theme="day"] .header-breadcrumb span.text-surface-300 {
+  color: #111111 !important;
 }
 
 /* Hero section title text */
-[data-theme="day"] .text-white {
-  color: #1c1825 !important;
+[data-theme="day"] h1,
+[data-theme="day"] h2,
+[data-theme="day"] h3 {
+  color: #111111 !important;
+}
+[data-theme="day"] h2.hero-title {
+  color: #ffffff !important;
+}
+[data-theme="day"] p.hero-subtitle {
+  color: #D1D5DB !important;
 }
 
 /* Hero accent tag stays purple */
-[data-theme="day"] .text-accent { color: #7c3aed !important; }
-[data-theme="day"] .bg-accent { background-color: #7c3aed !important; }
-[data-theme="day"] .border-accent { border-color: #7c3aed !important; }
-[data-theme="day"] .bg-accent\/10 { background-color: rgba(124,58,237,0.08) !important; }
+[data-theme="day"] .text-accent { color: #8b5cf6 !important; }
+[data-theme="day"] .bg-accent { background-color: #8b5cf6 !important; }
+[data-theme="day"] .border-accent { border-color: #8b5cf6 !important; }
+[data-theme="day"] .bg-accent\/10 { background-color: rgba(139, 92, 246, 0.08) !important; }
 
 /* Textarea / input inside console */
 [data-theme="day"] textarea,
 [data-theme="day"] input {
-  color: #1c1825 !important;
-  caret-color: #7c3aed;
+  color: #111111 !important;
+  caret-color: #8b5cf6;
 }
 [data-theme="day"] textarea::placeholder,
 [data-theme="day"] input::placeholder {
-  color: #b0abc0 !important;
+  color: #6B7280 !important;
 }
 
 /* Dropdown selects */
-[data-theme="day"] select,
-[data-theme="day"] .custom-select-trigger {
-  color: #1c1825 !important;
-  background: rgba(255,255,255,0.9) !important;
-  border-color: rgba(0,0,0,0.1) !important;
-}
-[data-theme="day"] option {
-  background: #ffffff;
-  color: #1c1825;
+[data-theme="day"] select {
+  color: #111111 !important;
+  background: #FFFFFF !important;
+  border-color: #E5E7EB !important;
 }
 
-/* Creative mode cards */
-[data-theme="day"] .group\/card,
-[data-theme="day"] [class*="rounded-2xl"][class*="border"][class*="bg-"] {
-  background: rgba(255,255,255,0.85) !important;
-  border-color: rgba(0,0,0,0.07) !important;
+/* Creative mode cards - reset overrides because they are dark cards in both modes now */
+[data-theme="day"] .creative-presets-section button,
+[data-theme="day"] .featured-productions-section [class*="bg-\[#111111\]"] {
+  background-color: #111111 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* FeaturedProductions card backgrounds */
-[data-theme="day"] .bg-\[\#0a0a14\]\/60,
-[data-theme="day"] .bg-\[\#0c0c18\]\/80 {
-  background-color: rgba(255,255,255,0.88) !important;
+[data-theme="day"] .creative-presets-section h4,
+[data-theme="day"] .featured-productions-section h4 {
+  color: #ffffff !important;
+}
+
+[data-theme="day"] .creative-presets-section p,
+[data-theme="day"] .featured-productions-section p {
+  color: #D1D5DB !important;
+}
+
+[data-theme="day"] .creative-presets-section .font-mono,
+[data-theme="day"] .featured-productions-section .font-mono {
+  color: #D1D5DB !important;
+}
+
+[data-theme="day"] .creative-presets-section span,
+[data-theme="day"] .featured-productions-section span {
+  color: #8A8A8A !important;
 }
 
 /* Mono text / secondary labels */
-[data-theme="day"] .font-mono { color: #7b7591; }
+[data-theme="day"] .font-mono:not(.creative-presets-section *):not(.featured-productions-section *) {
+  color: #4B5563;
+}
 
 /* Viewfinder brackets: keep them very subtle on light bg */
-[data-theme="day"] .border-white\/\[0\.12\] { border-color: rgba(0,0,0,0.1) !important; }
+[data-theme="day"] .border-white\/\[0\.12\] { border-color: #E5E7EB !important; }
 
 /* Studio bg image: reduce mix-blend on light bg */
 [data-theme="day"] .mix-blend-screen {
   mix-blend-mode: multiply !important;
-  opacity: 0.25 !important;
-}
-
-/* Section headings */
-[data-theme="day"] h1,
-[data-theme="day"] h2,
-[data-theme="day"] h3 {
-  color: #1c1825;
+  opacity: 0.20 !important;
 }
 
 /* Subtle box-shadows in day mode */

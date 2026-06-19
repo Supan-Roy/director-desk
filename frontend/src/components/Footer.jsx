@@ -6,8 +6,8 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className={`mt-16 border-t py-12 px-2 transition-colors duration-500 ${
-      d ? 'border-neutral-200 text-neutral-600' : 'border-white/[0.04] text-surface-400'
+    <footer className={`mt-16 border-t py-12 px-6 md:px-8 transition-colors duration-500 rounded-lg ${
+      d ? 'border-neutral-200 bg-white text-neutral-600' : 'border-white/[0.04] text-surface-400'
     }`}>
       <div className="mx-auto max-w-[1400px] flex flex-col md:flex-row justify-between gap-10">
         
@@ -20,7 +20,7 @@ export default function Footer() {
               <img
                 src="/logo.svg"
                 alt="Director Desk Logo"
-                className="h-6 w-6 shrink-0 filter drop-shadow-[0_0_6px_rgba(139,92,246,0.3)]"
+                className="h-6 w-6 shrink-0"
               />
             </div>
             <div className="flex flex-col">
@@ -34,7 +34,7 @@ export default function Footer() {
               </span>
             </div>
           </div>
-          <p className={`text-[11.5px] leading-relaxed mt-1 ${d ? 'text-neutral-500' : 'text-surface-500'}`}>
+          <p className={`text-[11.5px] leading-relaxed mt-1 ${d ? 'text-neutral-600' : 'text-surface-500'}`}>
             Next-generation autonomous production workspace. Generate, refine, and orchestrate cinematic productions with agents.
           </p>
           <p className={`text-[10px] tracking-wide mt-2 ${d ? 'text-neutral-400' : 'text-surface-600'}`}>
@@ -47,7 +47,7 @@ export default function Footer() {
           {/* Column 1: Studio */}
           <div className="flex flex-col gap-3.5">
             <h4 className={`text-[10px] font-bold uppercase tracking-widest ${
-              d ? 'text-neutral-950' : 'text-surface-200'
+              d ? 'text-neutral-900 font-black' : 'text-surface-200'
             }`}>
               Platform
             </h4>
@@ -73,7 +73,7 @@ export default function Footer() {
           {/* Column 2: Resources */}
           <div className="flex flex-col gap-3.5">
             <h4 className={`text-[10px] font-bold uppercase tracking-widest ${
-              d ? 'text-neutral-950' : 'text-surface-200'
+              d ? 'text-neutral-900 font-black' : 'text-surface-200'
             }`}>
               Resources
             </h4>
@@ -99,7 +99,7 @@ export default function Footer() {
           {/* Column 3: Legal */}
           <div className="flex flex-col gap-3.5">
             <h4 className={`text-[10px] font-bold uppercase tracking-widest ${
-              d ? 'text-neutral-950' : 'text-surface-200'
+              d ? 'text-neutral-900 font-black' : 'text-surface-200'
             }`}>
               Legal
             </h4>

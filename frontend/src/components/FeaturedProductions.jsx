@@ -66,7 +66,7 @@ export default function FeaturedProductions() {
   const { isDayMode } = useTheme();
 
   return (
-    <section className="space-y-4 select-none">
+    <section className="space-y-4 select-none featured-productions-section">
       <div className="flex items-center gap-3">
         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
           Featured Productions
@@ -78,23 +78,15 @@ export default function FeaturedProductions() {
         {featuredList.map((item, idx) => {
           const isImageRight = idx >= 2;
           const gradientClass = isImageRight
-            ? isDayMode
-              ? 'from-white via-white/80 to-transparent'
-              : 'from-surface-900 via-surface-900/80 to-transparent'
-            : isDayMode
-              ? 'from-transparent via-white/80 to-white'
-              : 'from-transparent via-surface-900/80 to-surface-900';
+            ? 'from-[#111111] via-[#111111]/80 to-transparent'
+            : 'from-transparent via-[#111111]/80 to-[#111111]';
 
           return (
             <div
               key={item.id}
               onClick={() => loadFeatured(item.id)}
-              className={`group relative h-[178px] w-full rounded-lg border overflow-hidden cursor-pointer transition-all duration-300 flex ${
+              className={`group relative h-[178px] w-full rounded-lg border border-white/10 overflow-hidden cursor-pointer transition-all duration-300 flex bg-[#111111] hover:border-accent/60 shadow-[0_4px_12px_rgba(0,0,0,0.4)] ${
                 isImageRight ? 'flex-row-reverse' : 'flex-row'
-              } ${
-                isDayMode 
-                  ? 'bg-white border-black/[0.07] hover:border-accent/50' 
-                  : 'bg-surface-900 border-surface-700 hover:border-surface-600 hover:bg-surface-800'
               }`}
             >
               {/* Glossy top-shine reflection */}
@@ -114,25 +106,19 @@ export default function FeaturedProductions() {
               {/* Text content split side */}
               <div className="flex-1 flex flex-col justify-between p-3.5 min-w-0 relative z-10">
                 <div>
-                  <h4 className={`text-[12px] font-black tracking-wide leading-tight uppercase font-display truncate transition-colors duration-300 ${
-                    isDayMode ? 'text-neutral-900 group-hover:text-accent' : 'text-white group-hover:text-accent'
-                  }`}>
+                  <h4 className="text-[12px] font-black tracking-wide leading-tight uppercase font-display truncate transition-colors duration-300 text-white group-hover:text-accent">
                     {item.title}
                   </h4>
                   <span className="text-[8px] font-extrabold tracking-wider uppercase block mt-1" style={{ color: item.accent }}>
                     {item.tag}
                   </span>
-                  <p className={`mt-2 text-[9.5px] leading-relaxed line-clamp-2 transition-colors duration-300 ${
-                    isDayMode ? 'text-neutral-500' : 'text-surface-500'
-                  }`}>
+                  <p className="mt-2 text-[9.5px] leading-relaxed line-clamp-2 transition-colors duration-300 text-[#D1D5DB]">
                     {item.description}
                   </p>
                 </div>
 
                 {/* Footer scenes & agents info */}
-                <div className={`flex items-center gap-4 text-[9.5px] font-semibold font-mono border-t pt-2 mt-2 transition-colors duration-300 ${
-                  isDayMode ? 'border-neutral-100 text-neutral-500' : 'border-surface-700 text-surface-400'
-                }`}>
+                <div className="flex items-center gap-4 text-[9.5px] font-semibold font-mono border-t border-white/10 pt-2 mt-2 transition-colors duration-300 text-surface-400">
                   <span className="flex items-center gap-1.5">
                     <FiLayers size={10} className="text-accent/80" />
                     {item.scenes}

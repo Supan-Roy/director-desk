@@ -1495,7 +1495,7 @@ export default function EditorPage() {
 
   return (
     <div className={`flex h-screen overflow-hidden select-none font-display relative transition-colors duration-500 ${
-      isDayMode ? 'bg-[#f0ede8]' : 'bg-[#06060b]'
+      isDayMode ? 'bg-white' : 'bg-[#06060b]'
     }`}>
       {/* Background radial lens flares */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
