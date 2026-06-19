@@ -146,6 +146,7 @@ export function EditorProvider({ children }) {
   // Selections
   const [selectedClipId, setSelectedClipId] = useState(null)
   const [selectedTrackType, setSelectedTrackType] = useState(null) // 'video', 'audio', 'text', 'vfx'
+  const [aspectRatio, setAspectRatio] = useState('16:9')
 
   // Export properties
   const [resolution, setResolution] = useState('1080p')
@@ -304,7 +305,11 @@ export function EditorProvider({ children }) {
       mirrorV: false,
       vignette: 0.0,
       edgeDetect: false,
-      sharpen: false
+      sharpen: false,
+      fitMode: 'contain',
+      zoom: 1.0,
+      panX: 0.0,
+      panY: 0.0
     }
 
     if (trackType === 'video') {
@@ -665,6 +670,7 @@ export function EditorProvider({ children }) {
     const payload = {
       resolution,
       format: exportFormat,
+      aspectRatio,
       videoTrack,
       audioTrack,
       textTrack,
@@ -803,7 +809,11 @@ export function EditorProvider({ children }) {
         blur: 0.0,
         volume: 1.0,
         fadeIn: 0.0,
-        fadeOut: 0.0
+        fadeOut: 0.0,
+        fitMode: 'contain',
+        zoom: 1.0,
+        panX: 0.0,
+        panY: 0.0
       }
 
       setVideoTrack((prev) => [...prev, newClip])
@@ -867,6 +877,7 @@ export function EditorProvider({ children }) {
     snapEnabled,
     selectedClipId,
     selectedTrackType,
+    aspectRatio,
     resolution,
     exportFormat,
     isExporting,
@@ -886,6 +897,7 @@ export function EditorProvider({ children }) {
     setSnapEnabled,
     setSelectedClipId,
     setSelectedTrackType,
+    setAspectRatio,
     setResolution,
     setExportFormat,
     uploadAsset,

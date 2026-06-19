@@ -577,6 +577,7 @@ export default function EditorPage() {
     snapEnabled,
     selectedClipId,
     selectedTrackType,
+    aspectRatio,
     resolution,
     exportFormat,
     isExporting,
@@ -596,6 +597,7 @@ export default function EditorPage() {
     setSnapEnabled,
     setSelectedClipId,
     setSelectedTrackType,
+    setAspectRatio,
     setResolution,
     setExportFormat,
     uploadAsset,
@@ -620,6 +622,114 @@ export default function EditorPage() {
     splitLeft,
     splitRight
   } = useEditor()
+
+  const getAspectRatioCSS = (ar) => {
+    const map = {
+      '16:9': '16 / 9',
+      '9:16': '9 / 16',
+      '4:3': '4 / 3',
+      '1.85:1': '1.85 / 1',
+      '2.39:1': '2.39 / 1',
+      '1.43:1': '1.43 / 1',
+      '1.90:1': '1.90 / 1'
+    }
+    return map[ar] || '16 / 9'
+  }
+
+  const getPreviewDimensions = (ar) => {
+    const ratioMap = {
+      '16:9': 16 / 9,
+      '9:16': 9 / 16,
+      '4:3': 4 / 3,
+      '1.85:1': 1.85,
+      '2.39:1': 2.39,
+      '1.43:1': 1.43,
+      '1.90:1': 1.90
+    }
+    const ratio = ratioMap[ar] || (16 / 9)
+    const maxW = 480
+    const maxH = 270
+    
+    if (ratio >= (16 / 9)) {
+      return {
+        width: `${maxW}px`,
+        height: `${Math.round(maxW / ratio)}px`,
+        aspectRatio: getAspectRatioCSS(ar)
+      }
+    } else {
+      return {
+        width: `${Math.round(maxH * ratio)}px`,
+        height: `${maxH}px`,
+        aspectRatio: getAspectRatioCSS(ar)
+      }
+    }
+  }
+
+  const getVideoStyle = (clip) => {
+    const isCover = clip.fitMode === 'cover'
+    const zoomFactor = clip.zoom || 1.0
+    const panXPercent = - (clip.panX || 0) * (zoomFactor - 1) / 2
+    const panYPercent = - (clip.panY || 0) * (zoomFactor - 1) / 2
+    
+    const transform = isCover 
+      ? `scale(${zoomFactor}) translate(${panXPercent}%, ${panYPercent}%) scaleX(${clip.mirrorH ? -1 : 1}) scaleY(${clip.mirrorV ? -1 : 1})`
+      : `scaleX(${clip.mirrorH ? -1 : 1}) scaleY(${clip.mirrorV ? -1 : 1})`
+      
+    return {
+      filter: [
+        `brightness(${1.0 + (clip.brightness || 0)})`,
+        `contrast(${clip.contrast || 1.0})`,
+        `blur(${clip.blur || 0}px)`,
+        clip.grayscale ? 'grayscale(100%)' : '',
+        clip.sepia ? 'sepia(100%)' : '',
+        clip.invert ? 'invert(100%)' : '',
+        clip.saturation !== undefined ? `saturate(${clip.saturation})` : '',
+        clip.hueRotate !== undefined ? `hue-rotate(${clip.hueRotate}deg)` : '',
+        clip.edgeDetect ? 'grayscale(100%) contrast(500%) invert(100%)' : '',
+        clip.sharpen ? 'contrast(1.15) brightness(1.03)' : '',
+      ].filter(Boolean).join(' '),
+      transform,
+      transition: 'transform 0.15s ease'
+    }
+  }
+
+  const handleVideoPlayerMouseDown = (e, clip) => {
+    if (clip.fitMode !== 'cover' || (clip.zoom || 1.0) <= 1.0) return
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const initialPanX = clip.panX || 0
+    const initialPanY = clip.panY || 0
+    const zoomFactor = clip.zoom || 1.0
+    
+    const rect = e.currentTarget.getBoundingClientRect()
+    
+    const handleMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const deltaY = moveEvent.clientY - startY
+      
+      const deltaPanX = - (deltaX / rect.width) * (200 / (zoomFactor - 1))
+      const deltaPanY = - (deltaY / rect.height) * (200 / (zoomFactor - 1))
+      
+      const newPanX = Math.max(-100, Math.min(100, Math.round(initialPanX + deltaPanX)))
+      const newPanY = Math.max(-100, Math.min(100, Math.round(initialPanY + deltaPanY)))
+      
+      updateClipProperties(clip.id, 'video', {
+        panX: newPanX,
+        panY: newPanY
+      })
+    }
+    
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }
 
   const [activeTab, setActiveTab] = useState('media') // media, overlays
   const [activeInspectorTab, setActiveInspectorTab] = useState('properties') // properties, effects
@@ -1398,6 +1508,28 @@ export default function EditorPage() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Aspect Ratio Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Aspect Ratio</span>
+              <select
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value)}
+                className={`text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
+                  isDayMode 
+                    ? 'bg-white border-black/10 text-neutral-800' 
+                    : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                }`}
+              >
+                <option value="16:9">16:9 (Widescreen)</option>
+                <option value="9:16">9:16 (Portrait)</option>
+                <option value="4:3">4:3 (Academy)</option>
+                <option value="1.85:1">1.85:1 (Cinema Flat)</option>
+                <option value="2.39:1">2.39:1 (Cinemascope)</option>
+                <option value="1.43:1">1.43:1 (IMAX Film)</option>
+                <option value="1.90:1">1.90:1 (IMAX Digital)</option>
+              </select>
+            </div>
+
             {/* Resolution Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Resolution</span>
@@ -2043,8 +2175,9 @@ export default function EditorPage() {
                 className={`relative bg-[#030305] shadow-[0_24px_50px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center transition-all ${
                   isFullscreen 
                     ? 'w-screen h-screen max-w-none rounded-none border-none' 
-                    : 'w-full max-w-[480px] border border-white/[0.04] rounded-none aspect-video'
+                    : 'border border-white/[0.04] rounded-none'
                 }`}
+                style={isFullscreen ? {} : getPreviewDimensions(aspectRatio)}
               >
                 {/* Cinematic camera movement and post-processing wrapper */}
                 <div
@@ -2062,22 +2195,15 @@ export default function EditorPage() {
                         ref={previewVideoRef}
                         src={resolveUrl(activeVideoClip.url)}
                         muted={isMuted}
-                        className="w-full h-full object-contain transition-transform"
-                        style={{
-                          filter: [
-                            `brightness(${1.0 + (activeVideoClip.brightness || 0)})`,
-                            `contrast(${activeVideoClip.contrast || 1.0})`,
-                            `blur(${activeVideoClip.blur || 0}px)`,
-                            activeVideoClip.grayscale ? 'grayscale(100%)' : '',
-                            activeVideoClip.sepia ? 'sepia(100%)' : '',
-                            activeVideoClip.invert ? 'invert(100%)' : '',
-                            activeVideoClip.saturation !== undefined ? `saturate(${activeVideoClip.saturation})` : '',
-                            activeVideoClip.hueRotate !== undefined ? `hue-rotate(${activeVideoClip.hueRotate}deg)` : '',
-                            activeVideoClip.edgeDetect ? 'grayscale(100%) contrast(500%) invert(100%)' : '',
-                            activeVideoClip.sharpen ? 'contrast(1.15) brightness(1.03)' : '',
-                          ].filter(Boolean).join(' '),
-                          transform: `scaleX(${activeVideoClip.mirrorH ? -1 : 1}) scaleY(${activeVideoClip.mirrorV ? -1 : 1})`
-                        }}
+                        onMouseDown={(e) => handleVideoPlayerMouseDown(e, activeVideoClip)}
+                        className={`w-full h-full transition-transform ${
+                          activeVideoClip.fitMode === 'cover' ? 'object-cover' : 'object-contain'
+                        } ${
+                          activeVideoClip.fitMode === 'cover' && (activeVideoClip.zoom || 1.0) > 1.0 
+                            ? 'cursor-grab active:cursor-grabbing' 
+                            : ''
+                        }`}
+                        style={getVideoStyle(activeVideoClip)}
                       />
                       {/* Vignette Overlay */}
                       {activeVideoClip.vignette > 0 && (
@@ -2757,6 +2883,82 @@ export default function EditorPage() {
                       {/* Video specific audio & fade properties */}
                       {selectedTrackType === 'video' && (
                         <div className="space-y-3">
+                          <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Screen Fit & Zoom</p>
+                          
+                          {/* Fit Mode */}
+                          <div className="space-y-1">
+                            <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Fit Mode</span>
+                            <select
+                              value={selectedClip.fitMode || 'contain'}
+                              onChange={(e) => updateClipProperties(selectedClip.id, 'video', { fitMode: e.target.value })}
+                              className={`w-full text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
+                                isDayMode 
+                                  ? 'bg-white border-black/10 text-neutral-800' 
+                                  : 'bg-[#0c0c16] border-white/10 text-neutral-200'
+                              }`}
+                            >
+                              <option value="contain">Fit (Contain)</option>
+                              <option value="cover">Zoom & Pan (Cover)</option>
+                            </select>
+                          </div>
+
+                          {selectedClip.fitMode === 'cover' && (
+                            <div className="space-y-3 pt-1">
+                              {/* Zoom Slider */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                                  <span>Zoom Factor</span>
+                                  <span>{(selectedClip.zoom || 1.0).toFixed(2)}x</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="1.0"
+                                  max="3.0"
+                                  step="0.05"
+                                  value={selectedClip.zoom || 1.0}
+                                  onChange={(e) => updateClipProperties(selectedClip.id, 'video', { zoom: parseFloat(e.target.value) })}
+                                  className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                                />
+                              </div>
+
+                              {/* Pan X Slider */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                                  <span>Pan X</span>
+                                  <span>{Math.round(selectedClip.panX || 0)}%</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="-100"
+                                  max="100"
+                                  step="1"
+                                  value={selectedClip.panX || 0}
+                                  onChange={(e) => updateClipProperties(selectedClip.id, 'video', { panX: parseInt(e.target.value) })}
+                                  className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                                />
+                              </div>
+
+                              {/* Pan Y Slider */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-semibold text-surface-400">
+                                  <span>Pan Y</span>
+                                  <span>{Math.round(selectedClip.panY || 0)}%</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="-100"
+                                  max="100"
+                                  step="1"
+                                  value={selectedClip.panY || 0}
+                                  onChange={(e) => updateClipProperties(selectedClip.id, 'video', { panY: parseInt(e.target.value) })}
+                                  className="w-full accent-accent bg-white/10 rounded-lg cursor-pointer"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="h-px bg-white/[0.04] my-2" />
+
                           <p className="text-[9.5px] font-bold uppercase tracking-widest text-surface-500">Audio Controls</p>
                           
                           {/* Volume */}
