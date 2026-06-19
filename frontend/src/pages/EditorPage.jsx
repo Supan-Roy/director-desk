@@ -736,7 +736,7 @@ export default function EditorPage() {
     }
   }
 
-  // Keyboard shortcut listener for spacebar, enter, and arrow keys
+  // Keyboard shortcut listener for spacebar, enter, arrow keys, and delete/backspace
   useEffect(() => {
     const handleKeyDown = (e) => {
       const activeEl = document.activeElement
@@ -769,6 +769,11 @@ export default function EditorPage() {
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
         setPlayerVolume((prev) => Math.max(0.0, prev - 0.1))
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (selectedClipId && selectedTrackType) {
+          e.preventDefault()
+          deleteClip(selectedClipId, selectedTrackType)
+        }
       }
     }
 
@@ -776,7 +781,7 @@ export default function EditorPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [totalDuration, setIsPlaying, setCurrentTime, setPlayerVolume, setIsMuted])
+  }, [totalDuration, setIsPlaying, setCurrentTime, setPlayerVolume, setIsMuted, selectedClipId, selectedTrackType, deleteClip])
 
   const handleTimelineResizeMouseDown = (e) => {
     e.preventDefault()
