@@ -929,5 +929,30 @@ aside nav button.bg-accent\/10 .blur-sm {
   animation: popoutSlideLeft 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Toast Notification Slide-Up & Fade-Out Animation (5 seconds total duration) */
+@keyframes toastSlideUpDown {
+  0% {
+    transform: translate(-50%, 150%);
+    opacity: 0;
+  }
+  7% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  93% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 150%);
+    opacity: 0;
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideUpDown 5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+
 
 

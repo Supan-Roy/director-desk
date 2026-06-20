@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm } from 'react-icons/fi';
+import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle } from 'react-icons/fi';
 import { PiSparkle, PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
+import { DICTIONARY } from '../utils/dictionary';
 
 const aspectRatios = [
   { id: '16-9', label: '16:9 Cinema', value: '16:9' },
@@ -340,6 +341,130 @@ const prodTypePool = {
   ]
 };
 
+/*
+ * Uses a local 10k English word dictionary to validate words with inflection stripping
+ * and a 70% word validation ratio.
+ */
+function isGibberishPrompt(promptText) {
+  if (!promptText || !promptText.trim()) return false;
+  
+  // Split prompt into clean lowercase alphabetical tokens (keeping hyphens)
+  const words = promptText
+    .toLowerCase()
+    .replace(/[^a-z\s\-]/g, "")
+    .split(/[\s\-]+/)
+    .filter(w => w.length > 0);
+    
+  if (words.length === 0) return false;
+  
+  const keyboardRows = [
+    "asdfghjkl",
+    "qwertyuiop",
+    "zxcvbnm"
+  ];
+  
+  const hasKeyboardWalk = (word) => {
+    if (word.length < 4) return false;
+    for (const row of keyboardRows) {
+      // Check forward row walk
+      for (let i = 0; i <= row.length - 4; i++) {
+        if (word.includes(row.substring(i, i + 4))) return true;
+      }
+      // Check backward row walk
+      const reversedRow = row.split("").reverse().join("");
+      for (let i = 0; i <= reversedRow.length - 4; i++) {
+        if (word.includes(reversedRow.substring(i, i + 4))) return true;
+      }
+    }
+    return false;
+  };
+
+  const isWordValid = (word) => {
+    // 1. Short words (length <= 2) or words containing digits are allowed (e.g. 4k, 3d, 1940s)
+    if (word.length <= 2 || /\d/.test(word)) return true;
+    
+    // 2. Direct dictionary match
+    if (DICTIONARY.has(word)) return true;
+    
+    // 3. Inflections check
+    // Plurals / 's
+    if (word.endsWith("'s")) {
+      if (DICTIONARY.has(word.slice(0, -2))) return true;
+    }
+    if (word.endsWith("s") && word.length > 3) {
+      if (DICTIONARY.has(word.slice(0, -1))) return true;
+    }
+    if (word.endsWith("es") && word.length > 4) {
+      if (DICTIONARY.has(word.slice(0, -2))) return true;
+    }
+    // Past tense
+    if (word.endsWith("ed") && word.length > 4) {
+      if (DICTIONARY.has(word.slice(0, -2)) || DICTIONARY.has(word.slice(0, -1))) return true;
+    }
+    // Adverbs
+    if (word.endsWith("ly") && word.length > 4) {
+      if (DICTIONARY.has(word.slice(0, -2))) return true;
+    }
+    // Gerunds
+    if (word.endsWith("ing") && word.length > 5) {
+      if (DICTIONARY.has(word.slice(0, -3)) || DICTIONARY.has(word.slice(0, -3) + "e")) return true;
+    }
+    
+    return false;
+  };
+  
+  let invalidSequenceFound = false;
+  let validWordCount = 0;
+  
+  for (const word of words) {
+    // 1. Single character repeated 4+ times (e.g., "aaaaa")
+    if (/(.)\1{3,}/.test(word)) {
+      invalidSequenceFound = true;
+      break;
+    }
+    
+    // 2. Repeating syllable pattern of length 2-4 repeated 3+ times (e.g., "inininininii", "ababab")
+    if (/(.{2,4})\1{2,}/.test(word)) {
+      invalidSequenceFound = true;
+      break;
+    }
+    
+    // 3. No vowels at all in a word of length >= 4 (e.g., "sdfg")
+    if (word.length >= 4 && !/[aeiouy]/.test(word)) {
+      invalidSequenceFound = true;
+      break;
+    }
+    
+    // 4. Keyboard walk mashups (e.g., "asdf", "lkjh", "qwer")
+    if (hasKeyboardWalk(word)) {
+      invalidSequenceFound = true;
+      break;
+    }
+    
+    // 5. Excessive consecutive consonants (6+ consonants in a row, e.g., "bcdfgh", "zxcvbn")
+    if (/[^aeiouy]{6,}/.test(word)) {
+      invalidSequenceFound = true;
+      break;
+    }
+    
+    // 6. Excessive consecutive vowels (6+ vowels in a row)
+    if (/[aeiou]{6,}/.test(word)) {
+      invalidSequenceFound = true;
+      break;
+    }
+    
+    if (isWordValid(word)) {
+      validWordCount++;
+    }
+  }
+  
+  if (invalidSequenceFound) return true;
+  
+  // Ratio calculation: if less than 70% of the words are verified English words, flag as gibberish
+  const validRatio = validWordCount / words.length;
+  return validRatio < 0.70;
+}
+
 function enhancePromptText(userPrompt, prodType, styleId, cameraId, qualityId) {
   let text = userPrompt.trim();
 
@@ -442,6 +567,7 @@ export default function HeroSection({
   const [quality, setQuality] = useState('high');
   const [orchestrationMode, setOrchestrationMode] = useState('studio');
   const [errorMsg, setErrorMsg] = useState('');
+  const [toastMsg, setToastMsg] = useState('');
   const { isDayMode } = useTheme();
   
   // AI Production Orb animation states
@@ -459,6 +585,13 @@ export default function HeroSection({
 
   const handleEnhance = () => {
     if (isEnhancing || loading) return;
+    setToastMsg('');
+
+    if (isGibberishPrompt(prompt)) {
+      setToastMsg("Please enter a valid word or description to enhance your prompt.");
+      return;
+    }
+
     setIsEnhancing(true);
     setTimeout(() => {
       const enhanced = enhancePromptText(prompt, selectedProdType, style, camera, quality);
@@ -610,9 +743,24 @@ export default function HeroSection({
     }
   }, [focused]);
 
+  // Dismiss toast notification after 5 seconds
+  useEffect(() => {
+    if (!toastMsg) return;
+    const timer = setTimeout(() => {
+      setToastMsg('');
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [toastMsg]);
+
   const handleSubmit = async () => {
     if (!prompt.trim() || loading) return;
     setErrorMsg('');
+    setToastMsg('');
+
+    if (isGibberishPrompt(prompt)) {
+      setToastMsg("Please enter a valid word or description to initiate production.");
+      return;
+    }
 
     // Compose a rich prompt containing the cinematic settings
     const selectedAspect = aspectRatios.find(a => a.id === aspect)?.value || '16:9';
@@ -804,7 +952,12 @@ export default function HeroSection({
             {/* Prompt text field */}
             <textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => {
+                setPrompt(e.target.value);
+                if (toastMsg) {
+                  setToastMsg('');
+                }
+              }}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               placeholder="Describe your creative concept or project idea, or drop context files..."
@@ -831,6 +984,7 @@ export default function HeroSection({
               )}
             </button>
           </div>
+
 
           {/* Attached Files List */}
           {attachedFiles.length > 0 && (
@@ -979,6 +1133,39 @@ export default function HeroSection({
         <div className="mt-4 rounded-xl border border-red-500/10 bg-red-500/[0.04] px-4 py-3 text-left max-w-xl mx-auto relative z-10">
           <p className="text-[12px] font-medium text-red-400">Production system failed</p>
           <p className="mt-1 text-[11px] text-red-300/70">{errorMsg}</p>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div 
+          key={toastMsg}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl animate-toast-in max-w-sm w-[90%] transition-all duration-300 ${
+            isDayMode 
+              ? 'bg-white border-[#FECACA] text-red-600' 
+              : 'bg-black border-red-950/60 text-red-500'
+          }`}
+          style={{
+            boxShadow: isDayMode 
+              ? '0 10px 30px -10px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05)' 
+              : '0 10px 30px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
+          <FiAlertCircle size={15} className="shrink-0 text-red-500 animate-pulse" />
+          <p className="flex-1 text-[11px] font-semibold leading-normal font-mono text-left">
+            {toastMsg}
+          </p>
+          <button 
+            onClick={() => setToastMsg('')}
+            className={`text-base font-bold leading-none p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer ${
+              isDayMode ? 'text-neutral-400 hover:text-neutral-600' : 'text-surface-500 hover:text-white'
+            }`}
+            title="Dismiss"
+          >
+            &times;
+          </button>
         </div>
       )}
       </div>
