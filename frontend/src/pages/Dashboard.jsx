@@ -165,7 +165,7 @@ export default function Dashboard() {
         {/* Minimal Header */}
         <header className="flex items-center justify-between border-b py-2 shrink-0 transition-colors duration-500 border-white/[0.03] [data-theme='day']_&:border-black/[0.06]">
           <p className="text-[10px] font-extrabold tracking-[0.25em] uppercase header-breadcrumb">
-            Director Desk <span className="text-surface-700">/</span> <span className="text-surface-300">Production Studio</span>
+            <span className="text-surface-300">Production Studio</span>
           </p>
 
 
