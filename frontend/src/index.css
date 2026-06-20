@@ -894,5 +894,40 @@ aside nav button.bg-accent\/10 .blur-sm {
   display: none !important;
 }
 
+/* Popout Animation Keyframes for Creative Presets detail cards */
+@keyframes popoutSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-100%) scale(0.98);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes popoutSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.98);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.animate-popout-right {
+  animation: popoutSlideRight 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-popout-left {
+  animation: popoutSlideLeft 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 
 
