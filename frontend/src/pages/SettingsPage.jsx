@@ -13,7 +13,12 @@ import { apiBaseUrl } from '../services/apiClient'
 export default function SettingsPage() {
   const navigate = useNavigate()
   const { isDayMode: d, themeMode, setThemeMode } = useTheme()
-  const { fetchSavedProjects, savedProjects = [] } = useProjectData()
+  const { 
+    fetchSavedProjects, 
+    savedProjects = [], 
+    removeSavedProject, 
+    updateProjectDetails 
+  } = useProjectData()
 
   const [activeSubTab, setActiveSubTab] = useState('appearance') // appearance, account, privacy, about
   const [exporting, setExporting] = useState(false)
@@ -348,6 +353,73 @@ export default function SettingsPage() {
                       {exporting ? <FiLoader size={11} className="animate-spin" /> : <FiDownload size={11} />}
                       <span>Export Data</span>
                     </button>
+                  </div>
+
+                  {/* Archived Productions */}
+                  <div className={`p-4 rounded-xl border space-y-3 text-left ${
+                    d ? 'border-black/[0.06] bg-white/40' : 'border-white/[0.04] bg-[#0c0c16]/30'
+                  }`}>
+                    <div className="space-y-0.5">
+                      <p className={`text-[11.5px] font-bold uppercase tracking-wider ${d ? 'text-gray-800' : 'text-neutral-200'}`}>
+                        Archived Productions ({(savedProjects || []).filter(p => p.is_archived).length})
+                      </p>
+                      <p className="text-[10px] text-surface-500 leading-normal">
+                        Manage your archived productions. Restoring them will place them back in the sidebar workspace.
+                      </p>
+                    </div>
+
+                    {(savedProjects || []).filter(p => p.is_archived).length === 0 ? (
+                      <p className={`text-[10px] italic ${d ? 'text-gray-400' : 'text-surface-600'}`}>
+                        No archived productions.
+                      </p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto mt-2">
+                        {(savedProjects || []).filter(p => p.is_archived).map((project) => (
+                          <div 
+                            key={project.id}
+                            className={`flex items-center justify-between p-2 rounded-lg border text-[10.5px] ${
+                              d ? 'bg-white border-neutral-100' : 'bg-black/25 border-surface-700'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1 pr-3">
+                              <span className="font-semibold truncate block text-[11px] leading-tight">
+                                {project.title}
+                              </span>
+                              <span className={`text-[8.5px] font-mono ${d ? 'text-gray-400' : 'text-surface-500'}`}>
+                                {project.production_type || 'Unknown Format'} · {new Date(project.updated_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={async () => {
+                                  await updateProjectDetails(project.id, { is_archived: false });
+                                }}
+                                className="px-2.5 py-1 rounded bg-accent/10 hover:bg-accent text-accent hover:text-white-force transition-all duration-150 text-[9px] font-bold uppercase tracking-wider cursor-pointer"
+                              >
+                                Restore
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`Are you sure you want to permanently delete "${project.title}"?`)) {
+                                    setDeleting(true);
+                                    await removeSavedProject(project.id);
+                                    setDeleting(false);
+                                  }
+                                }}
+                                className={`p-1.5 rounded transition-all duration-150 cursor-pointer ${
+                                  d 
+                                    ? 'hover:bg-red-50 text-gray-400 hover:text-red-500' 
+                                    : 'hover:bg-red-500/10 text-surface-600 hover:text-red-400'
+                                }`}
+                                title="Delete permanently"
+                              >
+                                <FiTrash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Danger Zone */}

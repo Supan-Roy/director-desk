@@ -15,6 +15,7 @@ import {
   updateProjectApproval,
   refineProjectScript,
   refineRawScript,
+  updateProject,
 } from '../services/apiClient'
 import { featuredProductions } from '../data/featuredProductions'
 
@@ -399,6 +400,20 @@ export function ProjectDataProvider({ children }) {
     }
   }, [activeProjectId, script, criticReview, originalScript, fetchSavedProjects])
 
+  const updateProjectDetails = useCallback(async (id, updates) => {
+    try {
+      await updateProject(id, updates)
+      await fetchSavedProjects()
+      if (activeProjectId === id) {
+        if (updates.title !== undefined) setTitle(updates.title)
+        if (updates.approved !== undefined) setApproved(updates.approved)
+        if (updates.script !== undefined) setScript(updates.script)
+      }
+    } catch (err) {
+      console.error('Failed to update project details:', err)
+    }
+  }, [activeProjectId, fetchSavedProjects])
+
   const value = {
     hasProject,
     title,
@@ -427,6 +442,7 @@ export function ProjectDataProvider({ children }) {
     updateScript,
     approveProject,
     refineProject,
+    updateProjectDetails,
   }
 
   return (
