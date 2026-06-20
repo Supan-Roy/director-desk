@@ -173,6 +173,38 @@ const creativeTemplates = [
   },
 ];
 
+// Add filmmaking specs dynamically to templates
+creativeTemplates[0].specs = {
+  lenses: 'Anamorphic Prime 50mm/75mm T1.9',
+  lighting: 'Neon key, cyan/magenta rims, volumetric fog key',
+  colorGrade: 'Teal & orange split tone, high dynamic range',
+  movement: 'Stabilized gimbal tracking, dramatic crane rises'
+};
+creativeTemplates[1].specs = {
+  lenses: 'Vintage Spherical 35mm T2.0, deep focus',
+  lighting: 'High-contrast low-key, single-source hard key',
+  colorGrade: 'Silver halide emulation, rich black density',
+  movement: 'Static lock-offs, slow atmospheric pan & tilts'
+};
+creativeTemplates[2].specs = {
+  lenses: 'Large Format 24mm/85mm, anamorphic flares',
+  lighting: 'Harsh key (star radiation), zero-fill shadows',
+  colorGrade: 'Cool cyan shadows, solar golden highlights',
+  movement: 'Zero-gravity slow float drift, parallax crane slide'
+};
+creativeTemplates[3].specs = {
+  lenses: 'Super 16mm/35mm Zoom, shallow depth of field',
+  lighting: 'Natural ambient, negative fill, soft window key',
+  colorGrade: 'Organic skin tones, realistic contrast roll-off',
+  movement: 'Handheld organic shake, snap zoom observational'
+};
+creativeTemplates[4].specs = {
+  lenses: 'Ultra-wide Prime 18mm/28mm, sharp edge contrast',
+  lighting: 'Volumetric sky glow, city emissions, industrial keys',
+  colorGrade: 'Futuristic daylight balance, enhanced clarity',
+  movement: 'Aerial drone tracking, vertical tower crane sweeps'
+};
+
 export default function CreativeModes({ onSelectTemplate }) {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [zCard, setZCard] = useState(null);
@@ -191,6 +223,12 @@ export default function CreativeModes({ onSelectTemplate }) {
   const handleSelectTemplate = (tmpl) => {
     // Pick a random prompt from the pool each time
     const randomPrompt = tmpl.prompts[Math.floor(Math.random() * tmpl.prompts.length)];
+    if (onSelectTemplate) {
+      onSelectTemplate({
+        ...tmpl,
+        prompt: randomPrompt
+      });
+    }
   };
   const { isDayMode } = useTheme();
 
@@ -210,7 +248,7 @@ export default function CreativeModes({ onSelectTemplate }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5" style={{ overflow: 'visible' }}>
-        {creativeTemplates.map((tmpl) => {
+        {creativeTemplates.map((tmpl, idx) => {
           const isHov = hoveredCard === tmpl.id;
           return (
           <button
@@ -219,18 +257,18 @@ export default function CreativeModes({ onSelectTemplate }) {
             onMouseEnter={() => handleMouseEnter(tmpl.id)}
             onMouseLeave={handleMouseLeave}
             style={{
-              zIndex: zCard === tmpl.id ? 5 : 1,
-              transform: isHov ? 'translateY(-2px)' : 'translateY(0px)',
-              transition: 'transform 0.2s ease, border-color 0.2s ease',
+              zIndex: hoveredCard === tmpl.id ? 30 : (zCard === tmpl.id ? 10 : 1),
+              transform: isHov ? 'scale(1.08) translateY(-4px)' : 'scale(1.0) translateY(0px)',
+              transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease',
               willChange: 'transform',
             }}
-            className="group text-left flex flex-col h-[205px] w-full border border-white/10 relative rounded-lg overflow-hidden transition-all duration-200 bg-[#111111] hover:border-accent/60 shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
+            className="group text-left flex flex-col h-[205px] w-full border border-white/10 relative rounded-lg bg-[#111111] hover:border-accent/60 shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:shadow-[0_20px_35px_rgba(0,0,0,0.6)]"
           >
             {/* Glossy top-shine reflection (removed gradient shine for flat style) */}
             <div className="absolute inset-0 bg-white/[0.01] pointer-events-none z-20" />
 
             {/* Template Visual Header */}
-            <div className="relative h-[125px] w-full overflow-hidden bg-black shrink-0">
+            <div className="relative h-[125px] w-full overflow-hidden bg-black shrink-0 rounded-t-lg">
               {tmpl.video ? (
                 <VideoThumbnail src={tmpl.video} isHovered={hoveredCard === tmpl.id} />
               ) : (
@@ -262,7 +300,45 @@ export default function CreativeModes({ onSelectTemplate }) {
               </p>
             </div>
 
+            {/* Popout Filmmaking Info Panel */}
+            {isHov && tmpl.specs && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className={`absolute top-0 h-full w-full bg-[#141414] border border-accent/40 rounded-lg p-3 z-50 text-left select-text pointer-events-auto flex flex-col justify-between shadow-[0_20px_35px_rgba(0,0,0,0.8)] ${
+                  idx <= 2 ? 'left-full ml-3 animate-popout-right' : 'right-full mr-3 animate-popout-left'
+                }`}
+              >
+                <div>
+                  <span className="text-[7.5px] font-black uppercase tracking-[0.2em] text-accent block mb-1.5 border-b border-white/5 pb-1">
+                    Filmmaking Profile
+                  </span>
+                  
+                  <div className="space-y-1.5">
+                    <div>
+                      <span className="text-[6.5px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Lens Config</span>
+                      <span className="text-[9px] font-bold text-white block mt-0.5 leading-snug">{tmpl.specs.lenses}</span>
+                    </div>
+                    <div>
+                      <span className="text-[6.5px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Lighting Scheme</span>
+                      <span className="text-[9px] font-bold text-white block mt-0.5 leading-snug">{tmpl.specs.lighting}</span>
+                    </div>
+                    <div>
+                      <span className="text-[6.5px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Color Profile</span>
+                      <span className="text-[9px] font-bold text-white block mt-0.5 leading-snug">{tmpl.specs.colorGrade}</span>
+                    </div>
+                    <div>
+                      <span className="text-[6.5px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Choreography</span>
+                      <span className="text-[9px] font-bold text-white block mt-0.5 leading-snug">{tmpl.specs.movement}</span>
+                    </div>
+                  </div>
+                </div>
 
+                <div className="pt-1.5 border-t border-white/5 flex items-center justify-between text-[7.5px] font-bold uppercase tracking-wider text-surface-400 font-mono leading-none">
+                  <span>{tmpl.productionType}</span>
+                  <span className="text-accent">{tmpl.duration}</span>
+                </div>
+              </div>
+            )}
           </button>
           );
         })}
