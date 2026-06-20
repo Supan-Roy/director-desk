@@ -606,12 +606,12 @@ export default function HeroSection({
           <>
             {/* Cinematic background artwork */}
             <div
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.65] filter brightness-[0.65] contrast-[1.1] mix-blend-screen rounded-lg"
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.85] filter brightness-[0.8] contrast-[1.1] mix-blend-screen rounded-lg"
               style={{ backgroundImage: `url('/images/studio_bg.png')` }}
             />
-            {/* Dark overlay (70-80%) */}
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-b from-black/75 via-transparent to-black/85" />
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-r from-[#050505]/85 via-transparent to-[#050505]/85" />
+            {/* Dark overlay (reduced opacity for better visibility) */}
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-b from-black/50 via-transparent to-black/60" />
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-r from-[#050505]/50 via-transparent to-[#050505]/50" />
           </>
         )}
       </>
