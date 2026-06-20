@@ -42,6 +42,10 @@ class Project(Base):
 
     approved = Column(Boolean, default=False, nullable=False)
 
+    is_pinned = Column(Boolean, default=False, nullable=False)
+
+    is_archived = Column(Boolean, default=False, nullable=False)
+
     storyboard = Column(JSONType, nullable=True)       # list of scene dicts
 
     production_plan = Column(JSONType, nullable=True)  # nested plan dict

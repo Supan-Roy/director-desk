@@ -80,6 +80,12 @@ export async function updateProjectApproval(id, approved) {
   return response.data
 }
 
+/** Update generic fields of a saved project. */
+export async function updateProject(id, payload) {
+  const response = await apiClient.patch(`/api/projects/${id}`, payload)
+  return response.data
+}
+
 /** Refine the script of a saved project using Editor Agent. */
 export async function refineProjectScript(id) {
   const response = await apiClient.post(`/api/projects/${id}/refine`)

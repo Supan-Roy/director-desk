@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FiGrid,
@@ -13,11 +14,38 @@ import {
   FiChevronLeft,
   FiTrash2,
   FiClock,
+  FiMoreHorizontal,
+  FiShare2,
+  FiArchive,
+  FiEdit2,
 } from 'react-icons/fi';
 import { PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
 import { encodeId, decodeId } from '../utils/hashids';
+
+// ── Custom SVGs ─────────────────────────────────────────────────────────────
+
+function PinIcon({ size = 12, className, filled = false }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={{ transform: "rotate(45deg)", display: 'inline-block' }}
+    >
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.5A2 2 0 0 1 15 9.24V5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4.24c0 .43-.14.86-.4 1.22l-2.8 3.5a2 2 0 0 0-.44 1.24z" />
+    </svg>
+  );
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -97,18 +125,75 @@ export default function Sidebar() {
     savedProjects,
     projectsLoading,
     removeSavedProject,
+    updateProjectDetails,
   } = useProjectData();
   const { isDayMode: d } = useTheme();
+
+  const activeProjectId = (() => {
+    const match = location.pathname.match(/^\/projects\/([a-z0-9]+)$/);
+    return match ? decodeId(match[1]) : null;
+  })();
 
   const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
   const [projectsOpen, setProjectsOpen] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [projectToDelete, setProjectToDelete] = useState(null);
 
-  const activeProjectId = (() => {
-    const match = location.pathname.match(/^\/projects\/([a-z0-9]+)$/);
-    return match ? decodeId(match[1]) : null;
-  })();
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [menuTriggerRect, setMenuTriggerRect] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const getMenuStyles = () => {
+    if (!menuTriggerRect) return {};
+    const { bottom, right, top } = menuTriggerRect;
+    const spaceBelow = window.innerHeight - bottom;
+    const dropdownHeight = 220; // conservative estimate for w-40 menu height
+    const showAbove = spaceBelow < dropdownHeight && top > dropdownHeight;
+
+    return {
+      position: 'fixed',
+      top: showAbove ? `${top - 4}px` : `${bottom + 4}px`,
+      transform: showAbove ? 'translateY(-100%)' : 'none',
+      left: `${right - 160}px`,
+      width: '160px',
+      zIndex: 9999,
+    };
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (
+        activeMenuId &&
+        !e.target.closest('.project-menu-container') &&
+        !e.target.closest('.project-dropdown-portal')
+      ) {
+        setActiveMenuId(null);
+        setMenuTriggerRect(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [activeMenuId]);
+
+  useEffect(() => {
+    const handleScrollOrResize = () => {
+      if (activeMenuId) {
+        setActiveMenuId(null);
+        setMenuTriggerRect(null);
+      }
+    };
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [activeMenuId]);
+
+  const pinnedProjects = (savedProjects || []).filter(p => p.is_pinned && !p.is_archived);
+  const recentProjects = (savedProjects || []).filter(p => !p.is_pinned && !p.is_archived);
 
   const handleDelete = (e, project) => {
     e.stopPropagation();
@@ -123,6 +208,212 @@ export default function Sidebar() {
     await removeSavedProject(id);
     setDeletingId(null);
     if (activeProjectId === id) navigate('/');
+  };
+
+  const renderProjectRow = (project) => {
+    const isActive = activeProjectId === project.id;
+    const isRenaming = renamingId === project.id;
+
+    return (
+      <div
+        key={project.id}
+        onClick={() => !isRenaming && navigate(`/projects/${encodeId(project.id)}`)}
+        title={project.title}
+        className={`group relative w-full flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-200 cursor-pointer ${
+          isActive
+            ? d
+              ? 'bg-accent/10 border border-accent/25'
+              : 'bg-surface-800 border border-surface-700 text-white'
+            : d
+              ? 'hover:bg-black/[0.04] border border-transparent hover:border-black/[0.06]'
+              : 'hover:bg-surface-800/40 border border-transparent hover:border-surface-700'
+        }`}
+      >
+        {/* Type emoji */}
+        <span className="text-base leading-none shrink-0 mt-0.5 select-none">
+          {typeIcon(project.production_type)}
+        </span>
+
+        {/* Text block */}
+        <div className="flex-1 min-w-0">
+          {isRenaming ? (
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter') {
+                  e.stopPropagation();
+                  if (renameValue.trim() && renameValue.trim() !== project.title) {
+                    await updateProjectDetails(project.id, { title: renameValue.trim() });
+                  }
+                  setRenamingId(null);
+                } else if (e.key === 'Escape') {
+                  e.stopPropagation();
+                  setRenamingId(null);
+                }
+              }}
+              onBlur={async () => {
+                if (renameValue.trim() && renameValue.trim() !== project.title) {
+                  await updateProjectDetails(project.id, { title: renameValue.trim() });
+                }
+                setRenamingId(null);
+              }}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full bg-transparent border-b focus:outline-none text-[11.5px] font-semibold py-0.5 ${
+                d ? 'text-gray-900 border-gray-300' : 'text-white border-surface-600'
+              }`}
+            />
+          ) : (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className={`text-[11.5px] font-semibold leading-tight truncate transition-colors duration-200 ${
+                isActive
+                  ? 'text-accent font-bold'
+                  : d
+                    ? 'text-gray-700 group-hover:text-gray-900'
+                    : 'text-surface-200 group-hover:text-white'
+              }`}>
+                {project.title}
+              </p>
+              {project.is_pinned && (
+                <PinIcon size={10} className="shrink-0 text-accent/60" filled />
+              )}
+            </div>
+          )}
+          <div className={`flex items-center gap-1 mt-1 text-[9px] font-mono transition-colors duration-200 ${
+            d ? 'text-gray-400' : 'text-surface-600'
+          }`}>
+            <FiClock size={8} />
+            <span>{shortDate(project.updated_at)}</span>
+            {project.production_type && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="truncate">{project.production_type}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 3-Dot Popover Menu */}
+        {!isRenaming && (
+          <div className="relative shrink-0 project-menu-container">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (activeMenuId === project.id) {
+                  setActiveMenuId(null);
+                  setMenuTriggerRect(null);
+                } else {
+                  setActiveMenuId(project.id);
+                  setMenuTriggerRect(e.currentTarget.getBoundingClientRect());
+                }
+              }}
+              title="Project actions"
+              className={`opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150 rounded-md p-1 -mr-1 -mt-0.5 cursor-pointer ${
+                d
+                  ? 'hover:bg-neutral-100 text-gray-400 hover:text-gray-700'
+                  : 'hover:bg-surface-700 text-surface-400 hover:text-white'
+              } ${activeMenuId === project.id ? 'opacity-100 bg-surface-700' : ''}`}
+            >
+              <FiMoreHorizontal size={13} />
+            </button>
+
+            {activeMenuId === project.id && createPortal(
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className={`project-dropdown-portal rounded-lg border p-1 shadow-xl flex flex-col gap-0.5 transition-all select-none ${
+                  d
+                    ? 'bg-white border-neutral-200 text-neutral-800'
+                    : 'bg-surface-900 border-surface-750 text-surface-200'
+                }`}
+                style={getMenuStyles()}
+              >
+                <button
+                  onClick={() => {
+                    const shareLink = `${window.location.origin}/projects/${encodeId(project.id)}`;
+                    navigator.clipboard.writeText(shareLink);
+                    setCopiedId(project.id);
+                    setTimeout(() => setCopiedId(null), 2000);
+                  }}
+                  className={`w-full flex items-center px-2 py-1.5 rounded text-[10.5px] font-semibold transition-colors cursor-pointer text-left ${
+                    d ? 'hover:bg-neutral-50' : 'hover:bg-surface-800 hover:text-white'
+                  }`}
+                >
+                  <FiShare2 size={12} className={`mr-2 ${copiedId === project.id ? 'text-emerald-500' : 'text-purple-400'}`} />
+                  <span>{copiedId === project.id ? 'Link Copied!' : 'Share'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setRenamingId(project.id);
+                    setRenameValue(project.title);
+                    setActiveMenuId(null);
+                    setMenuTriggerRect(null);
+                  }}
+                  className={`w-full flex items-center px-2 py-1.5 rounded text-[10.5px] font-semibold transition-colors cursor-pointer text-left ${
+                    d ? 'hover:bg-neutral-50' : 'hover:bg-surface-800 hover:text-white'
+                  }`}
+                >
+                  <FiEdit2 size={12} className="mr-2 text-blue-400" />
+                  <span>Rename</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    setActiveMenuId(null);
+                    setMenuTriggerRect(null);
+                    await updateProjectDetails(project.id, { is_pinned: !project.is_pinned });
+                  }}
+                  className={`w-full flex items-center px-2 py-1.5 rounded text-[10.5px] font-semibold transition-colors cursor-pointer text-left ${
+                    d ? 'hover:bg-neutral-50' : 'hover:bg-surface-800 hover:text-white'
+                  }`}
+                >
+                  <PinIcon size={12} className={`mr-2 ${project.is_pinned ? 'text-yellow-500' : 'text-purple-400'}`} filled={project.is_pinned} />
+                  <span>{project.is_pinned ? 'Unpin' : 'Pin'}</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    setActiveMenuId(null);
+                    setMenuTriggerRect(null);
+                    await updateProjectDetails(project.id, { is_archived: true });
+                  }}
+                  className={`w-full flex items-center px-2 py-1.5 rounded text-[10.5px] font-semibold transition-colors cursor-pointer text-left ${
+                    d ? 'hover:bg-neutral-50' : 'hover:bg-surface-800 hover:text-white'
+                  }`}
+                >
+                  <FiArchive size={12} className="mr-2 text-emerald-400" />
+                  <span>Archive</span>
+                </button>
+
+                <div className={`h-px my-1 ${d ? 'bg-neutral-100' : 'bg-surface-800'}`} />
+
+                <button
+                  onClick={(e) => {
+                    setActiveMenuId(null);
+                    setMenuTriggerRect(null);
+                    handleDelete(e, project);
+                  }}
+                  className={`w-full flex items-center px-2 py-1.5 rounded text-[10.5px] font-semibold text-red-500 transition-colors cursor-pointer text-left ${
+                    d ? 'hover:bg-red-50/50' : 'hover:bg-red-950/20 hover:text-red-400'
+                  }`}
+                >
+                  <FiTrash2 size={12} className="mr-2" />
+                  <span>Delete</span>
+                </button>
+              </div>,
+              document.body
+            )}
+          </div>
+        )}
+
+        {/* Active indicator bar */}
+        {isActive && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent rounded-r-full" />
+        )}
+      </div>
+    );
   };
 
   return (
@@ -286,85 +577,42 @@ export default function Sidebar() {
               {projectsOpen && (
                 <div className="space-y-0.5">
                   {projectsLoading ? (
-                <ProjectSkeleton d={d} />
-              ) : savedProjects.length === 0 ? (
-                <div className={`px-3 py-4 text-center text-[10px] transition-colors duration-500 ${
-                  d ? 'text-gray-400' : 'text-surface-600'
-                }`}>
-                  <div className="text-2xl mb-1.5 opacity-40">🎬</div>
-                  <p className="font-medium">No saved productions yet</p>
-                  <p className="opacity-70 mt-0.5">Generate one to get started</p>
-                </div>
-              ) : (
-                savedProjects.map((project) => {
-                  const isActive = activeProjectId === project.id;
-                  return (
-                    <button
-                      key={project.id}
-                      onClick={() => navigate(`/projects/${encodeId(project.id)}`)}
-                      title={project.title}
-                      className={`group relative w-full flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-200 ${
-                        isActive
-                          ? d
-                            ? 'bg-accent/10 border border-accent/25'
-                            : 'bg-surface-800 border border-surface-700 text-white'
-                          : d
-                            ? 'hover:bg-black/[0.04] border border-transparent hover:border-black/[0.06]'
-                            : 'hover:bg-surface-800/40 border border-transparent hover:border-surface-700'
-                      }`}
-                    >
-                      {/* Type emoji */}
-                      <span className="text-base leading-none shrink-0 mt-0.5">
-                        {typeIcon(project.production_type)}
-                      </span>
-
-                      {/* Text block */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[11.5px] font-semibold leading-tight truncate transition-colors duration-200 ${
-                          isActive
-                            ? 'text-accent'
-                            : d
-                              ? 'text-gray-700 group-hover:text-gray-900'
-                              : 'text-surface-200 group-hover:text-white'
-                        }`}>
-                          {project.title}
-                        </p>
-                        <div className={`flex items-center gap-1 mt-1 text-[9px] font-mono transition-colors duration-200 ${
-                          d ? 'text-gray-400' : 'text-surface-600'
-                        }`}>
-                          <FiClock size={8} />
-                          <span>{shortDate(project.updated_at)}</span>
-                          {project.production_type && (
-                            <>
-                              <span className="opacity-40">·</span>
-                              <span className="truncate">{project.production_type}</span>
-                            </>
-                          )}
+                    <ProjectSkeleton d={d} />
+                  ) : (savedProjects || []).filter(p => !p.is_archived).length === 0 ? (
+                    <div className={`px-3 py-4 text-center text-[10px] transition-colors duration-500 ${
+                      d ? 'text-gray-400' : 'text-surface-600'
+                    }`}>
+                      <div className="text-2xl mb-1.5 opacity-40">🎬</div>
+                      <p className="font-medium">No saved productions yet</p>
+                      <p className="opacity-70 mt-0.5">Generate one to get started</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Pinned section */}
+                      {pinnedProjects.length > 0 && (
+                        <div className="space-y-0.5 mb-3.5">
+                          <p className={`px-3 py-1 text-[9px] font-bold uppercase tracking-[0.15em] font-mono leading-none ${
+                            d ? 'text-neutral-400' : 'text-surface-500'
+                          }`}>
+                            Pinned
+                          </p>
+                          {pinnedProjects.map((project) => renderProjectRow(project))}
                         </div>
-                      </div>
-
-                      {/* Delete button — visible on hover */}
-                      <button
-                        onClick={(e) => handleDelete(e, project)}
-                        disabled={deletingId === project.id}
-                        title="Delete project"
-                        className={`shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-150 rounded-md p-1 -mr-1 -mt-0.5 ${
-                          d
-                            ? 'hover:bg-red-50 text-gray-300 hover:text-red-500'
-                            : 'hover:bg-red-500/10 text-surface-600 hover:text-red-400'
-                        } ${deletingId === project.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <FiTrash2 size={11} />
-                      </button>
-
-                      {/* Active indicator bar */}
-                      {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent rounded-r-full" />
                       )}
-                    </button>
-                  );
-                })
-              )}
+
+                      {/* Recents section */}
+                      <div className="space-y-0.5">
+                        {pinnedProjects.length > 0 && (
+                          <p className={`px-3 py-1 text-[9px] font-bold uppercase tracking-[0.15em] font-mono leading-none mb-1 ${
+                            d ? 'text-neutral-400' : 'text-surface-500'
+                          }`}>
+                            Recents
+                          </p>
+                        )}
+                        {recentProjects.map((project) => renderProjectRow(project))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </>

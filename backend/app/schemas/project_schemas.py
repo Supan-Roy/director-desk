@@ -13,6 +13,8 @@ class ProjectSummary(BaseModel):
     title: str
     production_type: Optional[str] = None
     approved: bool = False
+    is_pinned: bool = False
+    is_archived: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -29,6 +31,8 @@ class ProjectDetail(BaseModel):
     original_script: Optional[str] = None
     critic_review: Optional[Dict[str, Any]] = None
     approved: bool = False
+    is_pinned: bool = False
+    is_archived: bool = False
     storyboard: Optional[List[Dict[str, Any]]] = None
     production_plan: Optional[Dict[str, Any]] = None
     created_at: datetime
@@ -43,4 +47,7 @@ class ProjectUpdate(BaseModel):
     original_script: Optional[str] = None
     critic_review: Optional[Dict[str, Any]] = None
     approved: Optional[bool] = None
+    title: Optional[str] = None
+    is_pinned: Optional[bool] = None
+    is_archived: Optional[bool] = None
 
