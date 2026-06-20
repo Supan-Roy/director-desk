@@ -501,7 +501,7 @@ export default function HeroSection({
       'image/svg+xml'
     ];
 
-    const allowedExtensions = ['.pdf', '.txt', '.md', '.png', '.jpg', '.jpeg', '.gif', '.webp'];
+    const allowedExtensions = ['.pdf', '.txt', '.md', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.doc', '.docx'];
     const validFiles = [];
 
     for (const file of filesArray) {
@@ -536,10 +536,14 @@ export default function HeroSection({
       // 3. Allowlist Validation
       const isAllowedExt = allowedExtensions.includes(fileExtension);
       const isImage = fileType.startsWith('image/') && fileType !== 'image/svg+xml';
-      const isDoc = fileType === 'application/pdf' || fileType === 'text/plain' || fileType === 'text/markdown';
+      const isDoc = fileType === 'application/pdf' || 
+                    fileType === 'text/plain' || 
+                    fileType === 'text/markdown' ||
+                    fileType === 'application/msword' ||
+                    fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
       if (!isAllowedExt && !isImage && !isDoc) {
-        setErrorMsg(`Only PDF, TXT, MD, and standard image files (PNG, JPG, WEBP, GIF) are allowed.`);
+        setErrorMsg(`Only PDF, TXT, MD, DOC, DOCX, and standard image files (PNG, JPG, WEBP, GIF) are allowed.`);
         e.target.value = '';
         return;
       }
@@ -732,7 +736,7 @@ export default function HeroSection({
             multiple
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".pdf,.txt,.md,image/*"
+            accept=".pdf,.txt,.md,image/*,.doc,.docx"
             className="hidden"
           />
 
