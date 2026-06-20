@@ -278,16 +278,6 @@ export default function CreativeModes({ onSelectTemplate }) {
                   className="h-full w-full object-cover filter contrast-[1.05]"
                 />
               )}
-              {/* Category Icon */}
-              <div 
-                className="absolute left-2.5 top-2.5 z-10 flex h-6.5 w-6.5 items-center justify-center rounded-lg border border-white/10 bg-[#0B0B0B]/90 transition-colors group-hover:border-accent/40"
-              >
-                <tmpl.icon size={12} style={{ color: tmpl.accent }} />
-              </div>
-              {/* Status/Format tag */}
-              <div className="absolute right-2.5 top-2.5 z-10 rounded border border-white/10 px-1 py-0.5 text-[7px] font-semibold tracking-wider uppercase font-mono bg-black/60 text-[#D1D5DB]">
-                {tmpl.tag}
-              </div>
             </div>
 
             {/* Template Details */}
