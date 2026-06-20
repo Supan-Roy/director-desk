@@ -475,20 +475,96 @@ export default function HeroSection({
 
   const handleFileChange = (e) => {
     if (!e.target.files) return;
+    setErrorMsg('');
     const filesArray = Array.from(e.target.files);
+
+    const MAX_SIZE = 200 * 1024 * 1024; // 200MB
+    const blockedExtensions = [
+      '.zip', '.rar', '.7z', '.tar', '.gz', '.xz', '.bz2',
+      '.exe', '.bat', '.cmd', '.sh', '.py', '.js', '.jsx', '.ts', '.tsx', '.vbs', '.msi',
+      '.html', '.htm', '.xhtml', '.svg'
+    ];
     
-    filesArray.forEach((file) => {
+    const blockedMimeTypes = [
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/zip-compressed',
+      'application/x-rar-compressed',
+      'application/x-7z-compressed',
+      'application/x-tar',
+      'application/gzip',
+      'application/x-gzip',
+      'application/x-msdownload',
+      'application/x-sh',
+      'application/x-python',
+      'text/html',
+      'image/svg+xml'
+    ];
+
+    const allowedExtensions = ['.pdf', '.txt', '.md', '.png', '.jpg', '.jpeg', '.gif', '.webp'];
+    const validFiles = [];
+
+    for (const file of filesArray) {
+      const fileName = file.name;
+      const fileType = file.type || '';
+      
+      // Extract file extension cleanly
+      const extIndex = fileName.lastIndexOf('.');
+      const fileExtension = extIndex !== -1 ? fileName.substring(extIndex).toLowerCase() : '';
+
+      // 1. Size Validation
+      if (file.size > MAX_SIZE) {
+        setErrorMsg(`File "${fileName}" exceeds the maximum allowed limit of 200MB.`);
+        e.target.value = '';
+        return;
+      }
+
+      // 2. Blocklist Validation (Archives/Scripts/Executables)
+      const isBlockedExt = blockedExtensions.some(ext => fileExtension === ext || fileName.toLowerCase().endsWith(ext));
+      const isBlockedMime = blockedMimeTypes.includes(fileType.toLowerCase());
+
+      if (isBlockedExt || isBlockedMime) {
+        if (fileExtension === '.zip' || fileType.includes('zip') || fileType.includes('tar') || fileType.includes('gzip')) {
+          setErrorMsg(`ZIP and archive file formats are not allowed for security reasons.`);
+        } else {
+          setErrorMsg(`File "${fileName}" contains an unsupported or potentially unsafe format.`);
+        }
+        e.target.value = '';
+        return;
+      }
+
+      // 3. Allowlist Validation
+      const isAllowedExt = allowedExtensions.includes(fileExtension);
+      const isImage = fileType.startsWith('image/') && fileType !== 'image/svg+xml';
+      const isDoc = fileType === 'application/pdf' || fileType === 'text/plain' || fileType === 'text/markdown';
+
+      if (!isAllowedExt && !isImage && !isDoc) {
+        setErrorMsg(`Only PDF, TXT, MD, and standard image files (PNG, JPG, WEBP, GIF) are allowed.`);
+        e.target.value = '';
+        return;
+      }
+
+      // 4. Filename Sanitization to prevent directory traversal
+      const sanitizedName = fileName
+        .replace(/^[.\/\\]+/, '') // remove leading dots/slashes
+        .replace(/[\/\\]/g, '_')   // replace internal slashes with underscores
+        .replace(/[^a-zA-Z0-9_\-\.\s]/g, ''); // keep safe chars only
+
+      validFiles.push({ file, sanitizedName });
+    }
+
+    // Process valid files
+    validFiles.forEach(({ file, sanitizedName }) => {
       const reader = new FileReader();
       const fileType = file.type;
-      const fileName = file.name;
-      
+
       if (fileType.startsWith('image/') || fileType === 'application/pdf') {
         reader.readAsDataURL(file);
         reader.onload = () => {
           setAttachedFiles((prev) => {
-            if (prev.some(f => f.name === fileName)) return prev;
+            if (prev.some(f => f.name === sanitizedName)) return prev;
             return [...prev, {
-              name: fileName,
+              name: sanitizedName,
               type: fileType,
               content: reader.result
             }];
@@ -498,9 +574,9 @@ export default function HeroSection({
         reader.readAsText(file);
         reader.onload = () => {
           setAttachedFiles((prev) => {
-            if (prev.some(f => f.name === fileName)) return prev;
+            if (prev.some(f => f.name === sanitizedName)) return prev;
             return [...prev, {
-              name: fileName,
+              name: sanitizedName,
               type: fileType,
               content: reader.result
             }];

@@ -19,6 +19,37 @@ class ContentProcessor:
         extracted_parts = []
         logger.info(f"ContentProcessor: Processing {len(files)} files...")
 
+        # Security constraints
+        MAX_SIZE_BYTES = 200 * 1024 * 1024  # 200MB
+        blocked_extensions = {
+            '.zip', '.rar', '.7z', '.tar', '.gz', '.xz', '.bz2',
+            '.exe', '.bat', '.cmd', '.sh', '.py', '.js', '.jsx', '.ts', '.tsx', '.vbs', '.msi',
+            '.html', '.htm', '.xhtml', '.svg'
+        }
+        blocked_mimes = {
+            'application/zip',
+            'application/x-zip-compressed',
+            'application/zip-compressed',
+            'application/x-rar-compressed',
+            'application/x-7z-compressed',
+            'application/x-tar',
+            'application/gzip',
+            'application/x-gzip',
+            'application/x-msdownload',
+            'application/x-sh',
+            'application/x-python',
+            'text/html',
+            'image/svg+xml'
+        }
+        allowed_extensions = {'.pdf', '.txt', '.md', '.png', '.jpg', '.jpeg', '.webp', '.gif'}
+        allowed_mimes = {
+            'application/pdf', 'text/plain', 'text/markdown',
+            'image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'
+        }
+
+        import os
+        import re
+
         for file_item in files:
             # Handle both pydantic model and dict
             if hasattr(file_item, "dict"):
@@ -32,6 +63,54 @@ class ContentProcessor:
 
             if not content:
                 continue
+
+            # 1. Filename sanitization (Path traversal & Injection guardrail)
+            # Remove leading dots/slashes and replace any internal slashes with underscores
+            sanitized_name = re.sub(r'^[./\\]+', '', name)
+            sanitized_name = re.sub(r'[/\\]', '_', sanitized_name)
+            # Keep only alphanumeric, dots, dashes, underscores, spaces
+            sanitized_name = re.sub(r'[^a-zA-Z0-9_\-\.\s]', '', sanitized_name)
+            
+            _, ext = os.path.splitext(sanitized_name.lower())
+
+            # 2. Blocklist validation (ZIP / Archives / Executables / Scripts)
+            is_blocked_ext = ext in blocked_extensions
+            is_blocked_mime = any(bm in file_type for bm in blocked_mimes)
+            if is_blocked_ext or is_blocked_mime:
+                logger.error(f"Security Block: Blocked file type detected (ext: {ext}, mime: {file_type}) for file: {name}")
+                raise ValueError(f"Security violation: Archives, scripts, or executables (like ZIP/TAR/SH/PY) are not allowed.")
+
+            # 3. Allowlist validation (PDF, TXT, MD, Images only)
+            is_allowed_ext = ext in allowed_extensions
+            is_allowed_mime = any(am in file_type for am in allowed_mimes)
+            is_image = file_type.startswith("image/") and "svg" not in file_type
+            is_doc = "pdf" in file_type or "text" in file_type or "markdown" in file_type
+            
+            if not (is_allowed_ext or is_allowed_mime or is_image or is_doc):
+                logger.error(f"Security Block: Unsupported file format (ext: {ext}, mime: {file_type}) for file: {name}")
+                raise ValueError(f"Security violation: Unsupported file format for file '{name}'. Only PDF, TXT, MD, PNG, JPG, WEBP, and GIF are allowed.")
+
+            # 4. File Size validation (200MB limit)
+            estimated_size = len(content)
+            if "," in content:
+                # Base64 with data URI header
+                _, b64_data = content.split(",", 1)
+                estimated_size = (len(b64_data) * 3) // 4
+            else:
+                try:
+                    # Check if plain base64 without header
+                    decoded_len = len(base64.b64decode(content))
+                    estimated_size = decoded_len
+                except Exception:
+                    # Raw text content string
+                    estimated_size = len(content.encode('utf-8', errors='ignore'))
+
+            if estimated_size > MAX_SIZE_BYTES:
+                logger.error(f"Security Block: File size {estimated_size} bytes exceeds limit of {MAX_SIZE_BYTES} bytes")
+                raise ValueError(f"Security violation: File size exceeds the 200MB limit for file '{name}'.")
+
+            # Update name to sanitized name for safe processing
+            name = sanitized_name
 
             try:
                 if "application/pdf" in file_type or name.endswith(".pdf"):
