@@ -95,7 +95,12 @@ class ProjectRepository:
         for key, value in kwargs.items():
             if hasattr(project, key):
                 setattr(project, key, value)
-        project.updated_at = datetime.now(timezone.utc)
+        
+        # Only update timestamp if modifying content fields (excluding title, pin, archive states)
+        metadata_fields = {"title", "is_pinned", "is_archived"}
+        if any(key not in metadata_fields for key in kwargs):
+            project.updated_at = datetime.now(timezone.utc)
+            
         db.commit()
         db.refresh(project)
         return project
