@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import {
-  FiArrowLeft, FiEdit3, FiSend, FiX, FiFileText,
+  FiArrowLeft, FiEdit3, FiSend, FiX, FiFileText, FiList,
   FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck, FiShare2,
   FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar
 } from 'react-icons/fi';
@@ -215,6 +215,382 @@ function PlanView({ plan }) {
           </ul>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SceneBreakdownView({ breakdown, productionType }) {
+  const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
+  const { isDayMode: d } = useTheme();
+  const [copiedPrompt, setCopiedPrompt] = useState(null);
+
+  const handleCopyPrompt = (promptText, index) => {
+    navigator.clipboard.writeText(promptText);
+    setCopiedPrompt(index);
+    setTimeout(() => setCopiedPrompt(null), 2000);
+  };
+
+  if (isAudio) {
+    return (
+      <div className={`flex min-h-[260px] flex-col items-center justify-center text-sm gap-3 p-6 text-center ${
+        d ? 'text-neutral-500' : 'text-surface-400'
+      }`}>
+        <span className="text-3xl">🎙️</span>
+        <h4 className="font-bold tracking-wide">Audio Production Format</h4>
+        <p className="max-w-md text-xs leading-relaxed opacity-80">
+          Scene breakdowns and visual technical prompts are optimized for video models (Veo, Wan, HappyHorse). Audio-only formats bypass visual specification pipelines.
+        </p>
+      </div>
+    );
+  }
+
+  if (!breakdown || !breakdown.scenes || breakdown.scenes.length === 0) {
+    return (
+      <div className={`flex min-h-[260px] flex-col items-center justify-center text-sm gap-2 ${
+        d ? 'text-neutral-400' : 'text-surface-550'
+      }`}>
+        <span>🎬</span>
+        <span>No scene breakdown generated yet. Run production to compile specifications.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 text-left">
+      {/* Overview Block */}
+      <div className={`rounded-xl border p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
+        d ? 'bg-neutral-50/50 border-neutral-200' : 'bg-[#111111] border-white/[0.04]'
+      }`}>
+        <div>
+          <h4 className={`text-xs font-bold uppercase tracking-[0.15em] ${d ? 'text-neutral-500' : 'text-surface-400'}`}>
+            Scene Specs Overview
+          </h4>
+          <p className={`text-[10px] mt-1 font-mono ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+            Optimized for Wan, Veo, HappyHorse, and Luma Video Pipelines
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end">
+            <span className={`text-[9px] font-semibold tracking-wider font-mono ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+              ESTIMATED RUNTIME
+            </span>
+            <span className="text-sm font-black text-accent">
+              {breakdown.total_runtime || "Calculating..."}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Warnings Block */}
+      {breakdown.consistency_warnings && breakdown.consistency_warnings.length > 0 && (
+        <div className="rounded-xl border border-amber-500/10 bg-amber-500/[0.02] p-4">
+          <div className="flex items-center gap-2 text-amber-500 text-xs font-bold uppercase tracking-wider mb-2">
+            <FiAlertCircle size={14} />
+            <span>Consistency Audit Warnings</span>
+          </div>
+          <ul className="list-disc pl-4 space-y-1">
+            {breakdown.consistency_warnings.map((warn, i) => (
+              <li key={i} className={`text-[11px] font-mono leading-relaxed ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                {warn}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Scenes List */}
+      <div className="space-y-6">
+        {breakdown.scenes.map((scene, idx) => (
+          <div 
+            key={idx} 
+            className={`rounded-xl border transition-all duration-300 ${
+              d 
+                ? 'bg-white border-neutral-200 shadow-sm hover:border-neutral-300' 
+                : 'bg-[#0B0B0B] border-white/[0.05] hover:border-white/[0.08]'
+            }`}
+          >
+            {/* Scene Header */}
+            <div className={`px-5 py-4 border-b flex flex-wrap justify-between items-center gap-3 ${
+              d ? 'border-neutral-100 bg-neutral-50/30' : 'border-white/[0.04] bg-[#111111]/30'
+            }`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-bold font-mono text-accent">
+                  {scene.scene_number || `SCENE ${idx + 1}`}
+                </span>
+                <h3 className={`text-sm font-bold tracking-wide truncate ${d ? 'text-neutral-900' : 'text-white'}`}>
+                  {scene.title || "Untitled Scene"}
+                </h3>
+              </div>
+              <span className={`text-[10px] font-bold font-mono px-2.5 py-1 rounded-full border ${
+                d ? 'bg-neutral-50 border-neutral-200 text-neutral-600' : 'bg-white/[0.03] border-white/[0.08] text-surface-400'
+              }`}>
+                ⏱️ {scene.duration || "8s"}
+              </span>
+            </div>
+
+            {/* Scene Specs Grid */}
+            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6 text-[12px] leading-relaxed">
+              {/* Col 1: Environment & Location */}
+              <div className="space-y-3.5">
+                <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Location & Space
+                  </span>
+                </div>
+                <div>
+                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Location</span>
+                  <span className={`font-mono block mt-0.5 ${d ? 'text-neutral-950' : 'text-neutral-200'}`}>{scene.location || "N/A"}</span>
+                </div>
+                <div>
+                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Environment</span>
+                  <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.environment || "N/A"}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Time of Day</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'}`}>{scene.time_of_day || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Weather</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'}`}>{scene.weather || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Col 2: Casting & Props */}
+              <div className="space-y-3.5">
+                <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Casting & Props
+                  </span>
+                </div>
+                <div>
+                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Characters</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {Array.isArray(scene.characters) ? (
+                      scene.characters.map((char, i) => (
+                        <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border ${
+                          d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-white/[0.02] border-white/[0.06] text-neutral-200'
+                        }`}>
+                          {char}
+                        </span>
+                      ))
+                    ) : (
+                      <span className={`text-neutral-350`}>{scene.characters || "None"}</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Visual Profile & Wardrobe</span>
+                  <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-350'}`}>{scene.character_descriptions || scene.wardrobe || "N/A"}</span>
+                </div>
+                <div>
+                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Key Props</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {Array.isArray(scene.props) ? (
+                      scene.props.map((prop, i) => (
+                        <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] font-medium border ${
+                          d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-white/[0.02] border-white/[0.06] text-neutral-300'
+                        }`}>
+                          {prop}
+                        </span>
+                      ))
+                    ) : (
+                      <span className={`text-neutral-350`}>{scene.props || "None"}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Col 3: Cinematography & Audio */}
+              <div className="space-y-3.5">
+                <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Cinematography & Audio
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Camera Setup</span>
+                    <span className={`block mt-0.5 font-mono text-[10px] ${d ? 'text-neutral-900' : 'text-neutral-200'}`}>{scene.camera_setup || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Movement</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.camera_movement || "N/A"}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Shot Type</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.shot_type || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Lighting</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.lighting_design || "N/A"}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Audio Design & SFX</span>
+                  <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-350'}`}>{scene.audio_notes || "N/A"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Prompt Generation Section */}
+            <div className={`px-5 py-4 border-t flex flex-col gap-3 rounded-b-xl ${
+              d ? 'border-neutral-100 bg-neutral-50/20' : 'border-white/[0.04] bg-white/[0.005]'
+            }`}>
+              {/* AI Visual Prompt */}
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-accent">
+                    AI Generation Prompt (Wan/Veo/Luma Optimized)
+                  </span>
+                  <button
+                    onClick={() => handleCopyPrompt(scene.ai_generation_prompt, idx)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase transition-all duration-150 cursor-pointer ${
+                      copiedPrompt === idx 
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : 'bg-accent/10 text-accent hover:bg-accent/20'
+                    }`}
+                  >
+                    {copiedPrompt === idx ? (
+                      <>
+                        <FiCheck size={10} />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📋 Copy Prompt</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className={`font-mono text-[11px] leading-relaxed p-3 rounded-lg border whitespace-pre-wrap select-all ${
+                  d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-black/40 border-white/[0.04] text-neutral-200'
+                }`}>
+                  {scene.ai_generation_prompt || "N/A"}
+                </p>
+              </div>
+
+              {/* Negative Prompt */}
+              {scene.negative_prompt && (
+                <div>
+                  <span className={`text-[9px] font-bold uppercase tracking-wider block mb-1 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Negative Prompt
+                  </span>
+                  <p className={`font-mono text-[10px] p-2.5 rounded-lg border ${
+                    d ? 'bg-neutral-50/50 border-neutral-150 text-neutral-500' : 'bg-black/20 border-white/[0.03] text-surface-400'
+                  }`}>
+                    {scene.negative_prompt}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Consolidated Asset Requirements */}
+      {breakdown.asset_requirements && (
+        <div className={`rounded-xl border p-5 ${
+          d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
+        }`}>
+          <div className="flex items-center gap-2.5 border-b pb-3 mb-4 border-white/[0.04]">
+            <span className="text-base">📦</span>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
+                Consolidated Asset Requirements
+              </h3>
+              <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                Downstream pipeline requisition block (Production Agent consumer)
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 text-[11px]">
+            {/* Characters */}
+            <div className="space-y-2">
+              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                Characters Needed
+              </span>
+              <ul className="space-y-1 list-inside list-disc">
+                {Array.isArray(breakdown.asset_requirements.characters_needed) && breakdown.asset_requirements.characters_needed.length > 0 ? (
+                  breakdown.asset_requirements.characters_needed.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                  ))
+                ) : (
+                  <li className="text-surface-500 font-mono list-none">None</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Locations */}
+            <div className="space-y-2">
+              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                Locations Needed
+              </span>
+              <ul className="space-y-1 list-inside list-disc">
+                {Array.isArray(breakdown.asset_requirements.locations_needed) && breakdown.asset_requirements.locations_needed.length > 0 ? (
+                  breakdown.asset_requirements.locations_needed.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                  ))
+                ) : (
+                  <li className="text-surface-500 font-mono list-none">None</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Props */}
+            <div className="space-y-2">
+              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                Props Needed
+              </span>
+              <ul className="space-y-1 list-inside list-disc">
+                {Array.isArray(breakdown.asset_requirements.props_needed) && breakdown.asset_requirements.props_needed.length > 0 ? (
+                  breakdown.asset_requirements.props_needed.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                  ))
+                ) : (
+                  <li className="text-surface-500 font-mono list-none">None</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Sound */}
+            <div className="space-y-2">
+              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                Sound Design SFX
+              </span>
+              <ul className="space-y-1 list-inside list-disc">
+                {Array.isArray(breakdown.asset_requirements.sound_requirements) && breakdown.asset_requirements.sound_requirements.length > 0 ? (
+                  breakdown.asset_requirements.sound_requirements.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                  ))
+                ) : (
+                  <li className="text-surface-500 font-mono list-none">None</li>
+                )}
+              </ul>
+            </div>
+
+            {/* VFX */}
+            <div className="space-y-2">
+              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                VFX Overlay Cues
+              </span>
+              <ul className="space-y-1 list-inside list-disc">
+                {Array.isArray(breakdown.asset_requirements.vfx_requirements) && breakdown.asset_requirements.vfx_requirements.length > 0 ? (
+                  breakdown.asset_requirements.vfx_requirements.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                  ))
+                ) : (
+                  <li className="text-surface-500 font-mono list-none">None</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -518,10 +894,11 @@ function ReviewView({ criticReview, approved, onApprove, onRefine, loading }) {
 
 // ── Main Project Page ─────────────────────────────────────────────────────
 const TABS = [
-  { id: 'script',     label: 'Script',     icon: FiFileText },
-  { id: 'storyboard', label: 'Storyboard', icon: FiImage },
-  { id: 'plan',       label: 'Plan',       icon: FiClipboard },
-  { id: 'review',     label: 'Review',     icon: FiStar },
+  { id: 'script',     label: 'Script',          icon: FiFileText },
+  { id: 'storyboard', label: 'Storyboard',      icon: FiImage },
+  { id: 'breakdown',  label: 'Scene Breakdown', icon: FiList },
+  { id: 'plan',       label: 'Plan',            icon: FiClipboard },
+  { id: 'review',     label: 'Review',          icon: FiStar },
 ];
 
 
@@ -737,6 +1114,7 @@ export default function ProjectPage() {
                     />
                   )}
                   {activeTab === 'storyboard' && <StoryboardView storyboard={project.storyboard} productionType={project.production_type} />}
+                  {activeTab === 'breakdown' && <SceneBreakdownView breakdown={project.scene_breakdown} productionType={project.production_type} />}
                   {activeTab === 'plan' && <PlanView plan={project.production_plan} />}
                   {activeTab === 'review' && (
                     <ReviewView 

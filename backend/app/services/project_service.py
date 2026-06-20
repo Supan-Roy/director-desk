@@ -30,6 +30,7 @@ class ProjectService:
         storyboard: Optional[list],
         production_plan: Optional[dict],
         critic_review: Optional[dict] = None,
+        scene_breakdown: Optional[dict] = None,
         approved: bool = False,
     ) -> Project:
         """
@@ -47,6 +48,7 @@ class ProjectService:
             storyboard=storyboard,
             production_plan=production_plan,
             critic_review=critic_review,
+            scene_breakdown=scene_breakdown,
             approved=approved,
         )
         logger.info(f"Project saved: id={project.id}")

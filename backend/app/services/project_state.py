@@ -34,6 +34,7 @@ class ProjectState:
         self.production_plan: Optional[dict] = None
         self.critic_notes: list[str] = []
         self.critic_review: Optional[dict] = None
+        self.scene_breakdown: Optional[dict] = None
         self.approved: bool = False
         self.production_type: Optional[str] = "Auto Detect"
         self.agents = [
@@ -41,6 +42,7 @@ class ProjectState:
             AgentStatus("storyboard", "Storyboard Agent", "Visual Planning", "🎨"),
             AgentStatus("planner", "Production Planner", "Execution Strategy", "📋"),
             AgentStatus("critic", "Critic Agent", "Quality Review", "🔍"),
+            AgentStatus("scene_breakdown", "Scene Breakdown Agent", "AI Video Specs & Prompts", "🎬"),
         ]
 
     def reset(self):
@@ -54,6 +56,7 @@ class ProjectState:
         self.production_plan = None
         self.critic_notes = []
         self.critic_review = None
+        self.scene_breakdown = None
         self.approved = False
         self.production_type = "Auto Detect"
         for agent in self.agents:
@@ -74,6 +77,7 @@ class ProjectState:
         storyboard: list[StoryboardScene],
         production_plan: Optional[dict] = None,
         critic_review: Optional[dict] = None,
+        scene_breakdown: Optional[dict] = None,
         production_type: Optional[str] = "Auto Detect"
     ):
         self.has_project = True
@@ -84,6 +88,7 @@ class ProjectState:
         self.production_plan = production_plan
         self.critic_review = critic_review
         self.critic_notes = critic_review.get("suggestions", []) if critic_review else []
+        self.scene_breakdown = scene_breakdown
         self.approved = False
         self.production_type = production_type
         for agent in self.agents:

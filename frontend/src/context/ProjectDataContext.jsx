@@ -16,6 +16,7 @@ import {
   refineProjectScript,
   refineRawScript,
   updateProject,
+  getSceneBreakdown,
 } from '../services/apiClient'
 import { featuredProductions } from '../data/featuredProductions'
 
@@ -28,6 +29,7 @@ export function ProjectDataProvider({ children }) {
   const [script, setScript] = useState('')
   const [storyboard, setStoryboard] = useState([])
   const [productionPlan, setProductionPlan] = useState(null)
+  const [sceneBreakdown, setSceneBreakdown] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [productionType, setProductionType] = useState('Auto Detect')
@@ -68,12 +70,14 @@ export function ProjectDataProvider({ children }) {
       setCriticReview(project.critic_review || null)
       setOriginalScript(project.original_script || project.script || '')
       setApproved(project.approved || false)
+      setSceneBreakdown(project.scene_breakdown || null)
       // Show agents as all-completed since this is a restored session
       setAgents([
-        { id: 'writer',     name: 'Writer Agent',       role: 'Script & Narrative',  icon: '✍️', status: 'completed', completedAt: 'saved' },
-        { id: 'storyboard', name: 'Storyboard Agent',   role: 'Visual Planning',      icon: '🎨', status: 'completed', completedAt: 'saved' },
-        { id: 'planner',    name: 'Production Planner', role: 'Execution Strategy',   icon: '📋', status: 'completed', completedAt: 'saved' },
-        { id: 'critic',     name: 'Critic Agent',       role: 'Quality Review',       icon: '🔍', status: 'completed', completedAt: 'saved' },
+        { id: 'writer',          name: 'Writer Agent',          role: 'Script & Narrative',            icon: '✍️', status: 'completed', completedAt: 'saved' },
+        { id: 'storyboard',      name: 'Storyboard Agent',      role: 'Visual Planning',               icon: '🎨', status: 'completed', completedAt: 'saved' },
+        { id: 'planner',         name: 'Production Planner',    role: 'Execution Strategy',            icon: '📋', status: 'completed', completedAt: 'saved' },
+        { id: 'critic',          name: 'Critic Agent',          role: 'Quality Review',                icon: '🔍', status: 'completed', completedAt: 'saved' },
+        { id: 'scene_breakdown', name: 'Scene Breakdown Agent', role: 'AI Video Specs & Prompts',       icon: '🎬', status: 'completed', completedAt: 'saved' },
       ])
     } catch (err) {
       setError(err.message)
@@ -94,6 +98,7 @@ export function ProjectDataProvider({ children }) {
         setScript('')
         setStoryboard([])
         setProductionPlan(null)
+        setSceneBreakdown(null)
         setProductionType('Auto Detect')
         setAgents([])
         setActiveProjectId(null)
@@ -117,6 +122,7 @@ export function ProjectDataProvider({ children }) {
       setCriticReview(data.criticReview || null)
       setOriginalScript(data.originalScript || '')
       setApproved(data.approved || false)
+      setSceneBreakdown(data.sceneBreakdown || null)
     } catch (err) {
       setError(err.message)
     }
@@ -150,6 +156,15 @@ export function ProjectDataProvider({ children }) {
     }
   }, [])
 
+  const fetchSceneBreakdown = useCallback(async () => {
+    try {
+      const data = await getSceneBreakdown()
+      setSceneBreakdown(data.scene_breakdown)
+    } catch (err) {
+      setError(err.message)
+    }
+  }, [])
+
   const fetchAll = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -159,13 +174,14 @@ export function ProjectDataProvider({ children }) {
         fetchScript(),
         fetchStoryboard(),
         fetchProductionPlan(),
+        fetchSceneBreakdown(),
       ])
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [fetchProjectStatus, fetchScript, fetchStoryboard, fetchProductionPlan])
+  }, [fetchProjectStatus, fetchScript, fetchStoryboard, fetchProductionPlan, fetchSceneBreakdown])
 
   // ── Generation handler ──────────────────────────────────────────────────
   const handleGenerate = async (prompt, mode = 'fast', prodType = 'Auto Detect', files = []) => {
@@ -177,15 +193,17 @@ export function ProjectDataProvider({ children }) {
     setScript("")
     setStoryboard([])
     setProductionPlan(null)
+    setSceneBreakdown(null)
     setProductionType(prodType)
     setCriticReview(null)
     setOriginalScript('')
     setApproved(false)
     setAgents([
-      { id: "writer",     name: "Writer Agent",       role: "Script & Narrative", icon: "✍️", status: "active" },
-      { id: "storyboard", name: "Storyboard Agent",   role: "Visual Planning",    icon: "🎨", status: "waiting" },
-      { id: "planner",    name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "waiting" },
-      { id: "critic",     name: "Critic Agent",       role: "Quality Review",     icon: "🔍", status: "waiting" }
+      { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "active" },
+      { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "waiting" },
+      { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "waiting" },
+      { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" },
+      { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "waiting" }
     ])
 
     try {
@@ -217,27 +235,46 @@ export function ProjectDataProvider({ children }) {
           setStoryboard(event.data)
           const isAudio = event.data.length === 0
           setAgents([
-            { id: "writer",     name: "Writer Agent",       role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard", name: "Storyboard Agent",   role: "Visual Planning",    icon: "🎨", status: isAudio ? "completed" : "active", completedAt: isAudio ? "N/A" : null },
-            { id: "planner",    name: "Production Planner", role: "Execution Strategy", icon: "📋", status: isAudio ? "active" : "waiting" },
-            { id: "critic",     name: "Critic Agent",       role: "Quality Review",     icon: "🔍", status: "waiting" }
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: isAudio ? "completed" : "active", completedAt: isAudio ? "N/A" : null },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: isAudio ? "active" : "waiting" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "waiting" }
           ])
         } else if (event.type === 'production_plan') {
           setProductionPlan(event.data)
           setAgents([
-            { id: "writer",     name: "Writer Agent",       role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard", name: "Storyboard Agent",   role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
-            { id: "planner",    name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
-            { id: "critic",     name: "Critic Agent",       role: "Quality Review",     icon: "🔍", status: "active" }
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "active" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "waiting" }
           ])
         } else if (event.type === 'critic_review') {
           setCriticReview(event.data)
+          setAgents([
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "completed", completedAt: "just now" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "active" }
+          ])
+        } else if (event.type === 'scene_breakdown') {
+          setSceneBreakdown(event.data)
+          setAgents([
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "completed", completedAt: "just now" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "completed", completedAt: "just now" }
+          ])
         } else if (event.type === 'complete') {
           setAgents([
-            { id: "writer",     name: "Writer Agent",       role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard", name: "Storyboard Agent",   role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
-            { id: "planner",    name: "Production Planner", role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
-            { id: "critic",     name: "Critic Agent",       role: "Quality Review",     icon: "🔍", status: "completed", completedAt: "just now" }
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "completed", completedAt: "just now" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "completed", completedAt: "just now" }
           ])
           // Refresh sidebar list after auto-save completes (small delay for DB write)
           setTimeout(() => fetchSavedProjects(), 800)
@@ -299,6 +336,7 @@ export function ProjectDataProvider({ children }) {
       setScript('')
       setStoryboard([])
       setProductionPlan(null)
+      setSceneBreakdown(null)
       setProductionType('Auto Detect')
       setAgents([])
       setActiveProjectId(null)
@@ -324,6 +362,7 @@ export function ProjectDataProvider({ children }) {
       setCriticReview(prod.criticReview || null);
       setOriginalScript(prod.script || '');
       setApproved(prod.approved || false);
+      setSceneBreakdown(prod.sceneBreakdown || null);
     }
   }, []);
 
@@ -408,6 +447,7 @@ export function ProjectDataProvider({ children }) {
         if (updates.title !== undefined) setTitle(updates.title)
         if (updates.approved !== undefined) setApproved(updates.approved)
         if (updates.script !== undefined) setScript(updates.script)
+        if (updates.scene_breakdown !== undefined) setSceneBreakdown(updates.scene_breakdown)
       }
     } catch (err) {
       console.error('Failed to update project details:', err)
@@ -427,6 +467,7 @@ export function ProjectDataProvider({ children }) {
     criticReview,
     originalScript,
     approved,
+    sceneBreakdown,
     // Saved projects
     savedProjects,
     projectsLoading,
