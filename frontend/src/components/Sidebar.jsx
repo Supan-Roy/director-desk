@@ -23,6 +23,7 @@ import { PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
 import { encodeId, decodeId } from '../utils/hashids';
+import ProjectIcon from './ProjectIcon';
 
 // ── Custom SVGs ─────────────────────────────────────────────────────────────
 
@@ -69,16 +70,6 @@ function SidebarIcon({ size = 16, className }) {
   );
 }
 
-function typeIcon(productionType) {
-  const t = (productionType || '').toLowerCase();
-  if (t.includes('podcast')) return '🎙';
-  if (t.includes('documentary')) return '📺';
-  if (t.includes('drama') || t.includes('theatre')) return '🎭';
-  if (t.includes('audio')) return '🎵';
-  if (t.includes('commercial') || t.includes('ad')) return '📡';
-  if (t.includes('series') || t.includes('episode')) return '📺';
-  return '🎬';
-}
 
 function shortDate(isoStr) {
   if (!isoStr) return '';
@@ -219,7 +210,7 @@ export default function Sidebar() {
         key={project.id}
         onClick={() => !isRenaming && navigate(`/projects/${encodeId(project.id)}`)}
         title={project.title}
-        className={`group relative w-full flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-200 cursor-pointer ${
+        className={`group relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-200 cursor-pointer ${
           isActive
             ? d
               ? 'bg-accent/10 border border-accent/25'
@@ -229,10 +220,13 @@ export default function Sidebar() {
               : 'hover:bg-surface-800/40 border border-transparent hover:border-surface-700'
         }`}
       >
-        {/* Type emoji */}
-        <span className="text-base leading-none shrink-0 mt-0.5 select-none">
-          {typeIcon(project.production_type)}
-        </span>
+        {/* Type icon */}
+        <ProjectIcon
+          type={project.production_type}
+          size="sm"
+          dayMode={d}
+          active={isActive}
+        />
 
         {/* Text block */}
         <div className="flex-1 min-w-0">
@@ -582,7 +576,9 @@ export default function Sidebar() {
                     <div className={`px-3 py-4 text-center text-[10px] transition-colors duration-500 ${
                       d ? 'text-gray-400' : 'text-surface-600'
                     }`}>
-                      <div className="text-2xl mb-1.5 opacity-40">🎬</div>
+                      <div className="flex justify-center mb-2">
+                        <ProjectIcon type="film" size="md" dayMode={d} className="opacity-50" />
+                      </div>
                       <p className="font-medium">No saved productions yet</p>
                       <p className="opacity-70 mt-0.5">Generate one to get started</p>
                     </div>

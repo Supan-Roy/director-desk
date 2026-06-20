@@ -12,6 +12,7 @@ import {
   updateProjectApproval, refineProjectScript 
 } from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
+import ProjectIcon from '../components/ProjectIcon';
 import { useTheme } from '../context/ThemeContext';
 import { useProjectData } from '../hooks/useProjectData';
 import { decodeProjectRouteId } from '../utils/hashids';
@@ -523,14 +524,6 @@ const TABS = [
   { id: 'review',     label: 'Review',     icon: FiStar },
 ];
 
-function typeIcon(pt) {
-  const t = (pt || '').toLowerCase();
-  if (t.includes('podcast')) return '🎙';
-  if (t.includes('documentary')) return '📺';
-  if (t.includes('drama') || t.includes('theatre')) return '🎭';
-  if (t.includes('audio')) return '🎵';
-  return '🎬';
-}
 
 function fmtDate(isoStr) {
   if (!isoStr) return '';
@@ -637,7 +630,12 @@ export default function ProjectPage() {
 
           {project && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-base leading-none">{typeIcon(project.production_type)}</span>
+              <ProjectIcon
+                type={project.production_type}
+                size="sm"
+                dayMode={d}
+                active={true}
+              />
               <div className="min-w-0">
                 <h1 className={`text-[13px] font-bold truncate transition-colors duration-500 ${d ? 'text-gray-900' : 'text-white'}`}>
                   {project.title}
