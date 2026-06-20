@@ -41,10 +41,11 @@ class ContentProcessor:
             'text/html',
             'image/svg+xml'
         }
-        allowed_extensions = {'.pdf', '.txt', '.md', '.png', '.jpg', '.jpeg', '.webp', '.gif'}
+        allowed_extensions = {'.pdf', '.txt', '.md', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.doc', '.docx'}
         allowed_mimes = {
             'application/pdf', 'text/plain', 'text/markdown',
-            'image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'
+            'image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif',
+            'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         }
 
         import os
@@ -80,15 +81,15 @@ class ContentProcessor:
                 logger.error(f"Security Block: Blocked file type detected (ext: {ext}, mime: {file_type}) for file: {name}")
                 raise ValueError(f"Security violation: Archives, scripts, or executables (like ZIP/TAR/SH/PY) are not allowed.")
 
-            # 3. Allowlist validation (PDF, TXT, MD, Images only)
+            # 3. Allowlist validation (PDF, TXT, MD, DOC, DOCX, Images)
             is_allowed_ext = ext in allowed_extensions
             is_allowed_mime = any(am in file_type for am in allowed_mimes)
             is_image = file_type.startswith("image/") and "svg" not in file_type
-            is_doc = "pdf" in file_type or "text" in file_type or "markdown" in file_type
+            is_doc = "pdf" in file_type or "text" in file_type or "markdown" in file_type or "msword" in file_type or "wordprocessingml" in file_type
             
             if not (is_allowed_ext or is_allowed_mime or is_image or is_doc):
                 logger.error(f"Security Block: Unsupported file format (ext: {ext}, mime: {file_type}) for file: {name}")
-                raise ValueError(f"Security violation: Unsupported file format for file '{name}'. Only PDF, TXT, MD, PNG, JPG, WEBP, and GIF are allowed.")
+                raise ValueError(f"Security violation: Unsupported file format for file '{name}'. Only PDF, TXT, MD, DOC, DOCX, PNG, JPG, WEBP, and GIF are allowed.")
 
             # 4. File Size validation (200MB limit)
             estimated_size = len(content)
@@ -178,6 +179,30 @@ class ContentProcessor:
                         f"Image Description: {image_description}\n"
                         f"--- END UPLOADED FILE (Visual Content Analysis): {name} ---"
                     )
+                elif "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in file_type or name.endswith(".docx"):
+                    logger.info(f"Processing DOCX file: {name}")
+                    if "," in content:
+                        _, content = content.split(",", 1)
+                    docx_bytes = base64.b64decode(content)
+                    extracted_text = self._extract_docx_text(docx_bytes)
+                    extracted_parts.append(
+                        f"--- BEGIN UPLOADED FILE: {name} ---\n"
+                        f"{extracted_text}\n"
+                        f"--- END UPLOADED FILE: {name} ---"
+                    )
+
+                elif "application/msword" in file_type or name.endswith(".doc"):
+                    logger.info(f"Processing DOC file: {name}")
+                    if "," in content:
+                        _, content = content.split(",", 1)
+                    doc_bytes = base64.b64decode(content)
+                    extracted_text = self._extract_doc_text(doc_bytes)
+                    extracted_parts.append(
+                        f"--- BEGIN UPLOADED FILE: {name} ---\n"
+                        f"{extracted_text}\n"
+                        f"--- END UPLOADED FILE: {name} ---"
+                    )
+
                 else:
                     logger.warning(f"Unsupported file type: {file_type} for file: {name}")
             except Exception as e:
@@ -193,5 +218,52 @@ class ContentProcessor:
 
         unified_context = "\n\n".join(extracted_parts)
         return unified_context
+
+    def _extract_docx_text(self, docx_bytes: bytes) -> str:
+        import zipfile
+        import xml.etree.ElementTree as ET
+        import io
+        try:
+            with zipfile.ZipFile(io.BytesIO(docx_bytes)) as docx:
+                namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+                xml_content = docx.read('word/document.xml')
+                root = ET.fromstring(xml_content)
+                
+                paragraphs = []
+                for p in root.findall('.//w:p', namespaces):
+                    p_text = []
+                    for t in p.findall('.//w:t', namespaces):
+                        if t.text:
+                            p_text.append(t.text)
+                    if p_text:
+                        paragraphs.append("".join(p_text))
+                
+                return "\n".join(paragraphs)
+        except Exception as e:
+            logger.error(f"Failed to parse DOCX: {e}", exc_info=True)
+            return f"[Failed to extract DOCX text: {str(e)}]"
+
+    def _extract_doc_text(self, doc_bytes: bytes) -> str:
+        import re
+        try:
+            # Simple fallback text strings extractor for binary .doc files
+            ascii_strings = re.findall(rb'[ -~]{4,}', doc_bytes)
+            text_lines = []
+            for s in ascii_strings:
+                try:
+                    decoded = s.decode('ascii').strip()
+                    # Filter out standard OLE metadata/formatting noise
+                    if len(decoded) > 8 and not decoded.startswith(('Style', 'Normal', 'Title', 'Heading', 'Font', 'Author', 'Microsoft')):
+                        text_lines.append(decoded)
+                except Exception:
+                    continue
+            
+            extracted = "\n".join(text_lines)
+            if not extracted.strip():
+                return "[Legacy .doc binary parsing is limited. Please convert to .docx for full text extraction.]"
+            return extracted
+        except Exception as e:
+            logger.error(f"Failed to parse DOC: {e}", exc_info=True)
+            return f"[Failed to extract legacy DOC text: {str(e)}. Please convert to .docx]"
 
 content_processor = ContentProcessor()
