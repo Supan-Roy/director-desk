@@ -13,6 +13,7 @@ from app.services.storyboard_parser import storyboard_parser
 from app.agents.planner_agent import planner_agent
 from app.agents.critic_agent import critic_agent
 from app.agents.showrunner_agent import showrunner_agent
+from app.agents.scene_breakdown_agent import scene_breakdown_agent
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +33,45 @@ class ShowrunnerService:
 
         result = showrunner_agent.generate_all(full_prompt, production_type)
 
+        # Convert storyboard list to text for Scene Breakdown Agent
+        storyboard_list = result.get("storyboard", [])
+        storyboard_text = "\n\n".join([
+            f"Scene Number: {s.scene_number if hasattr(s, 'scene_number') else s.get('scene_number', s.get('scene', 1))}\n"
+            f"Camera Shot: {s.camera_shot if hasattr(s, 'camera_shot') else s.get('camera_shot', s.get('shot', 'Wide Shot'))}\n"
+            f"Environment: {s.environment if hasattr(s, 'environment') else s.get('environment', 'Set')}\n"
+            f"Mood: {s.mood if hasattr(s, 'mood') else s.get('mood', 'Atmospheric')}"
+            for s in storyboard_list
+        ])
+        
+        is_audio = production_type in ["Podcast", "Audio Story"]
+        if is_audio:
+            breakdown = {
+                "total_runtime": "N/A",
+                "consistency_warnings": [],
+                "scenes": [],
+                "asset_requirements": {
+                    "characters_needed": [],
+                    "locations_needed": [],
+                    "props_needed": [],
+                    "sound_requirements": ["Audio Story/Podcast audio track"],
+                    "vfx_requirements": []
+                }
+            }
+        else:
+            breakdown = scene_breakdown_agent.generate_breakdown(
+                full_prompt,
+                result["script"],
+                storyboard_text,
+                result.get("production_plan")
+            )
+
         project_state.set_generation_complete(
             title=result["title"],
             script=result["script"],
             storyboard=result["storyboard"],
             production_plan=result["production_plan"],
             critic_review=result.get("critic_review"),
+            scene_breakdown=breakdown,
             production_type=production_type
         )
 
@@ -47,7 +81,8 @@ class ShowrunnerService:
             storyboard=result["storyboard"],
             production_plan=result["production_plan"],
             critic_notes=result.get("critic_review", {}).get("suggestions", []),
-            critic_review=result.get("critic_review")
+            critic_review=result.get("critic_review"),
+            scene_breakdown=breakdown
         )
 
     def generate_stream(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect", files: list = None) -> Generator[dict, None, None]:
@@ -202,6 +237,37 @@ class ShowrunnerService:
                 "data": critic_review
             }
 
+            # Stage 5: Scene Breakdown Agent generates scene breakdown
+            project_state.set_agent_status("scene_breakdown", "active")
+            if is_audio:
+                breakdown = {
+                    "total_runtime": "N/A",
+                    "consistency_warnings": [],
+                    "scenes": [],
+                    "asset_requirements": {
+                        "characters_needed": [],
+                        "locations_needed": [],
+                        "props_needed": [],
+                        "sound_requirements": ["Audio Story/Podcast audio track"],
+                        "vfx_requirements": []
+                    }
+                }
+            else:
+                breakdown = scene_breakdown_agent.generate_breakdown(
+                    full_prompt,
+                    script_accumulated,
+                    storyboard_text_accumulated,
+                    plan
+                )
+            
+            project_state.scene_breakdown = breakdown
+            project_state.set_agent_status("scene_breakdown", "completed", "just now")
+
+            yield {
+                "type": "scene_breakdown",
+                "data": breakdown
+            }
+
             yield {
                 "type": "complete"
             }
@@ -296,6 +362,47 @@ class ShowrunnerService:
             yield {
                 "type": "critic_review",
                 "data": critic_review
+            }
+
+            # 6. Scene Breakdown (in FAST mode stream)
+            project_state.set_agent_status("scene_breakdown", "active")
+            
+            storyboard_list = result.get("storyboard", [])
+            storyboard_text = "\n\n".join([
+                f"Scene Number: {s.scene_number if hasattr(s, 'scene_number') else s.get('scene_number', s.get('scene', 1))}\n"
+                f"Camera Shot: {s.camera_shot if hasattr(s, 'camera_shot') else s.get('camera_shot', s.get('shot', 'Wide Shot'))}\n"
+                f"Environment: {s.environment if hasattr(s, 'environment') else s.get('environment', 'Set')}\n"
+                f"Mood: {s.mood if hasattr(s, 'mood') else s.get('mood', 'Atmospheric')}"
+                for s in storyboard_list
+            ])
+            
+            if is_audio:
+                breakdown = {
+                    "total_runtime": "N/A",
+                    "consistency_warnings": [],
+                    "scenes": [],
+                    "asset_requirements": {
+                        "characters_needed": [],
+                        "locations_needed": [],
+                        "props_needed": [],
+                        "sound_requirements": ["Audio Story/Podcast audio track"],
+                        "vfx_requirements": []
+                    }
+                }
+            else:
+                breakdown = scene_breakdown_agent.generate_breakdown(
+                    full_prompt,
+                    result["script"],
+                    storyboard_text,
+                    plan
+                )
+            
+            project_state.scene_breakdown = breakdown
+            project_state.set_agent_status("scene_breakdown", "completed", "just now")
+            
+            yield {
+                "type": "scene_breakdown",
+                "data": breakdown
             }
 
             yield {

@@ -111,6 +111,7 @@ def _auto_save_project(original_prompt: str) -> None:
                 storyboard=storyboard_data,
                 production_plan=project_state.production_plan,
                 critic_review=project_state.critic_review,
+                scene_breakdown=project_state.scene_breakdown,
                 approved=project_state.approved,
             )
             project_state.id = project.id

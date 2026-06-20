@@ -43,6 +43,12 @@ export async function getProductionPlan() {
   return response.data
 }
 
+// Scene breakdown
+export async function getSceneBreakdown() {
+  const response = await apiClient.get('/api/scene_breakdown')
+  return response.data
+}
+
 // Generate (trigger the showrunner)
 export async function generateStory(prompt, mode = 'fast') {
   const response = await apiClient.post('/api/generate', { prompt, mode })

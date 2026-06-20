@@ -50,6 +50,8 @@ class Project(Base):
 
     production_plan = Column(JSONType, nullable=True)  # nested plan dict
 
+    scene_breakdown = Column(JSONType, nullable=True)  # nested breakdown dict
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     updated_at = Column(

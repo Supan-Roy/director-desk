@@ -48,6 +48,7 @@ def _run_migrations(engine) -> None:
         ("projects", "approved", "BOOLEAN DEFAULT 0"),
         ("projects", "is_pinned", "BOOLEAN DEFAULT 0"),
         ("projects", "is_archived", "BOOLEAN DEFAULT 0"),
+        ("projects", "scene_breakdown", "TEXT"),
     ]
 
     with engine.connect() as conn:
