@@ -37,7 +37,7 @@ export default function Footer() {
           <p className={`text-[11.5px] leading-relaxed mt-1 ${d ? 'text-neutral-600' : 'text-surface-500'}`}>
             Next-generation autonomous production workspace. Generate, refine, and orchestrate cinematic productions with agents.
           </p>
-          <p className={`text-[10px] tracking-wide mt-2 ${d ? 'text-neutral-400' : 'text-surface-600'}`}>
+          <p className={`text-[10px] tracking-wide mt-2 ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
             &copy; {currentYear} Director Desk. All rights reserved.
           </p>
         </div>

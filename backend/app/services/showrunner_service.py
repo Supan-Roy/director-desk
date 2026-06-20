@@ -83,7 +83,7 @@ class ShowrunnerService:
             # Stage 1: Writer Agent generates script
             project_state.set_agent_status("writer", "active")
             
-            title = f"Generated from: {prompt}"
+            title = showrunner_agent.generate_short_title(prompt)
             project_state.title = title
             yield {
                 "type": "title",

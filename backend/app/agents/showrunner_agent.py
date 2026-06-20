@@ -9,6 +9,35 @@ logger = logging.getLogger(__name__)
 class ShowrunnerAgent:
     name = "showrunner_agent"
 
+    def generate_short_title(self, prompt: str) -> str:
+        # Strip aspect ratio/motion tags like [Aspect: 16:9, Style: noir, Motion: Static, Quality: draft]
+        clean_prompt = re.sub(r'\[Aspect:[^\]]+\]', '', prompt).strip()
+        
+        title_prompt = f"""
+        Create a short, meaningful, and professional production title (5 to 10 words) for the following creative concept:
+        "{clean_prompt}"
+        
+        Return ONLY the title (do not wrap in quotes, do not add "Title:", do not add any markdown, do not add a period).
+        """
+        try:
+            title = qwen_service.generate_text(title_prompt).strip()
+            # Clean title
+            title = title.replace('"', '').replace("'", "").replace('.', '').strip()
+            if not title or len(title.split()) > 15:
+                raise ValueError("Too long or empty title")
+            return title
+        except Exception as e:
+            logger.warning(f"Failed to generate custom title: {e}. Using fallback.")
+            # Fallback: clean up the first 8 words of the prompt
+            words = [w for w in clean_prompt.split() if not (w.startswith('[') or w.endswith(']'))]
+            clean_words = []
+            for w in words[:8]:
+                clean_w = ''.join(c for c in w if c.isalnum() or c in ['-', '_'])
+                if clean_w:
+                    clean_words.append(clean_w)
+            fallback = " ".join(clean_words).title()
+            return fallback or "Untitled Production"
+
     def detect_production_type(self, prompt: str) -> str:
         detect_prompt = f"""
         Analyze the following prompt and classify it into exactly one of these production formats:
@@ -229,7 +258,7 @@ class ShowrunnerAgent:
             
         except Exception as e:
             logger.warning(f"FAST mode JSON generation failed: {e}. Falling back to default structures.")
-            fallback_title = f"Generated from: {prompt}"
+            fallback_title = self.generate_short_title(prompt)
             is_audio = production_type in ["Podcast", "Audio Story"]
             
             fallback_critic_review = {
