@@ -24,7 +24,7 @@ class ShowrunnerOrchestrator:
             storyboard = storyboard_parser.parse(storyboard_text)
             
             # Set a baseline title
-            title = f"Generated from: {prompt}"
+            title = showrunner_agent.generate_short_title(prompt)
             
             # Step 3: Production Planner Agent generates phase-wise actions
             plan = planner_agent.generate_plan(title, script, storyboard_text)
