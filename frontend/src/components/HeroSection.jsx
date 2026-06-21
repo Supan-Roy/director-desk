@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle } from 'react-icons/fi';
 import { PiSparkle, PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
@@ -1137,15 +1138,16 @@ export default function HeroSection({
       )}
 
       {/* Toast Notification */}
-      {toastMsg && (
+      {toastMsg && createPortal(
         <div 
           key={toastMsg}
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl animate-toast-in max-w-sm w-[90%] transition-all duration-300 ${
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100000] flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl animate-toast-in max-w-sm w-[90%] transition-all duration-300 ${
             isDayMode 
               ? 'bg-white border-[#FECACA] text-red-600' 
               : 'bg-black border-red-950/60 text-red-500'
           }`}
           style={{
+            zIndex: 100000,
             boxShadow: isDayMode 
               ? '0 10px 30px -10px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05)' 
               : '0 10px 30px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
@@ -1166,7 +1168,8 @@ export default function HeroSection({
           >
             &times;
           </button>
-        </div>
+        </div>,
+        document.body
       )}
       </div>
     </section>
