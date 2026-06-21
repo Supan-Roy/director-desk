@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { marked } from 'marked';
 import {
   FiArrowLeft, FiEdit3, FiSend, FiX, FiFileText, FiList,
@@ -19,7 +19,7 @@ import { decodeProjectRouteId } from '../utils/hashids';
 import Footer from '../components/Footer';
 
 // ── Reusable script renderer (copied from TabbedContent) ──────────────────
-function ScriptView({ script, originalScript, onSave }) {
+function ScriptView({ script, originalScript, onSave, readOnly }) {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(script || '');
   const [copied, setCopied] = useState(false);
@@ -84,6 +84,11 @@ function ScriptView({ script, originalScript, onSave }) {
         )}
 
         <div className="flex gap-2">
+          {readOnly && (
+            <span className="text-[10px] text-surface-500 italic flex items-center pr-1.5 select-none">
+              Production active: script is locked
+            </span>
+          )}
           {viewVersion === 'refined' && (
             isEditing ? (
               <button
@@ -95,14 +100,16 @@ function ScriptView({ script, originalScript, onSave }) {
                 <span>Save</span>
               </button>
             ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                title="Edit script manually"
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
-              >
-                <FiEdit3 size={12} />
-                <span>Edit</span>
-              </button>
+              !readOnly && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  title="Edit script manually"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/[0.03] border border-white/[0.08] text-surface-300 hover:bg-white/[0.08] hover:text-white transition-all"
+                >
+                  <FiEdit3 size={12} />
+                  <span>Edit</span>
+                </button>
+              )
             )
           )}
           {viewVersion === 'original' && (
@@ -916,6 +923,8 @@ export default function ProjectPage() {
   const navigate = useNavigate();
   const { isDayMode: d } = useTheme();
   const { fetchSavedProjects } = useProjectData();
+  const [searchParams] = useSearchParams();
+  const forcePreProd = searchParams.get('view') === 'preprod';
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -935,6 +944,12 @@ export default function ProjectPage() {
       .catch(err => { if (!cancelled) { setError(err.message); setLoading(false); } });
     return () => { cancelled = true; };
   }, [id]);
+
+  useEffect(() => {
+    if (project && project.approved && !forcePreProd) {
+      navigate(`/projects/${id}/production`, { replace: true });
+    }
+  }, [project, id, navigate, forcePreProd]);
 
   const handleProjectUpdated = useCallback((updated) => {
     setProject(updated);
@@ -959,6 +974,7 @@ export default function ProjectPage() {
       const updated = await updateProjectApproval(numericId, true);
       setProject(updated);
       fetchSavedProjects();
+      navigate(`/projects/${id}/production`);
     } catch (err) {
       console.error('Failed to approve project:', err);
       alert('Failed to approve project: ' + err.message);
@@ -1044,20 +1060,21 @@ export default function ProjectPage() {
               </button>
             )}
 
-            {/* Modify button */}
-            <button
-              onClick={() => setModifyOpen(o => !o)}
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-200 border ${
-                modifyOpen
-                  ? 'bg-accent text-white border-accent shadow-[0_0_16px_rgba(139,92,246,0.3)]'
-                  : d
-                    ? 'border-accent/30 text-accent hover:bg-accent/10 bg-accent/5'
-                    : 'border-accent/25 text-accent hover:bg-accent/10 bg-accent/5'
-              }`}
-            >
-              <FiEdit3 size={12} />
-              <span>{modifyOpen ? 'Close Editor' : 'Modify'}</span>
-            </button>
+            {project && !project.approved && (
+              <button
+                onClick={() => setModifyOpen(o => !o)}
+                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-200 border ${
+                  modifyOpen
+                    ? 'bg-accent text-white border-accent shadow-[0_0_16px_rgba(139,92,246,0.3)]'
+                    : d
+                      ? 'border-accent/30 text-accent hover:bg-accent/10 bg-accent/5'
+                      : 'border-accent/25 text-accent hover:bg-accent/10 bg-accent/5'
+                }`}
+              >
+                <FiEdit3 size={12} />
+                <span>{modifyOpen ? 'Close Editor' : 'Modify'}</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -1111,6 +1128,7 @@ export default function ProjectPage() {
                       script={project.script} 
                       originalScript={project.original_script} 
                       onSave={handleSaveScript} 
+                      readOnly={project.approved}
                     />
                   )}
                   {activeTab === 'storyboard' && <StoryboardView storyboard={project.storyboard} productionType={project.production_type} />}

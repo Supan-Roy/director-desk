@@ -213,31 +213,7 @@ class ShowrunnerService:
                     
                 project_state.set_agent_status("storyboard", "completed", "just now")
 
-            # Stage 3: Production Planner Agent generates phase-wise actions
-            project_state.set_agent_status("planner", "active")
-            plan = planner_agent.generate_plan(title, script_accumulated, storyboard_text_accumulated, production_type)
-            
-            project_state.production_plan = plan
-            project_state.set_agent_status("planner", "completed", "just now")
-
-            yield {
-                "type": "production_plan",
-                "data": plan
-            }
-
-            # Stage 4: Critic Agent generates structured review
-            project_state.set_agent_status("critic", "active")
-            critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
-            project_state.critic_review = critic_review
-            project_state.critic_notes = critic_review.get("suggestions", [])
-            project_state.set_agent_status("critic", "completed", "just now")
-
-            yield {
-                "type": "critic_review",
-                "data": critic_review
-            }
-
-            # Stage 5: Scene Breakdown Agent generates scene breakdown
+            # Stage 3: Scene Breakdown Agent generates scene breakdown
             project_state.set_agent_status("scene_breakdown", "active")
             if is_audio:
                 breakdown = {
@@ -257,7 +233,7 @@ class ShowrunnerService:
                     full_prompt,
                     script_accumulated,
                     storyboard_text_accumulated,
-                    plan
+                    None
                 )
             
             project_state.scene_breakdown = breakdown
@@ -266,6 +242,30 @@ class ShowrunnerService:
             yield {
                 "type": "scene_breakdown",
                 "data": breakdown
+            }
+
+            # Stage 4: Production Planner Agent generates phase-wise actions
+            project_state.set_agent_status("planner", "active")
+            plan = planner_agent.generate_plan(title, script_accumulated, storyboard_text_accumulated, production_type)
+            
+            project_state.production_plan = plan
+            project_state.set_agent_status("planner", "completed", "just now")
+
+            yield {
+                "type": "production_plan",
+                "data": plan
+            }
+
+            # Stage 5: Critic Agent generates structured review
+            project_state.set_agent_status("critic", "active")
+            critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
+            project_state.critic_review = critic_review
+            project_state.critic_notes = critic_review.get("suggestions", [])
+            project_state.set_agent_status("critic", "completed", "just now")
+
+            yield {
+                "type": "critic_review",
+                "data": critic_review
             }
 
             yield {
@@ -336,36 +336,9 @@ class ShowrunnerService:
                     time.sleep(0.5)
                 project_state.set_agent_status("storyboard", "completed", "just now")
                 
-            project_state.set_agent_status("planner", "active")
-            time.sleep(0.3)
-
-            # 4. Production Plan
-            plan = result["production_plan"]
-            
-            project_state.production_plan = plan
-            project_state.set_agent_status("planner", "completed", "just now")
-            project_state.set_agent_status("critic", "active")
-            
-            yield {
-                "type": "production_plan",
-                "data": plan
-            }
-            
-            time.sleep(0.5)
-
-            # 5. Critic review
-            critic_review = result.get("critic_review")
-            project_state.critic_review = critic_review
-            project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
-            project_state.set_agent_status("critic", "completed", "just now")
-            
-            yield {
-                "type": "critic_review",
-                "data": critic_review
-            }
-
-            # 6. Scene Breakdown (in FAST mode stream)
+            # 4. Scene Breakdown
             project_state.set_agent_status("scene_breakdown", "active")
+            time.sleep(0.3)
             
             storyboard_list = result.get("storyboard", [])
             storyboard_text = "\n\n".join([
@@ -394,15 +367,43 @@ class ShowrunnerService:
                     full_prompt,
                     result["script"],
                     storyboard_text,
-                    plan
+                    result.get("production_plan")
                 )
             
             project_state.scene_breakdown = breakdown
             project_state.set_agent_status("scene_breakdown", "completed", "just now")
+            project_state.set_agent_status("planner", "active")
             
             yield {
                 "type": "scene_breakdown",
                 "data": breakdown
+            }
+            
+            time.sleep(0.5)
+
+            # 5. Production Plan
+            plan = result["production_plan"]
+            
+            project_state.production_plan = plan
+            project_state.set_agent_status("planner", "completed", "just now")
+            project_state.set_agent_status("critic", "active")
+            
+            yield {
+                "type": "production_plan",
+                "data": plan
+            }
+            
+            time.sleep(0.5)
+
+            # 6. Critic review
+            critic_review = result.get("critic_review")
+            project_state.critic_review = critic_review
+            project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
+            project_state.set_agent_status("critic", "completed", "just now")
+            
+            yield {
+                "type": "critic_review",
+                "data": critic_review
             }
 
             yield {

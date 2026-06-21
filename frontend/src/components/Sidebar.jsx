@@ -121,7 +121,7 @@ export default function Sidebar() {
   const { isDayMode: d } = useTheme();
 
   const activeProjectId = (() => {
-    const match = location.pathname.match(/^\/projects\/([a-z0-9]+)$/);
+    const match = location.pathname.match(/^\/projects\/([a-z0-9]+)(?:\/production)?$/);
     return match ? decodeId(match[1]) : null;
   })();
 
@@ -208,7 +208,14 @@ export default function Sidebar() {
     return (
       <div
         key={project.id}
-        onClick={() => !isRenaming && navigate(`/projects/${encodeId(project.id)}`)}
+        onClick={() => {
+          if (!isRenaming) {
+            const targetUrl = project.approved
+              ? `/projects/${encodeId(project.id)}/production`
+              : `/projects/${encodeId(project.id)}`;
+            navigate(targetUrl);
+          }
+        }}
         title={project.title}
         className={`group relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-200 cursor-pointer ${
           isActive

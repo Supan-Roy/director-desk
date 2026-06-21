@@ -40,9 +40,9 @@ class ProjectState:
         self.agents = [
             AgentStatus("writer", "Writer Agent", "Script & Narrative", "✍️"),
             AgentStatus("storyboard", "Storyboard Agent", "Visual Planning", "🎨"),
+            AgentStatus("scene_breakdown", "Scene Breakdown Agent", "AI Video Specs & Prompts", "🎬"),
             AgentStatus("planner", "Production Planner", "Execution Strategy", "📋"),
             AgentStatus("critic", "Critic Agent", "Quality Review", "🔍"),
-            AgentStatus("scene_breakdown", "Scene Breakdown Agent", "AI Video Specs & Prompts", "🎬"),
         ]
 
     def reset(self):

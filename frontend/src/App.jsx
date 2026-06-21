@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import ProjectPage from './pages/ProjectPage'
+import ProductionPage from './pages/ProductionPage'
 import EditorPage from './pages/EditorPage'
 import SettingsPage from './pages/SettingsPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -12,6 +13,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects/:id" element={<ProjectPage />} />
+        <Route path="/projects/:id/production" element={<ProductionPage />} />
         <Route path="/editor" element={
           <EditorProvider>
             <EditorPage />
