@@ -21,6 +21,40 @@ export default function SettingsPage() {
   } = useProjectData()
 
   const [activeSubTab, setActiveSubTab] = useState('appearance') // appearance, account, privacy, about
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem('user_profile');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (!parsed.plan) parsed.plan = "Free Plan";
+        return parsed;
+      } catch(e) {}
+    }
+    return {
+      firstName: "Creative",
+      lastName: "Director",
+      email: "director@director-desk.com",
+      dob: "1990-01-01",
+      photo: null,
+      plan: "Free Plan"
+    };
+  });
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      const saved = localStorage.getItem('user_profile');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (!parsed.plan) parsed.plan = "Free Plan";
+          setProfile(parsed);
+        } catch(e) {}
+      }
+    };
+    window.addEventListener('user_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
+  }, []);
+
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showDeleteProjectsModal, setShowDeleteProjectsModal] = useState(false)
@@ -255,35 +289,45 @@ export default function SettingsPage() {
                     d ? 'bg-[#faf9f6]/95 border-neutral-200' : 'bg-[#090910]/95 border-white/[0.04]'
                   }`}>
                     <div className="shrink-0 select-none">
-                      <div className="h-14 w-14 rounded-lg bg-gradient-to-tr from-accent to-purple-600 flex items-center justify-center text-white text-base font-black border border-white/10 shadow-lg">
-                        CD
-                      </div>
+                      {profile.photo ? (
+                        <img src={profile.photo} className="h-14 w-14 rounded-xl object-cover border border-white/10 shadow-lg" alt="Avatar" />
+                      ) : (
+                        <div className="h-14 w-14 rounded-xl bg-gradient-to-tr from-accent to-purple-600 flex items-center justify-center text-white text-base font-black border border-white/10 shadow-lg uppercase">
+                          {((profile.firstName || '').charAt(0) + (profile.lastName || '').charAt(0)).toUpperCase() || 'U'}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1 w-full text-left space-y-2">
                       <div className="flex items-center justify-between border-b border-current border-opacity-10 pb-1.5">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-accent">Active Profile</span>
                         <span className="text-[8px] uppercase tracking-wider font-bold py-0.5 px-2 bg-neutral-500/10 border border-neutral-500/20 rounded">
-                          Studio Admin
+                          Studio Owner
                         </span>
                       </div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] leading-relaxed">
                         <div>
                           <span className="opacity-50">Name:</span>{' '}
-                          <span className={`font-bold ${d ? 'text-gray-900' : 'text-neutral-200'}`}>Creative Director</span>
+                          <span className={`font-bold ${d ? 'text-gray-900' : 'text-neutral-200'}`}>
+                            {`${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Not Set'}
+                          </span>
                         </div>
                         <div>
-                          <span className="opacity-50">Registry ID:</span>{' '}
-                          <span className="font-semibold">DESK-089-CD</span>
+                          <span className="opacity-50">Date of Birth:</span>{' '}
+                          <span className="font-semibold">{profile.dob || 'Not Set'}</span>
                         </div>
                         <div>
                           <span className="opacity-50">Email:</span>{' '}
-                          <span className={`font-bold ${d ? 'text-gray-900' : 'text-neutral-200'}`}>director@director-desk.com</span>
+                          <span className={`font-bold ${d ? 'text-gray-900' : 'text-neutral-200'}`}>{profile.email || 'Not Set'}</span>
+                        </div>
+                        <div>
+                          <span className="opacity-50">Subscription Plan:</span>{' '}
+                          <span className="font-bold text-accent">{profile.plan || 'Free Plan'}</span>
                         </div>
                         <div>
                           <span className="opacity-50">Security:</span>{' '}
-                          <span className="font-semibold">Local Storage</span>
+                          <span className="font-semibold">Local Storage encryption</span>
                         </div>
                       </div>
                     </div>

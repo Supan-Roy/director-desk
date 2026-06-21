@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -18,6 +18,12 @@ import {
   FiShare2,
   FiArchive,
   FiEdit2,
+  FiUser,
+  FiMail,
+  FiCalendar,
+  FiCamera,
+  FiX,
+  FiCheck,
 } from 'react-icons/fi';
 import { PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
@@ -105,6 +111,35 @@ function ProjectSkeleton({ d }) {
   );
 }
 
+const getInitials = (firstName, lastName) => {
+  const f = typeof firstName === 'string' ? firstName.trim().charAt(0) : '';
+  const l = typeof lastName === 'string' ? lastName.trim().charAt(0) : '';
+  return (f + l).toUpperCase() || 'U';
+};
+
+function getUserProfile() {
+  const saved = localStorage.getItem('user_profile');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.plan) {
+        parsed.plan = "Free Plan";
+      }
+      return parsed;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  return {
+    firstName: "Creative",
+    lastName: "Director",
+    email: "director@director-desk.com",
+    dob: "1990-01-01",
+    photo: null,
+    plan: "Free Plan"
+  };
+}
+
 // ── Main Sidebar ───────────────────────────────────────────────────────────
 
 export default function Sidebar() {
@@ -135,6 +170,75 @@ export default function Sidebar() {
   const [copiedId, setCopiedId] = useState(null);
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+
+  // Profile states
+  const [profile, setProfile] = useState(getUserProfile);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [formFirstName, setFormFirstName] = useState('');
+  const [formLastName, setFormLastName] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formDob, setFormDob] = useState('');
+  const [formPhoto, setFormPhoto] = useState(null);
+  const [formPlan, setFormPlan] = useState('Free Plan');
+  
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isProfileOpen) {
+      setFormFirstName(profile.firstName || '');
+      setFormLastName(profile.lastName || '');
+      setFormEmail(profile.email || '');
+      setFormDob(profile.dob || '');
+      setFormPhoto(profile.photo || null);
+      setFormPlan(profile.plan || 'Free Plan');
+    }
+  }, [isProfileOpen, profile]);
+
+  // Sync profile edits from external sources
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setProfile(getUserProfile());
+    };
+    window.addEventListener('user_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
+  }, []);
+
+  const handleSaveProfile = () => {
+    const updated = {
+      firstName: formFirstName,
+      lastName: formLastName,
+      email: formEmail,
+      dob: formDob,
+      photo: formPhoto,
+      plan: formPlan
+    };
+    localStorage.setItem('user_profile', JSON.stringify(updated));
+    setProfile(updated);
+    setIsProfileOpen(false);
+    window.dispatchEvent(new Event('user_profile_updated'));
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormPhoto(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoRemove = (e) => {
+    e.stopPropagation();
+    setFormPhoto(null);
+  };
+
+  const handleTriggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   const getMenuStyles = () => {
     if (!menuTriggerRect) return {};
@@ -651,38 +755,277 @@ export default function Sidebar() {
         <div className={`h-px shrink-0 transition-all duration-300 ${isCollapsed ? 'w-12 mx-auto' : 'mx-4 w-[calc(100%-2rem)]'} ${d ? 'bg-black/[0.07]' : 'bg-white/[0.04]'}`} />
 
         {/* User Info Card */}
-        <div className={`flex rounded-lg border relative overflow-hidden group transition-all duration-300 ${
-          isCollapsed ? 'p-1.5 justify-center w-12 h-12 items-center' : 'flex-col gap-2 p-3.5 w-full'
-        } ${
-          d ? 'bg-gray-50/80 border-black/[0.07]' : 'bg-surface-900 border-surface-700'
-        }`}>
+        <div 
+          onClick={() => setIsProfileOpen(true)}
+          className={`flex rounded-lg border relative overflow-hidden group transition-all duration-300 cursor-pointer select-none ${
+            isCollapsed ? 'p-1.5 justify-center w-10 h-10 items-center' : 'gap-2.5 p-3 w-full items-center'
+          } ${
+            d 
+              ? 'bg-gray-50/80 border-black/[0.07] hover:bg-neutral-100 hover:border-accent/15' 
+              : 'bg-surface-900 border-surface-700 hover:bg-surface-800/80 hover:border-accent/15'
+          }`}
+          title="Open User Profile Control Room"
+        >
           <div className="absolute inset-0 bg-grid-lines opacity-[0.02] pointer-events-none" />
           <div className={`flex items-center gap-3 relative z-10 ${isCollapsed ? 'justify-center' : 'w-full'}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-700 text-[11px] font-black text-white border border-surface-600">
-              CD
-            </div>
+            {profile.photo ? (
+              <img src={profile.photo} className="h-8 w-8 rounded-full object-cover border border-accent/25 shrink-0 animate-fade-in" alt="Avatar" />
+            ) : (
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-700 text-[10px] font-black text-white border border-surface-600 uppercase">
+                {getInitials(profile.firstName, profile.lastName)}
+              </div>
+            )}
             {!isCollapsed && (
-              <div className="min-w-0 flex-1">
-                <p className={`truncate text-[11.5px] font-bold leading-tight transition-colors duration-500 ${d ? 'text-gray-800' : 'text-white'}`}>
-                  Creative Director
+              <div className="min-w-0 flex-1 text-left">
+                {`${profile.firstName || ''} ${profile.lastName || ''}`.trim() ? (
+                  <p className={`truncate text-[11.5px] font-extrabold leading-tight transition-colors duration-500 ${d ? 'text-gray-800' : 'text-white'}`}>
+                    {`${profile.firstName || ''} ${profile.lastName || ''}`.trim()}
+                  </p>
+                ) : null}
+                <p className="truncate text-[9.5px] font-extrabold text-accent mt-0.5 leading-none">
+                  {profile.plan || 'Free Plan'}
                 </p>
-                <p className="text-[8px] text-accent font-bold tracking-widest mt-1 uppercase">Studio Admin</p>
+                {profile.email && (
+                  <p className="truncate text-[9px] text-surface-500 mt-1 leading-none">{profile.email}</p>
+                )}
               </div>
             )}
           </div>
-          {!isCollapsed && (
-            <div className={`flex items-center justify-between border-t pt-2 mt-1 text-[8px] font-mono select-none relative z-10 transition-colors duration-500 ${
-              d ? 'border-black/[0.07] text-gray-400' : 'border-surface-700 text-surface-400'
-            }`}>
-              <span className="flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                ONLINE // LICENSED
-              </span>
-              <span>DESK-ID // 089-CD</span>
-            </div>
-          )}
         </div>
       </div>
+ 
+      {/* Profile Modal */}
+      {isProfileOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setIsProfileOpen(false)}
+            className="absolute inset-0 bg-black/80 transition-opacity duration-300 animate-fade-in"
+          />
+          
+          {/* Modal Content */}
+          <div className={`relative z-55 w-full max-w-md rounded-2xl border p-6 transition-all duration-300 scale-100 flex flex-col gap-5 animate-scale-in max-h-[90vh] overflow-y-auto ${
+            d 
+              ? 'bg-[#fcfbfa] border-neutral-200 text-neutral-800' 
+              : 'bg-[#0a0a0e] border-white/[0.06] text-white shadow-2xl shadow-black'
+          }`}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b pb-3 border-white/[0.04]">
+              <div className="flex items-center gap-2">
+                <FiUser size={16} className="text-accent" />
+                <h3 className="text-xs font-black uppercase tracking-wider">User Profile Console</h3>
+              </div>
+              <button 
+                onClick={() => setIsProfileOpen(false)}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${d ? 'hover:bg-neutral-100' : 'hover:bg-white/[0.04]'}`}
+              >
+                <FiX size={14} />
+              </button>
+            </div>
+
+            {/* Profile Content Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-[100px_1fr] gap-5 items-start">
+              {/* Photo Upload Area */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative group/avatar cursor-pointer" onClick={handleTriggerFileInput}>
+                  {formPhoto ? (
+                    <img src={formPhoto} className="h-16 w-16 rounded-full object-cover border-2 border-accent/40 shadow-lg" alt="Preview" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-700 text-lg font-black text-white border-2 border-surface-600 shadow-lg uppercase select-none">
+                      {getInitials(formFirstName, formLastName)}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150">
+                    <FiCamera size={16} className="text-white" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <button
+                    type="button"
+                    onClick={handleTriggerFileInput}
+                    className={`w-full py-1.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-colors cursor-pointer ${
+                      d ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700' : 'bg-white/[0.03] hover:bg-white/[0.06] text-surface-300'
+                    }`}
+                  >
+                    Upload
+                  </button>
+                  {formPhoto && (
+                    <button
+                      type="button"
+                      onClick={handlePhotoRemove}
+                      className="w-full py-1.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/15 text-red-400 transition-colors cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handlePhotoChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+              </div>
+
+              {/* Form Input fields */}
+              <div className="space-y-3.5">
+                {/* Names */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1 text-left">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">First Name</label>
+                    <input
+                      type="text"
+                      value={formFirstName}
+                      onChange={(e) => setFormFirstName(e.target.value)}
+                      placeholder="Creative"
+                      className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                        d 
+                          ? 'bg-white border-neutral-200 text-neutral-800' 
+                          : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                      }`}
+                    />
+                  </div>
+                  <div className="space-y-1 text-left">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Last Name</label>
+                    <input
+                      type="text"
+                      value={formLastName}
+                      onChange={(e) => setFormLastName(e.target.value)}
+                      placeholder="Director"
+                      className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                        d 
+                          ? 'bg-white border-neutral-200 text-neutral-800' 
+                          : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Email Address */}
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Email Address</label>
+                  <input
+                    type="email"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    placeholder="director@director-desk.com"
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                      d 
+                        ? 'bg-white border-neutral-200 text-neutral-800' 
+                        : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                    }`}
+                  />
+                </div>
+
+                {/* Date of Birth */}
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={formDob}
+                    onChange={(e) => setFormDob(e.target.value)}
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                      d 
+                        ? 'bg-white border-neutral-200 text-neutral-800' 
+                        : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                    }`}
+                  />
+                </div>
+
+                {/* Subscription Plan */}
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Subscription Plan</label>
+                  <select
+                    value={formPlan}
+                    onChange={(e) => setFormPlan(e.target.value)}
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                      d 
+                        ? 'bg-white border-neutral-200 text-neutral-800' 
+                        : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                    }`}
+                  >
+                    <option value="Free Plan" className={d ? 'text-neutral-800' : 'bg-surface-900 text-white'}>Free Plan</option>
+                    <option value="Pro Plan" className={d ? 'text-neutral-800' : 'bg-surface-900 text-white'}>Pro Plan</option>
+                    <option value="Max Plan" className={d ? 'text-neutral-800' : 'bg-surface-900 text-white'}>Max Plan</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Archived Productions section */}
+            <div className="border-t border-white/[0.04] pt-4 text-left">
+              <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-surface-400 mb-2.5 flex items-center gap-1.5 select-none">
+                <FiArchive size={12} className="text-accent" />
+                <span>Restore Archived Productions</span>
+              </h4>
+              
+              {(() => {
+                const archivedList = (savedProjects || []).filter(p => p.is_archived);
+                if (archivedList.length === 0) {
+                  return (
+                    <p className={`text-[11px] font-mono italic opacity-55 ${d ? 'text-gray-500' : 'text-surface-500'}`}>
+                      No archived productions in registry.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                    {archivedList.map((project) => (
+                      <div 
+                        key={project.id} 
+                        className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all ${
+                          d 
+                            ? 'bg-neutral-50 border-neutral-200' 
+                            : 'bg-[#0f0f15]/80 border-white/[0.04] hover:border-white/[0.08]'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 mr-4 select-text">
+                          <p className={`font-bold truncate ${d ? 'text-gray-900' : 'text-neutral-200'}`}>{project.title}</p>
+                          <p className="text-[9px] text-surface-500 mt-0.5 font-mono">{project.production_type || 'Short Film'}</p>
+                        </div>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await updateProjectDetails(project.id, { is_archived: false });
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-accent/15 hover:bg-accent/25 text-accent transition-all cursor-pointer select-none"
+                        >
+                          <FiRefreshCw size={9} />
+                          <span>Restore</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2.5 border-t border-white/[0.04] pt-4 select-none">
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen(false)}
+                className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer text-center ${
+                  d 
+                    ? 'border-gray-250 hover:bg-gray-150 text-gray-500' 
+                    : 'border-white/[0.08] hover:bg-white/[0.04] text-neutral-350'
+                }`}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                className="flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-accent hover:bg-accent/90 text-white cursor-pointer transition-all flex items-center justify-center gap-1.5"
+              >
+                <FiCheck size={12} />
+                <span>Save Changes</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {projectToDelete && (
