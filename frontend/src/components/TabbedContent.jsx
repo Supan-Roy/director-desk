@@ -8,6 +8,8 @@ import { PiSparkle } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
+import { encodeId } from '../utils/hashids';
 
 const tabs = [
   { id: 'script', label: 'Script', icon: FiFileText },
@@ -837,6 +839,7 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
 }
 
 export default function TabbedContent() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('script');
   const { 
     script, 
@@ -848,7 +851,8 @@ export default function TabbedContent() {
     approveProject,
     refineProject,
     loading,
-    sceneBreakdown
+    sceneBreakdown,
+    activeProjectId
   } = useProjectData();
 
   return (
@@ -889,7 +893,12 @@ export default function TabbedContent() {
           <ReviewTab 
             criticReview={criticReview} 
             approved={approved} 
-            onApprove={approveProject} 
+            onApprove={async () => {
+              await approveProject();
+              if (activeProjectId) {
+                navigate(`/projects/${encodeId(activeProjectId)}/production`);
+              }
+            }} 
             onRefine={refineProject} 
             loading={loading} 
           />
