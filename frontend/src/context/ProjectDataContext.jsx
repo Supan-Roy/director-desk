@@ -458,6 +458,126 @@ export function ProjectDataProvider({ children }) {
     }
   }, [activeProjectId, fetchSavedProjects])
 
+  const handleResumeGenerate = useCallback(async (projectId) => {
+    setLoading(true)
+    setError(null)
+    setHasProject(true)
+    
+    setAgents([
+      { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+      { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: "just now" },
+      { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "waiting" },
+      { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "waiting" },
+      { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" }
+    ])
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/generate/stream/resume/${projectId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        const errText = await response.text()
+        throw new Error(errText || 'Failed to resume stream')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder('utf-8')
+      let buffer = ''
+
+      const processEvent = (event) => {
+        if (event.type === 'title') {
+          setTitle(event.data)
+        } else if (event.type === 'production_type') {
+          setProductionType(event.data)
+        } else if (event.type === 'resume_init') {
+          setScript(event.data.script || "")
+          setStoryboard(event.data.storyboard || [])
+          
+          const isAudio = event.data.production_type === 'Podcast' || event.data.production_type === 'Audio Story'
+          setAgents([
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: isAudio ? "completed" : "completed", completedAt: "just now" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "waiting" },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "waiting" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" }
+          ])
+        } else if (event.type === 'agent_status_change') {
+          setAgents((prev) => prev.map((agent) => {
+            if (agent.id === event.agent) {
+              return { ...agent, status: event.status }
+            }
+            return agent
+          }))
+        } else if (event.type === 'scene_breakdown') {
+          setSceneBreakdown(event.data)
+          setAgents((prev) => prev.map((agent) => {
+            if (agent.id === 'scene_breakdown') {
+              return { ...agent, status: 'completed', completedAt: 'just now' }
+            }
+            if (agent.id === 'planner') {
+              return { ...agent, status: 'active' }
+            }
+            return agent
+          }))
+        } else if (event.type === 'production_plan') {
+          setProductionPlan(event.data)
+          setAgents((prev) => prev.map((agent) => {
+            if (agent.id === 'planner') {
+              return { ...agent, status: 'completed', completedAt: 'just now' }
+            }
+            if (agent.id === 'critic') {
+              return { ...agent, status: 'active' }
+            }
+            return agent
+          }))
+        } else if (event.type === 'critic_review') {
+          setCriticReview(event.data)
+          setAgents((prev) => prev.map((agent) => {
+            if (agent.id === 'critic') {
+              return { ...agent, status: 'completed', completedAt: 'just now' }
+            }
+            return agent
+          }))
+        } else if (event.type === 'complete') {
+          const numericId = parseInt(projectId, 10);
+          if (!isNaN(numericId)) {
+             getProjectById(numericId).then(data => {
+               setActiveProjectId(data.id)
+               setApproved(data.approved)
+               fetchSavedProjects()
+             }).catch(console.error)
+          }
+        }
+      }
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.slice(6))
+              processEvent(event)
+            } catch (e) {
+              console.error('Failed to parse SSE line:', line, e)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchSavedProjects])
+
   const value = {
     hasProject,
     title,
@@ -478,6 +598,7 @@ export function ProjectDataProvider({ children }) {
     activeProjectId,
     // Actions
     generate: handleGenerate,
+    resumeGenerate: handleResumeGenerate,
     reset: handleReset,
     refresh: fetchAll,
     loadFeatured,

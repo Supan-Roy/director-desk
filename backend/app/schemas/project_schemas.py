@@ -36,6 +36,8 @@ class ProjectDetail(BaseModel):
     storyboard: Optional[List[Dict[str, Any]]] = None
     production_plan: Optional[Dict[str, Any]] = None
     scene_breakdown: Optional[Dict[str, Any]] = None
+    environments: Optional[List[Dict[str, Any]]] = None
+    voices: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
     updated_at: datetime
 
@@ -48,6 +50,8 @@ class ProjectUpdate(BaseModel):
     original_script: Optional[str] = None
     critic_review: Optional[Dict[str, Any]] = None
     scene_breakdown: Optional[Dict[str, Any]] = None
+    environments: Optional[List[Dict[str, Any]]] = None
+    voices: Optional[List[Dict[str, Any]]] = None
     approved: Optional[bool] = None
     title: Optional[str] = None
     is_pinned: Optional[bool] = None

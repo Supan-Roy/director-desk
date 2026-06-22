@@ -13,6 +13,8 @@ import {
 } from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
 import ProjectIcon from '../components/ProjectIcon';
+import WorkflowTimeline from '../components/WorkflowTimeline';
+import AgentActivityPanel from '../components/AgentActivityPanel';
 import { useTheme } from '../context/ThemeContext';
 import { useProjectData } from '../hooks/useProjectData';
 import { decodeProjectRouteId } from '../utils/hashids';
@@ -163,11 +165,22 @@ function ScriptView({ script, originalScript, onSave, readOnly }) {
   );
 }
 
-function StoryboardView({ storyboard, productionType }) {
+function StoryboardView({ storyboard, productionType, onProceed, loading }) {
   const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
   if (!storyboard || storyboard.length === 0) return (
-    <div className="flex min-h-[260px] items-center justify-center text-surface-600 text-sm">
-      {isAudio ? 'Not applicable for audio productions.' : 'No storyboard available.'}
+    <div className="flex flex-col min-h-[260px] items-center justify-center text-center gap-4">
+      <p className="text-surface-600 text-sm">
+        {isAudio ? 'Not applicable for audio productions.' : 'No storyboard available.'}
+      </p>
+      {!isAudio && onProceed && (
+        <button
+          onClick={onProceed}
+          disabled={loading}
+          className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-colors cursor-pointer"
+        >
+          {loading ? 'Resuming...' : 'Compile Storyboard & subsequent steps'}
+        </button>
+      )}
     </div>
   );
   return (
@@ -195,10 +208,19 @@ function StoryboardView({ storyboard, productionType }) {
   );
 }
 
-function PlanView({ plan }) {
+function PlanView({ plan, onProceed, loading }) {
   if (!plan) return (
-    <div className="flex min-h-[260px] items-center justify-center text-surface-600 text-sm">
-      No production plan available.
+    <div className="flex flex-col min-h-[260px] items-center justify-center text-center gap-4">
+      <p className="text-surface-600 text-sm">No production plan available.</p>
+      {onProceed && (
+        <button
+          onClick={onProceed}
+          disabled={loading}
+          className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer"
+        >
+          {loading ? 'Resuming...' : 'Compile Production Plan & Critic Review'}
+        </button>
+      )}
     </div>
   );
   return (
@@ -226,7 +248,7 @@ function PlanView({ plan }) {
   );
 }
 
-function SceneBreakdownView({ breakdown, productionType }) {
+function SceneBreakdownView({ breakdown, productionType, onProceed, loading }) {
   const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
   const { isDayMode: d } = useTheme();
   const [copiedPrompt, setCopiedPrompt] = useState(null);
@@ -253,11 +275,20 @@ function SceneBreakdownView({ breakdown, productionType }) {
 
   if (!breakdown || !breakdown.scenes || breakdown.scenes.length === 0) {
     return (
-      <div className={`flex min-h-[260px] flex-col items-center justify-center text-sm gap-2 ${
+      <div className={`flex min-h-[260px] flex-col items-center justify-center text-sm gap-4 text-center ${
         d ? 'text-neutral-400' : 'text-surface-550'
       }`}>
         <span>🎬</span>
-        <span>No scene breakdown generated yet. Run production to compile specifications.</span>
+        <p>No scene breakdown generated yet. Resuming production will compile specifications.</p>
+        {onProceed && (
+          <button
+            onClick={onProceed}
+            disabled={loading}
+            className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer"
+          >
+            {loading ? 'Resuming...' : 'Compile Scene Breakdown & Plan'}
+          </button>
+        )}
       </div>
     );
   }
@@ -772,11 +803,20 @@ The user wants to modify it. Apply their request and return ONLY the updated scr
   );
 }
 
-function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGoToProduction }) {
+function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGoToProduction, onProceed }) {
   if (!criticReview) {
     return (
-      <div className="flex min-h-[260px] items-center justify-center text-surface-600 text-sm">
-        Review will appear after the Critic Agent completes its review.
+      <div className="flex flex-col min-h-[260px] items-center justify-center text-center gap-4">
+        <p className="text-surface-600 text-sm">Review will appear after the Critic Agent completes its review.</p>
+        {onProceed && (
+          <button
+            onClick={onProceed}
+            disabled={loading}
+            className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer"
+          >
+            {loading ? 'Resuming...' : 'Generate Critic Review'}
+          </button>
+        )}
       </div>
     );
   }
@@ -930,7 +970,7 @@ export default function ProjectPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isDayMode: d } = useTheme();
-  const { fetchSavedProjects } = useProjectData();
+  const { fetchSavedProjects, resumeGenerate, loading: contextLoading } = useProjectData();
   const [searchParams] = useSearchParams();
   const forcePreProd = searchParams.get('view') === 'preprod';
 
@@ -941,6 +981,18 @@ export default function ProjectPage() {
   const [modifyOpen, setModifyOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleResume = async () => {
+    const numericId = decodeProjectRouteId(id);
+    try {
+      await resumeGenerate(numericId);
+      const updatedProject = await getProjectById(numericId);
+      setProject(updatedProject);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to resume generation: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -1145,26 +1197,42 @@ export default function ProjectPage() {
 
                 {/* Tab content */}
                 <div className="glass-panel rounded-xl p-6 bg-surface-950/45 border border-white/[0.03]">
-                  {activeTab === 'script' && (
-                    <ScriptView 
-                      script={project.script} 
-                      originalScript={project.original_script} 
-                      onSave={handleSaveScript} 
-                      readOnly={project.approved}
-                    />
-                  )}
-                  {activeTab === 'storyboard' && <StoryboardView storyboard={project.storyboard} productionType={project.production_type} />}
-                  {activeTab === 'breakdown' && <SceneBreakdownView breakdown={project.scene_breakdown} productionType={project.production_type} />}
-                  {activeTab === 'plan' && <PlanView plan={project.production_plan} />}
-                  {activeTab === 'review' && (
-                    <ReviewView 
-                      criticReview={project.critic_review} 
-                      approved={project.approved} 
-                      onApprove={handleApproveProject} 
-                      onRefine={handleRefineProject} 
-                      loading={loading} 
-                      onGoToProduction={() => navigate(`/projects/${id}/production`)}
-                    />
+                  {contextLoading ? (
+                    <div className="space-y-6">
+                      <div className="text-center space-y-1 py-4">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-accent">Resuming Pipeline Execution</h3>
+                        <p className="text-[11px] text-surface-500">Orchestrating autonomous agents to build subsequent production phases.</p>
+                      </div>
+                      <WorkflowTimeline />
+                      <div className="border-t border-white/[0.04] pt-5">
+                        <AgentActivityPanel />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {activeTab === 'script' && (
+                        <ScriptView 
+                          script={project.script} 
+                          originalScript={project.original_script} 
+                          onSave={handleSaveScript} 
+                          readOnly={project.approved}
+                        />
+                      )}
+                      {activeTab === 'storyboard' && <StoryboardView storyboard={project.storyboard} productionType={project.production_type} onProceed={handleResume} loading={contextLoading} />}
+                      {activeTab === 'breakdown' && <SceneBreakdownView breakdown={project.scene_breakdown} productionType={project.production_type} onProceed={handleResume} loading={contextLoading} />}
+                      {activeTab === 'plan' && <PlanView plan={project.production_plan} onProceed={handleResume} loading={contextLoading} />}
+                      {activeTab === 'review' && (
+                        <ReviewView 
+                          criticReview={project.critic_review} 
+                          approved={project.approved} 
+                          onApprove={handleApproveProject} 
+                          onRefine={handleRefineProject} 
+                          loading={loading || contextLoading} 
+                          onGoToProduction={() => navigate(`/projects/${id}/production`)}
+                          onProceed={handleResume}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
 

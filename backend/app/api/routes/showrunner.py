@@ -71,6 +71,46 @@ async def generate_story_stream(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/generate/stream/resume/{project_id}")
+async def resume_story_stream(project_id: int):
+    try:
+        logger.info(f"Resuming streaming story generation for project: {project_id}")
+        
+        import asyncio
+        queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        
+        def run_sync_generation():
+            try:
+                for event in showrunner_service.resume_generate_stream(project_id):
+                    loop.call_soon_threadsafe(queue.put_nowait, event)
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+            except Exception as e:
+                logger.error(f"Error in background resume generation: {e}", exc_info=True)
+                loop.call_soon_threadsafe(queue.put_nowait, {"type": "error", "message": str(e)})
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        loop.run_in_executor(None, run_sync_generation)
+        
+        async def event_generator():
+            while True:
+                event = await queue.get()
+                if event is None:
+                    break
+                yield f"data: {json.dumps(event)}\n\n"
+                
+        headers = {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+        return StreamingResponse(event_generator(), headers=headers, media_type="text/event-stream")
+    except Exception as e:
+        logger.error(f"Failed to initiate resume stream: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 def _auto_save_project(original_prompt: str) -> None:
     """
     Persist the just-completed generation to the database.

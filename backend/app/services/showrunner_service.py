@@ -410,5 +410,194 @@ class ShowrunnerService:
                 "type": "complete"
             }
 
+    def resume_generate_stream(self, project_id: int) -> Generator[dict, None, None]:
+        from app.db.database import SessionLocal
+        from app.services.project_service import project_service
+        from app.schemas.responses import StoryboardScene
+
+        db = SessionLocal()
+        try:
+            project = project_service.get_project_model(db, project_id)
+            if not project:
+                raise Exception(f"Project {project_id} not found")
+            
+            # Setup project state with existing data
+            project_state.reset()
+            project_state.id = project.id
+            project_state.has_project = True
+            project_state.title = project.title
+            project_state.prompt = project.prompt
+            project_state.production_type = project.production_type
+            project_state.script = project.script
+            project_state.original_script = project.original_script
+            
+            storyboard_objs = []
+            for s in (project.storyboard or []):
+                storyboard_objs.append(StoryboardScene(
+                    scene_number=s.get('scene', s.get('scene_number', '')),
+                    camera_shot=s.get('shot', s.get('camera_shot', '')),
+                    environment=s.get('environment', ''),
+                    mood=s.get('mood', '')
+                ))
+            project_state.storyboard = storyboard_objs
+            
+            # Set completed statuses for stages that are already generated
+            # Stage 1: Script
+            project_state.set_agent_status("writer", "completed", "just now")
+            
+            # Stage 2: Storyboard
+            is_audio = project.production_type in ["Podcast", "Audio Story"]
+            if is_audio:
+                project_state.set_agent_status("storyboard", "completed", "N/A")
+            elif project.storyboard:
+                project_state.set_agent_status("storyboard", "completed", "just now")
+                
+            script_accumulated = project.script
+            prompt = project.prompt
+            production_type = project.production_type
+            full_prompt = prompt
+            
+            # Reconstruct storyboard text
+            storyboard_text_accumulated = ""
+            for s in (project.storyboard or []):
+                storyboard_text_accumulated += f"Scene Number: {s.get('scene', '')}\n"
+                storyboard_text_accumulated += f"Camera Shot: {s.get('shot', '')}\n"
+                storyboard_text_accumulated += f"Environment: {s.get('environment', '')}\n"
+                storyboard_text_accumulated += f"Mood: {s.get('mood', '')}\n---\n\n"
+            
+            # Yield initial metadata to frontend
+            yield {
+                "type": "production_type",
+                "data": production_type
+            }
+            yield {
+                "type": "title",
+                "data": project.title
+            }
+            yield {
+                "type": "resume_init",
+                "data": {
+                    "production_type": production_type,
+                    "script": project.script,
+                    "storyboard": [
+                        {
+                            "scene": s.get('scene'),
+                            "shot": s.get('shot'),
+                            "environment": s.get('environment'),
+                            "mood": s.get('mood'),
+                            "description": f"{s.get('shot')} in {s.get('environment')} — {s.get('mood')}",
+                        }
+                        for s in (project.storyboard or [])
+                    ]
+                }
+            }
+
+            # ── Check Stage 3: Scene Breakdown ──
+            if not project.scene_breakdown:
+                project_state.set_agent_status("scene_breakdown", "active")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "scene_breakdown",
+                    "status": "active"
+                }
+                
+                if is_audio:
+                    breakdown = {
+                        "total_runtime": "N/A",
+                        "consistency_warnings": [],
+                        "scenes": [],
+                        "asset_requirements": {
+                            "characters_needed": [],
+                            "locations_needed": [],
+                            "props_needed": [],
+                            "sound_requirements": ["Audio Story/Podcast audio track"],
+                            "vfx_requirements": []
+                        }
+                    }
+                else:
+                    breakdown = scene_breakdown_agent.generate_breakdown(
+                        full_prompt,
+                        script_accumulated,
+                        storyboard_text_accumulated,
+                        None
+                    )
+                project_state.scene_breakdown = breakdown
+                project_state.set_agent_status("scene_breakdown", "completed", "just now")
+                yield {
+                    "type": "scene_breakdown",
+                    "data": breakdown
+                }
+            else:
+                project_state.scene_breakdown = project.scene_breakdown
+                project_state.set_agent_status("scene_breakdown", "completed", "just now")
+                yield {
+                    "type": "scene_breakdown",
+                    "data": project.scene_breakdown
+                }
+
+            # ── Check Stage 4: Plan ──
+            if not project.production_plan:
+                project_state.set_agent_status("planner", "active")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "planner",
+                    "status": "active"
+                }
+                plan = planner_agent.generate_plan(project.title, script_accumulated, storyboard_text_accumulated, production_type)
+                project_state.production_plan = plan
+                project_state.set_agent_status("planner", "completed", "just now")
+                yield {
+                    "type": "production_plan",
+                    "data": plan
+                }
+            else:
+                project_state.production_plan = project.production_plan
+                project_state.set_agent_status("planner", "completed", "just now")
+                yield {
+                    "type": "production_plan",
+                    "data": project.production_plan
+                }
+
+            # ── Check Stage 5: Review ──
+            if not project.critic_review:
+                project_state.set_agent_status("critic", "active")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "critic",
+                    "status": "active"
+                }
+                critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
+                project_state.critic_review = critic_review
+                project_state.critic_notes = critic_review.get("suggestions", [])
+                project_state.set_agent_status("critic", "completed", "just now")
+                yield {
+                    "type": "critic_review",
+                    "data": critic_review
+                }
+            else:
+                project_state.critic_review = project.critic_review
+                project_state.critic_notes = project.critic_review.get("suggestions", [])
+                project_state.set_agent_status("critic", "completed", "just now")
+                yield {
+                    "type": "critic_review",
+                    "data": project.critic_review
+                }
+
+            # Save updated project
+            project_service.update_project(
+                db,
+                project_id,
+                scene_breakdown=project_state.scene_breakdown,
+                production_plan=project_state.production_plan,
+                critic_review=project_state.critic_review
+            )
+
+            yield {
+                "type": "complete"
+            }
+
+        finally:
+            db.close()
+
 
 showrunner_service = ShowrunnerService()
