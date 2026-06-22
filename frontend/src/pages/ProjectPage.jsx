@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { marked } from 'marked';
 import {
-  FiArrowLeft, FiEdit3, FiSend, FiX, FiFileText, FiList,
+  FiArrowLeft, FiArrowRight, FiEdit3, FiSend, FiX, FiFileText, FiList,
   FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck, FiShare2,
   FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar
 } from 'react-icons/fi';
@@ -772,7 +772,7 @@ The user wants to modify it. Apply their request and return ONLY the updated scr
   );
 }
 
-function ReviewView({ criticReview, approved, onApprove, onRefine, loading }) {
+function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGoToProduction }) {
   if (!criticReview) {
     return (
       <div className="flex min-h-[260px] items-center justify-center text-surface-600 text-sm">
@@ -863,16 +863,24 @@ function ReviewView({ criticReview, approved, onApprove, onRefine, loading }) {
       <div className="border-t border-white/[0.04] pt-4">
         {approved ? (
           <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-400">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15">
+            <div className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 shrink-0">
                 <FiAward size={15} />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold uppercase tracking-wider">Production Approved</span>
-                <span className="text-[10px] text-emerald-500/70">Ready for visual asset and video generation pipelines.</span>
+                <span className="text-[10px] text-emerald-500/70 truncate">Ready for visual asset and video generation pipelines.</span>
               </div>
             </div>
-            <span className="text-xs font-bold bg-emerald-500/10 px-2.5 py-1 rounded-md uppercase tracking-wider select-none">✓ Ready</span>
+            {onGoToProduction && (
+              <button
+                onClick={onGoToProduction}
+                className="text-xs font-extrabold bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/30 px-3.5 py-2 rounded-xl uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <span>Production Studio</span>
+                <FiArrowRight size={11} />
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-3">
@@ -1060,6 +1068,20 @@ export default function ProjectPage() {
               </button>
             )}
 
+            {project && project.approved && (
+              <button
+                onClick={() => navigate(`/projects/${id}/production`)}
+                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 border ${
+                  d
+                    ? 'border-accent/35 text-accent hover:bg-accent/15 bg-accent/5'
+                    : 'border-accent/30 text-accent hover:bg-accent/15 bg-accent/5'
+                }`}
+              >
+                <span>Production Studio</span>
+                <FiArrowRight size={12} />
+              </button>
+            )}
+
             {project && !project.approved && (
               <button
                 onClick={() => setModifyOpen(o => !o)}
@@ -1141,6 +1163,7 @@ export default function ProjectPage() {
                       onApprove={handleApproveProject} 
                       onRefine={handleRefineProject} 
                       loading={loading} 
+                      onGoToProduction={() => navigate(`/projects/${id}/production`)}
                     />
                   )}
                 </div>
