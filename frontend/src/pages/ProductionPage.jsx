@@ -596,53 +596,62 @@ export default function ProductionPage() {
         </div>
 
         {/* Console Workspace viewport */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-6">
-          <div className="max-w-7xl mx-auto space-y-6 pb-12">
-            {contextLoading ? (
-              <div className={`rounded-xl border p-6 space-y-6 transition-colors duration-500 ${
-                d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-              }`}>
-                <div className="text-center space-y-1 py-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-accent">Resuming Pipeline Execution</h3>
-                  <p className={`text-[11px] ${d ? 'text-gray-550' : 'text-surface-500'}`}>Orchestrating autonomous agents to build subsequent production phases.</p>
-                </div>
-                <WorkflowTimeline />
-                <div className="border-t border-white/[0.04] pt-5">
-                  <AgentActivityPanel />
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          {contextLoading ? (
+            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
+              <div className="max-w-7xl mx-auto w-full space-y-6 pb-12">
+                <div className={`rounded-xl border p-6 space-y-6 transition-colors duration-500 ${
+                  d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
+                }`}>
+                  <div className="text-center space-y-1 py-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-accent">Resuming Pipeline Execution</h3>
+                    <p className={`text-[11px] ${d ? 'text-gray-550' : 'text-surface-500'}`}>Orchestrating autonomous agents to build subsequent production phases.</p>
+                  </div>
+                  <WorkflowTimeline />
+                  <div className="border-t border-white/[0.04] pt-5">
+                    <AgentActivityPanel />
+                  </div>
                 </div>
               </div>
-            ) : (
-              <>
-                {isMissingSpecs && (
-                  <div className={`rounded-xl border p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all duration-300 ${
-                    d 
-                      ? 'bg-amber-50/50 border-amber-300 text-neutral-800' 
-                      : 'bg-amber-500/[0.02] border-amber-500/20 text-white'
-                  }`}>
-                    <div className="flex items-start gap-3">
-                      <span className="text-amber-500 text-lg mt-0.5">⚠️</span>
-                      <div>
-                        <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-500">
-                          Missing Pre-Production Specifications
-                        </h4>
-                        <p className={`text-[11px] mt-1 ${d ? 'text-gray-650' : 'text-surface-400'}`}>
-                          This project is missing scene breakdown, production plan, or critic reviews. 
-                          Click "Proceed Generation" to compile these requirements from the existing script.
-                        </p>
+              <Footer />
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {isMissingSpecs && (
+                <div className="px-6 pt-4 shrink-0">
+                  <div className="max-w-7xl mx-auto">
+                    <div className={`rounded-xl border p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all duration-300 ${
+                      d 
+                        ? 'bg-amber-50/50 border-amber-300 text-neutral-800' 
+                        : 'bg-amber-500/[0.02] border-amber-500/20 text-white'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <span className="text-amber-500 text-lg mt-0.5">⚠️</span>
+                        <div>
+                          <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-500">
+                            Missing Pre-Production Specifications
+                          </h4>
+                          <p className={`text-[11px] mt-1 ${d ? 'text-gray-650' : 'text-surface-400'}`}>
+                            This project is missing scene breakdown, production plan, or critic reviews. 
+                            Click "Proceed Generation" to compile these requirements from the existing script.
+                          </p>
+                        </div>
                       </div>
+                      <button
+                        onClick={handleResume}
+                        className="px-4 py-2 bg-accent hover:bg-purple-600 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Proceed Generation
+                      </button>
                     </div>
-                    <button
-                      onClick={handleResume}
-                      className="px-4 py-2 bg-accent hover:bg-purple-600 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap"
-                    >
-                      Proceed Generation
-                    </button>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* ── TAB CONTENT ── */}
-                {activeStudioTab === 'dashboard' && (
-                  <div className="space-y-6">
+              {/* ── TAB CONTENT ── */}
+              {activeStudioTab === 'dashboard' && (
+                <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
+                  <div className="max-w-7xl mx-auto w-full space-y-6 pb-12">
                     {/* 1. TOP OVERVIEW DASHBOARD */}
                     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 rounded-xl border p-4 transition-colors duration-500 ${
                       d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.04]'
@@ -838,13 +847,17 @@ export default function ProductionPage() {
                       </div>
                     </div>
                   </div>
-                )}
+                  <Footer />
+                </div>
+              )}
 
-                {activeStudioTab === 'characters' && (
-                  /* 3. CHARACTER STUDIO (Cast extraction) */
-                  <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                    d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                  }`}>
+              {activeStudioTab === 'characters' && (
+                <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
+                  <div className="max-w-7xl mx-auto w-full pb-12">
+                    {/* 3. CHARACTER STUDIO (Cast extraction) */}
+                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
+                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
+                    }`}>
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
                       <div className="flex items-center gap-2">
                         <FiUser className="text-accent" size={14} />
@@ -1009,13 +1022,18 @@ export default function ProductionPage() {
                       </div>
                     )}
                   </div>
-                )}
+                  </div>
+                  <Footer />
+                </div>
+              )}
 
-                {activeStudioTab === 'environments' && (
-                  /* ── ENVIRONMENT STUDIO ── */
-                  <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                    d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                  }`}>
+              {activeStudioTab === 'environments' && (
+                <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
+                  <div className="max-w-7xl mx-auto w-full pb-12">
+                    {/* ── ENVIRONMENT STUDIO ── */}
+                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
+                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
+                    }`}>
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
                       <div className="flex items-center gap-2">
                         <FiMapPin className="text-accent" size={14} />
@@ -1169,13 +1187,18 @@ export default function ProductionPage() {
                       </div>
                     )}
                   </div>
-                )}
+                  </div>
+                  <Footer />
+                </div>
+              )}
 
-                {activeStudioTab === 'voices' && (
-                  /* ── VOICE STUDIO ── */
-                  <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                    d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                  }`}>
+              {activeStudioTab === 'voices' && (
+                <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
+                  <div className="max-w-7xl mx-auto w-full pb-12">
+                    {/* ── VOICE STUDIO ── */}
+                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
+                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
+                    }`}>
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
                       <div className="flex items-center gap-2">
                         <FiVolume2 className="text-accent" size={14} />
@@ -1377,13 +1400,18 @@ export default function ProductionPage() {
                       </div>
                     )}
                   </div>
-                )}
+                  </div>
+                  <Footer />
+                </div>
+              )}
 
-                {activeStudioTab === 'filmgen' && (
-                  /* ── FILM GENERATION WORKSPACE ── */
-                  <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                    d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                  }`}>
+              {activeStudioTab === 'filmgen' && (
+                <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
+                  <div className="max-w-7xl mx-auto w-full pb-12">
+                    {/* ── FILM GENERATION WORKSPACE ── */}
+                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
+                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
+                    }`}>
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
                       <div className="flex items-center gap-2">
                         <FiMonitor className="text-accent" size={14} />
@@ -1576,11 +1604,12 @@ export default function ProductionPage() {
                       </div>
                     )}
                   </div>
-                )}
-              </>
-            )}
-          </div>
-          <Footer />
+                  </div>
+                  <Footer />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
