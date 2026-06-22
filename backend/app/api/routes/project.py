@@ -36,6 +36,8 @@ def get_project_status():
         "productionType": project_state.production_type,
         "criticReview": project_state.critic_review,
         "sceneBreakdown": project_state.scene_breakdown,
+        "environments": project_state.environments,
+        "voices": project_state.voices,
         "originalScript": project_state.original_script,
         "script": project_state.script,
         "approved": project_state.approved,
@@ -83,6 +85,10 @@ def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depend
             project_state.critic_review = payload.critic_review
         if payload.scene_breakdown is not None:
             project_state.scene_breakdown = payload.scene_breakdown
+        if payload.environments is not None:
+            project_state.environments = payload.environments
+        if payload.voices is not None:
+            project_state.voices = payload.voices
         if payload.approved is not None:
             project_state.approved = payload.approved
 

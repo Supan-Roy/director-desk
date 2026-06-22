@@ -52,6 +52,9 @@ class Project(Base):
 
     scene_breakdown = Column(JSONType, nullable=True)  # nested breakdown dict
 
+    environments = Column(JSONType, nullable=True)     # list of environment dicts
+    voices = Column(JSONType, nullable=True)           # list of voice dicts
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     updated_at = Column(

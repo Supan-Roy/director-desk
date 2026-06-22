@@ -45,6 +45,8 @@ class ProjectRepository:
         production_plan: Optional[dict] = None,
         critic_review: Optional[dict] = None,
         scene_breakdown: Optional[dict] = None,
+        environments: Optional[list] = None,
+        voices: Optional[list] = None,
         approved: bool = False,
     ) -> Project:
         """Persist a new Project and return the saved instance."""
@@ -59,6 +61,8 @@ class ProjectRepository:
             production_plan=production_plan,
             critic_review=critic_review,
             scene_breakdown=scene_breakdown,
+            environments=environments,
+            voices=voices,
             approved=approved,
             created_at=now,
             updated_at=now,

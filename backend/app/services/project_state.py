@@ -35,6 +35,8 @@ class ProjectState:
         self.critic_notes: list[str] = []
         self.critic_review: Optional[dict] = None
         self.scene_breakdown: Optional[dict] = None
+        self.environments: Optional[list] = None
+        self.voices: Optional[list] = None
         self.approved: bool = False
         self.production_type: Optional[str] = "Auto Detect"
         self.agents = [
@@ -57,6 +59,8 @@ class ProjectState:
         self.critic_notes = []
         self.critic_review = None
         self.scene_breakdown = None
+        self.environments = None
+        self.voices = None
         self.approved = False
         self.production_type = "Auto Detect"
         for agent in self.agents:
@@ -89,6 +93,8 @@ class ProjectState:
         self.critic_review = critic_review
         self.critic_notes = critic_review.get("suggestions", []) if critic_review else []
         self.scene_breakdown = scene_breakdown
+        self.environments = None
+        self.voices = None
         self.approved = False
         self.production_type = production_type
         for agent in self.agents:
