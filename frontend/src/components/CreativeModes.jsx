@@ -30,6 +30,34 @@ function VideoThumbnail({ src, isHovered }) {
   );
 }
 
+function TemplateImage({ src, alt }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      setIsLoaded(true);
+    }
+  }, [src]);
+
+  return (
+    <div className="relative w-full h-full bg-[#111111] overflow-hidden">
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-[#15151a] shimmer-effect" />
+      )}
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        onLoad={() => setIsLoaded(true)}
+        className={`h-full w-full object-cover filter contrast-[1.05] transition-opacity duration-300 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
+  );
+}
+
 export default function CreativeModes({ onSelectTemplate }) {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [zCard, setZCard] = useState(null);
@@ -94,14 +122,12 @@ export default function CreativeModes({ onSelectTemplate }) {
 
             {/* Template Visual Header */}
             <div className="relative h-[125px] w-full overflow-hidden bg-black shrink-0 rounded-t-lg">
-              {tmpl.video ? (
-                <VideoThumbnail src={tmpl.video} isHovered={hoveredCard === tmpl.id} />
-              ) : (
-                <img
-                  src={tmpl.image}
-                  alt={tmpl.title}
-                  className="h-full w-full object-cover filter contrast-[1.05]"
-                />
+              <TemplateImage src={tmpl.image} alt={tmpl.title} />
+              
+              {tmpl.video && hoveredCard === tmpl.id && (
+                <div className="absolute inset-0 z-10 animate-fade-in">
+                  <VideoThumbnail src={tmpl.video} isHovered={true} />
+                </div>
               )}
               {/* Category Icon */}
               <div 
