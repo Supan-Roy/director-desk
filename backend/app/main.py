@@ -29,8 +29,20 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error(f"Failed to generate procedural VFX assets on startup: {exc}")
 
+    # Connect to Redis
+    from app.core.redis import redis_manager
+    try:
+        await redis_manager.connect()
+    except Exception as exc:
+        logger.error(f"Failed to connect to Redis on startup: {exc}")
+
     yield
-    # (shutdown hooks go here if needed)
+
+    # Disconnect from Redis
+    try:
+        await redis_manager.disconnect()
+    except Exception as exc:
+        logger.error(f"Failed to disconnect from Redis on shutdown: {exc}")
 
 
 def _run_migrations(engine) -> None:
@@ -80,9 +92,11 @@ app.add_middleware(
 
 from app.api.router import api_router
 from app.api.routes.showrunner import router as showrunner_router
+from app.api.routes.jobs import router as jobs_router
 
 app.include_router(api_router, prefix="/api")
 app.include_router(showrunner_router, prefix="/api", tags=["Showrunner"])
+app.include_router(jobs_router)
 
 from fastapi.staticfiles import StaticFiles
 import os

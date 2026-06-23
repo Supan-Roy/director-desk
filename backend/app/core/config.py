@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     ]
     qwen_api_base_url: str = ''
     qwen_api_key: str = ''
+    
+    redis_host: str = 'localhost'
+    redis_port: int = 6379
+    redis_password: str = ''
+    redis_db: int = 0
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
 
