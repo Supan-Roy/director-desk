@@ -76,11 +76,20 @@ export default function Dashboard() {
   const { isDayMode } = useTheme();
   const containerRef = useRef(null);
 
-  // Shared state for the prompt input controls
   const [prompt, setPrompt] = useState('');
   const [aspect, setAspect] = useState('16-9');
   const [style, setStyle] = useState('none');
   const [camera, setCamera] = useState('static');
+
+  // Reset prompt controls when project is cleared/exited
+  useEffect(() => {
+    if (!hasProject) {
+      setPrompt('');
+      setAspect('16-9');
+      setStyle('none');
+      setCamera('static');
+    }
+  }, [hasProject]);
 
   // Track mouse coordinates for interactive background lens flare
   const handleMouseMove = (e) => {
