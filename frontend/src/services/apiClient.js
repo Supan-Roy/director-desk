@@ -57,6 +57,12 @@ export async function generateStory(prompt, mode = 'fast') {
 
 // ─── Persisted Projects ────────────────────────────────────────────────────
 
+/** Fetch all featured productions (demo content) for dashboard. */
+export async function getFeaturedProductions() {
+  const response = await apiClient.get('/api/projects/featured')
+  return response.data
+}
+
 /** Fetch all saved projects (sidebar list). */
 export async function getProjects() {
   const response = await apiClient.get('/api/projects')

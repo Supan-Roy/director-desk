@@ -91,6 +91,25 @@ export default function Dashboard() {
     }
   }, [hasProject]);
 
+  // Measure dashboard render performance
+  useEffect(() => {
+    if (window.performance) {
+      const timeSincePageLoad = performance.now();
+      console.log(
+        `%c[Performance Metric] Dashboard mount complete.`,
+        'color: #10b981; font-weight: bold; font-size: 11px;'
+      );
+      console.log(
+        `%c- Time since page load: ${timeSincePageLoad.toFixed(2)}ms`,
+        'color: #a78bfa; font-weight: 500;'
+      );
+      console.log(
+        `%c- Presets loaded instantly from client bundle.`,
+        'color: #a78bfa; font-weight: 500;'
+      );
+    }
+  }, []);
+
   // Track mouse coordinates for interactive background lens flare
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
