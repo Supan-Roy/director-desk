@@ -3,7 +3,6 @@ import Sidebar from '../components/Sidebar';
 import HeroSection from '../components/HeroSection';
 import CreativeModes from '../components/CreativeModes';
 import FeaturedProductions from '../components/FeaturedProductions';
-import WorkflowTimeline from '../components/WorkflowTimeline';
 import TabbedContent from '../components/TabbedContent';
 import AgentActivityPanel from '../components/AgentActivityPanel';
 import CreditUsageCard from '../components/CreditUsageCard';
@@ -198,12 +197,8 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Active Mode (During/After generation is initiated) */}
             {(hasProject || loading) && (
               <div className="space-y-8">
-                {/* Agent schematic flow & scrolling log panel */}
-                <WorkflowTimeline />
-
                 {/* Production Workspace: Screenplays, Storyboard slides, & timeline details */}
                 {(hasProject || loading) && (
                   <div className="workspace-reveal flex flex-col lg:flex-row gap-8 mt-10">

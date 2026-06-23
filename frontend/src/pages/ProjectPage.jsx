@@ -13,7 +13,6 @@ import {
 } from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
 import ProjectIcon from '../components/ProjectIcon';
-import WorkflowTimeline from '../components/WorkflowTimeline';
 import AgentActivityPanel from '../components/AgentActivityPanel';
 import { useTheme } from '../context/ThemeContext';
 import { useProjectData } from '../hooks/useProjectData';
@@ -1203,7 +1202,6 @@ export default function ProjectPage() {
                         <h3 className="text-sm font-bold uppercase tracking-wider text-accent">Resuming Pipeline Execution</h3>
                         <p className="text-[11px] text-surface-500">Orchestrating autonomous agents to build subsequent production phases.</p>
                       </div>
-                      <WorkflowTimeline />
                       <div className="border-t border-white/[0.04] pt-5">
                         <AgentActivityPanel />
                       </div>
