@@ -54,6 +54,69 @@ def reset_project():
 # Persisted project CRUD
 # ---------------------------------------------------------------------------
 
+@router.get("/projects/featured")
+def get_featured_projects():
+    """Return the list of featured productions (demo content) for the dashboard."""
+    return [
+        {
+            "id": "neo-tokyo",
+            "title": "Neo Tokyo 2099",
+            "tag": "Cyberpunk Thriller",
+            "description": "A noir detective follows a digital signal deep into the towering, wet skyscrapers of Tokyo.",
+            "image": "/images/neotokyo_featured.png",
+            "scenes": "32 Scenes",
+            "agents": "4 Agents",
+            "rating": "98% Match",
+            "accent": "#8b5cf6",
+            "format": "4K RED RAW // Rec.2020",
+            "status": "VFX Master Render",
+            "progress": 92
+        },
+        {
+            "id": "quiet-camera",
+            "title": "The Quiet Camera",
+            "tag": "Drama",
+            "description": "An elderly lady recalls a lifetime of moments long forgotten.",
+            "image": "/images/camera_featured.png",
+            "scenes": "18 Scenes",
+            "agents": "3 Agents",
+            "rating": "95% Match",
+            "accent": "#f59e0b",
+            "format": "35mm Kodak // Dolby Vision",
+            "status": "Color Grading",
+            "progress": 85
+        },
+        {
+            "id": "echoes-apollo",
+            "title": "Echoes of Apollo",
+            "tag": "Sci-Fi",
+            "description": "Stranded on the moon, a lone engineer detects a signal from Earth.",
+            "image": "/images/apollo_featured.png",
+            "scenes": "24 Scenes",
+            "agents": "5 Agents",
+            "rating": "99% Match",
+            "accent": "#ec4899",
+            "format": "70mm IMAX // Atmos 16-bit",
+            "status": "Audio Master Align",
+            "progress": 99
+        },
+        {
+            "id": "last-lighthouse",
+            "title": "The Last Lighthouse",
+            "tag": "Drama",
+            "description": "A keeper's final log before the storm that changed everything.",
+            "image": "/images/lighthouse_featured.png",
+            "scenes": "16 Scenes",
+            "agents": "3 Agents",
+            "rating": "97% Match",
+            "accent": "#10b981",
+            "format": "Arri Alexa 65 // Rec.709",
+            "status": "Release Master Ready",
+            "progress": 100
+        }
+    ]
+
+
 @router.get("/projects", response_model=List[ProjectSummary])
 def list_projects(db: Session = Depends(get_db)):
     """Return all saved projects ordered newest-first (sidebar list)."""

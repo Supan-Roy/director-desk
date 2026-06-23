@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { useProjectData } from '../hooks/useProjectData';
 import { FiPlay, FiAward, FiTag, FiCpu, FiLayers, FiCamera } from 'react-icons/fi';
 import { useTheme } from '../context/ThemeContext';
+import { getFeaturedProductions } from '../services/apiClient';
 
 const featuredList = [
   {
@@ -65,6 +67,76 @@ export default function FeaturedProductions() {
   const { loadFeatured } = useProjectData();
   const { isDayMode } = useTheme();
 
+  // Load from cache or fallback to hardcoded local list
+  const [productions, setProductions] = useState(() => {
+    try {
+      const cached = localStorage.getItem('featured_productions_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && Array.isArray(parsed.data)) {
+          return parsed.data;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse featured productions cache:', e);
+    }
+    return featuredList;
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    async function revalidate() {
+      try {
+        const cached = localStorage.getItem('featured_productions_cache');
+        let shouldFetch = true;
+
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const age = Date.now() - (parsed.timestamp || 0);
+          const TTL = 24 * 60 * 60 * 1000; // 24 hours
+          if (age < TTL) {
+            shouldFetch = false;
+          }
+        }
+
+        if (shouldFetch) {
+          console.log('[FeaturedProductions] Cache is stale or missing, fetching in background...');
+          const data = await getFeaturedProductions();
+          
+          if (!active) return;
+
+          // Deep comparison using JSON serialization to avoid unnecessary re-renders
+          setProductions((prevProductions) => {
+            const hasChanged = JSON.stringify(data) !== JSON.stringify(prevProductions);
+            if (hasChanged) {
+              console.log('[FeaturedProductions] Featured productions updated from API.');
+              return data;
+            }
+            console.log('[FeaturedProductions] API data matches cache/local. No UI refresh needed.');
+            return prevProductions;
+          });
+
+          // Cache the new data
+          localStorage.setItem(
+            'featured_productions_cache',
+            JSON.stringify({ timestamp: Date.now(), data })
+          );
+        } else {
+          console.log('[FeaturedProductions] Cache is valid (less than 24 hours old).');
+        }
+      } catch (err) {
+        console.warn('[FeaturedProductions] Background revalidation failed:', err);
+      }
+    }
+
+    revalidate();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <section className="space-y-4 select-none featured-productions-section">
       <div className="flex items-center gap-3">
@@ -75,7 +147,7 @@ export default function FeaturedProductions() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-        {featuredList.map((item, idx) => {
+        {productions.map((item, idx) => {
           const isImageRight = idx >= 2;
           const gradientClass = isImageRight
             ? 'from-[#111111] via-[#111111]/80 to-transparent'
