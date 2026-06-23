@@ -21,11 +21,39 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://director_user:director_password@db:5432/director_desk
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    depends_on:
+      - redis
+      - db
     profiles:
       - dev
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: director_user
+      POSTGRES_PASSWORD: director_password
+      POSTGRES_DB: director_desk
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
 
 networks:
   default:
