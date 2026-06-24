@@ -15,6 +15,9 @@ import {
   getProjectEnvironments,
   selectEnvironmentVersion,
   generateEnvironmentAsset,
+  getProjectVoices,
+  selectVoiceVersion,
+  generateVoiceAsset,
   apiBaseUrl 
 } from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
@@ -283,9 +286,10 @@ export default function ProductionPage() {
     fetchProjectDetails();
   }, [id, fetchProjectDetails]);
 
-  // ── Character & Environment Studio State & Handlers ───────────────────────
+  // ── Character, Environment & Voice Studio State & Handlers ───────────────────────
   const [generatedAssets, setGeneratedAssets] = useState([]);
   const [generatedEnvAssets, setGeneratedEnvAssets] = useState([]);
+  const [generatedVoiceAssets, setGeneratedVoiceAssets] = useState([]);
   const [runningJobs, setRunningJobs] = useState({});
 
   const fetchCharactersList = useCallback(() => {
@@ -310,12 +314,24 @@ export default function ProductionPage() {
       });
   }, [id]);
 
+  const fetchVoicesList = useCallback(() => {
+    const numericId = decodeProjectRouteId(id);
+    getProjectVoices(numericId)
+      .then(data => {
+        setGeneratedVoiceAssets(data);
+      })
+      .catch(err => {
+        console.error("Failed to load voice assets:", err);
+      });
+  }, [id]);
+
   useEffect(() => {
     fetchCharactersList();
     fetchEnvironmentsList();
-  }, [id, fetchCharactersList, fetchEnvironmentsList]);
+    fetchVoicesList();
+  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchVoicesList]);
 
-  // SSE Stream Listener for both characters and environments
+  // SSE Stream Listener for characters, environments, and voices
   useEffect(() => {
     const eventSource = new EventSource(`${apiBaseUrl}/jobs/stream`);
     
@@ -366,6 +382,25 @@ export default function ProductionPage() {
                 return updated;
               });
             }
+          } else if (data.type === 'voice_generation') {
+            const charName = data.target_id;
+            if (charName) {
+              setRunningJobs(prev => {
+                const updated = { ...prev };
+                if (data.status === 'completed' || data.status === 'failed') {
+                  delete updated[charName];
+                  fetchVoicesList();
+                  fetchProjectDetails();
+                } else {
+                  updated[charName] = {
+                    status: data.status,
+                    progress: data.progress || 0,
+                    message: data.message || "Processing..."
+                  };
+                }
+                return updated;
+              });
+            }
           }
         }
       } catch (err) {
@@ -381,7 +416,7 @@ export default function ProductionPage() {
     return () => {
       eventSource.close();
     };
-  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchProjectDetails]);
+  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchVoicesList, fetchProjectDetails]);
 
   const handleGenerateCharacter = async (characterName) => {
     const numericId = decodeProjectRouteId(id);
@@ -450,6 +485,40 @@ export default function ProductionPage() {
       alert("Failed to switch version: " + err.message);
     }
   };
+
+  const handleGenerateVoice = async (characterName) => {
+    const numericId = decodeProjectRouteId(id);
+    setRunningJobs(prev => ({
+      ...prev,
+      [characterName]: {
+        status: 'queued',
+        progress: 0,
+        message: 'Initializing voice job...'
+      }
+    }));
+    try {
+      await generateVoiceAsset(numericId, characterName);
+    } catch (err) {
+      console.error("Failed to trigger voice generation:", err);
+      alert("Failed to start voice generation: " + err.message);
+      setRunningJobs(prev => {
+        const updated = { ...prev };
+        delete updated[characterName];
+        return updated;
+      });
+    }
+  };
+
+  const handleSelectVoiceVersion = async (characterName, preferredAssetId) => {
+    const numericId = decodeProjectRouteId(id);
+    try {
+      await selectVoiceVersion(numericId, characterName, preferredAssetId);
+      await fetchVoicesList();
+    } catch (err) {
+      console.error("Failed to select voice version:", err);
+      alert("Failed to switch version: " + err.message);
+    }
+  };
   
   // ── Tab Management ──────────────────────────────────────────────────────
   const [activeStudioTab, setActiveStudioTab] = useState('dashboard'); // dashboard, characters, environments, voices, filmgen
@@ -459,6 +528,7 @@ export default function ProductionPage() {
   const [activeVoicePreview, setActiveVoicePreview] = useState(null); // name of char voice previewing
   const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
   const previewTimer = useRef(null);
+  const audioInstanceRef = useRef(null);
 
   // ── Film Render Console State ───────────────────────────────────────────
   const [isRendering, setIsRendering] = useState(false);
@@ -521,32 +591,71 @@ export default function ProductionPage() {
   };
 
   // ── Voice Preview Playback Handler ──────────────────────────────────────
-  const handlePlayVoicePreview = (charName) => {
+  const handlePlayVoicePreview = (charName, previewUrl) => {
     if (voicePreviewPlaying && activeVoicePreview === charName) {
       // Pause
+      if (audioInstanceRef.current) {
+        audioInstanceRef.current.pause();
+      }
       setVoicePreviewPlaying(false);
       if (previewTimer.current) clearInterval(previewTimer.current);
       return;
     }
     
     // Stop any existing playing preview
+    if (audioInstanceRef.current) {
+      audioInstanceRef.current.pause();
+    }
     if (previewTimer.current) clearInterval(previewTimer.current);
+    
     setActiveVoicePreview(charName);
     setVoicePreviewPlaying(true);
-    
-    let playSec = 0;
-    previewTimer.current = setInterval(() => {
-      playSec += 1;
-      if (playSec >= 5) {
+
+    if (previewUrl) {
+      const fullUrl = previewUrl.startsWith('/') ? apiBaseUrl + previewUrl : previewUrl;
+      const audio = new Audio(fullUrl);
+      audioInstanceRef.current = audio;
+      audio.play().catch(err => {
+        console.error("Browser audio play failed, using simulated timer:", err);
+        // Fallback simulation
+        let playSec = 0;
+        previewTimer.current = setInterval(() => {
+          playSec += 1;
+          if (playSec >= 5) {
+            setVoicePreviewPlaying(false);
+            clearInterval(previewTimer.current);
+          }
+        }, 1000);
+      });
+      
+      audio.onended = () => {
         setVoicePreviewPlaying(false);
-        clearInterval(previewTimer.current);
-      }
-    }, 1000);
+        setActiveVoicePreview(null);
+      };
+    } else {
+      // Fallback simulation if no previewUrl
+      let playSec = 0;
+      previewTimer.current = setInterval(() => {
+        playSec += 1;
+        if (playSec >= 5) {
+          setVoicePreviewPlaying(false);
+          clearInterval(previewTimer.current);
+        }
+      }, 1000);
+    }
   };
+
+  useEffect(() => {
+    if (audioInstanceRef.current) {
+      audioInstanceRef.current.pause();
+    }
+    setVoicePreviewPlaying(false);
+  }, [activeStudioTab]);
 
   useEffect(() => {
     return () => {
       if (previewTimer.current) clearInterval(previewTimer.current);
+      if (audioInstanceRef.current) audioInstanceRef.current.pause();
     };
   }, []);
 
@@ -648,8 +757,8 @@ export default function ProductionPage() {
   const generatedEnvNames = new Set(generatedEnvAssets.map(asset => asset.environment_name));
   const readyEnvs = environments.filter(e => generatedEnvNames.has(e.name)).length;
   const environmentReadiness = environmentsCount > 0 ? Math.round((readyEnvs / environmentsCount) * 100) : 0;
-  
-  const readyVoices = voices.filter(v => v.status === 'Voice Model Ready').length;
+  const generatedVoiceNames = new Set(generatedVoiceAssets.map(asset => asset.character_name));
+  const readyVoices = voices.filter(v => generatedVoiceNames.has(v.character)).length;
   const voiceReadiness = voices.length > 0 ? Math.round((readyVoices / voices.length) * 100) : 0;
   
   const assetsReadiness = (characterReadiness === 100 && environmentReadiness === 100 && voiceReadiness === 100) ? 100 : 0;
@@ -1483,161 +1592,175 @@ export default function ProductionPage() {
                     <div className={`rounded-xl border p-5 transition-colors duration-500 ${
                       d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
                     }`}>
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
-                      <div className="flex items-center gap-2">
-                        <FiVolume2 className="text-accent" size={14} />
-                        <div>
-                          <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
-                            Voice Studio
-                          </h3>
-                          <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                            Mapping synthetic character accents, emotion ranges, and compiling speech IDs
-                          </p>
+                      <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
+                        <div className="flex items-center gap-2">
+                          <FiVolume2 className="text-accent" size={14} />
+                          <div>
+                            <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
+                              Voice Studio
+                            </h3>
+                            <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                              Mapping synthetic character accents, emotion ranges, and compiling speech IDs
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2 py-1 rounded border ${
+                          d ? 'bg-neutral-50 border-neutral-200 text-neutral-600' : 'bg-white/[0.02] border-white/[0.06] text-surface-400'
+                        }`}>
+                          Cast Voices: {voices.length}
                         </div>
                       </div>
-                      <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2 py-1 rounded border ${
-                        d ? 'bg-neutral-50 border-neutral-200 text-neutral-600' : 'bg-white/[0.02] border-white/[0.06] text-surface-400'
-                      }`}>
-                        Cast Voices: {voices.length}
-                      </div>
-                    </div>
 
-                    {voices.length === 0 ? (
-                      <div className="text-center py-10">
-                        <p className="text-surface-600 text-xs italic">No voice profiles mapped. Ensure pre-production script is generated.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-6">
-                        {voices.map((v) => {
-                          const isCompiled = v.status === 'Voice Model Ready';
-                          const isCompiling = compilingVoice === v.character;
-                          const isPlaying = voicePreviewPlaying && activeVoicePreview === v.character;
+                      {voices.length === 0 ? (
+                        <div className="text-center py-10">
+                          <p className="text-surface-600 text-xs italic">No voice profiles mapped. Ensure pre-production script is generated.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {voices.map((v) => {
+                            const characterVoiceAssets = generatedVoiceAssets.filter(asset => asset.character_name === v.character);
+                            const activeVoiceAsset = characterVoiceAssets.find(asset => asset.voice_profile?.is_preferred) || characterVoiceAssets[characterVoiceAssets.length - 1];
+                            const hasVoiceAsset = !!activeVoiceAsset;
+                            
+                            const charAssets = generatedAssets.filter(asset => asset.character_name === v.character);
+                            const activeCharAsset = charAssets.find(asset => asset.character_profile?.is_preferred) || charAssets[charAssets.length - 1];
 
-                          return (
-                            <div 
-                              key={v.character}
-                              className={`rounded-xl border p-5 transition-all duration-300 ${
-                                d 
-                                  ? 'bg-neutral-50/30 border-neutral-200' 
-                                  : 'bg-[#050507] border-white/[0.04] hover:border-white/[0.07]'
-                              }`}
-                            >
-                              {/* Voice Card Header */}
-                              <div className="flex flex-wrap justify-between items-center gap-3 border-b border-white/[0.03] pb-3 mb-4">
-                                <div className="flex items-center gap-2.5">
-                                  <h4 className={`text-sm font-extrabold tracking-wide uppercase ${d ? 'text-neutral-900' : 'text-white'}`}>
-                                    {v.character}
-                                  </h4>
-                                  <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded ${
-                                    v.role === 'Lead'
-                                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                  }`}>
-                                    {v.role}
-                                  </span>
-                                </div>
+                            const activeJob = runningJobs[v.character];
+                            const isCompiled = hasVoiceAsset;
+                            const isCompiling = !!activeJob;
+                            const isPlaying = voicePreviewPlaying && activeVoicePreview === v.character;
 
-                                <span className={`text-[9px] font-bold font-mono uppercase px-2 py-1 rounded border inline-flex items-center gap-1.5 ${
-                                  isCompiled 
-                                    ? d ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-500/5 border-emerald-500/25 text-emerald-400'
-                                    : isCompiling
-                                      ? 'bg-accent/10 border-accent/25 text-accent'
-                                      : d ? 'bg-neutral-100 border-neutral-200 text-neutral-500' : 'bg-white/[0.02] border-white/[0.06] text-surface-500'
-                                }`}>
-                                  {isCompiling && <div className="h-1.5 w-1.5 border border-accent border-t-transparent rounded-full animate-spin" />}
-                                  {!isCompiling && <span className={`h-1.5 w-1.5 rounded-full ${isCompiled ? 'bg-emerald-400 animate-pulse' : 'bg-surface-500'}`} />}
-                                  {isCompiling ? 'Compiling ID...' : v.status}
-                                </span>
-                              </div>
+                            const ageRange = activeVoiceAsset?.voice_profile?.age_range || v.age_range || 'Extracting...';
+                            const tone = activeVoiceAsset?.voice_profile?.voice_tone || v.tone || 'Extracting...';
+                            const energy = activeVoiceAsset?.voice_profile?.voice_energy || 'Medium';
+                            const pace = activeVoiceAsset?.voice_profile?.speech_pace || 'Measured';
+                            const accent = activeVoiceAsset?.voice_profile?.accent || v.accent || 'Extracting...';
+                            const speakingStyle = activeVoiceAsset?.voice_profile?.speaking_style || v.speech_style || 'Extracting...';
+                            const emotionRange = activeVoiceAsset?.voice_profile?.emotion_range || v.emotion_range || 'Extracting...';
+                            const narrativeFunction = activeVoiceAsset?.voice_profile?.narrative_function || 'Dialogue contributor';
 
-                              {/* Grid Layout */}
-                              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-                                {/* Voice attributes details */}
-                                <div className="md:col-span-4 space-y-3.5 border-r border-dashed border-white/[0.05] pr-4">
-                                  <h5 className="text-[9px] font-extrabold uppercase tracking-widest text-accent mb-1.5">Voice Profile Specs</h5>
-                                  
-                                  <div className="grid grid-cols-2 gap-3 text-[11px] leading-relaxed">
-                                    <div>
-                                      <span className="text-surface-500 block">Gender Profile</span>
-                                      <span className={`font-mono block ${d ? 'text-neutral-900' : 'text-neutral-200'}`}>{v.gender}</span>
+                            return (
+                              <div 
+                                key={v.character}
+                                className={`relative rounded-xl border p-5 flex flex-col justify-between overflow-hidden text-left transition-all duration-300 ${
+                                  d 
+                                    ? 'bg-white border-neutral-200 hover:border-neutral-300 shadow-sm' 
+                                    : 'bg-[#0b0b0f] border-white/[0.05] hover:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
+                                }`}
+                              >
+                                {activeJob && (
+                                  <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center select-none rounded-xl">
+                                    <div className="relative flex items-center justify-center mb-4">
+                                      <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                                      <span className="absolute text-[9px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
                                     </div>
-                                    <div>
-                                      <span className="text-surface-500 block">Estimated Age</span>
-                                      <span className={`font-mono block ${d ? 'text-neutral-900' : 'text-neutral-200'}`}>{v.age_range} yrs</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-surface-500 block">Voice Tone</span>
-                                      <span className={`font-mono block ${d ? 'text-neutral-900' : 'text-neutral-200'}`}>{v.tone}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-surface-500 block">Speech Style</span>
-                                      <span className={`font-mono block ${d ? 'text-neutral-900' : 'text-neutral-200'}`}>{v.speech_style}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-surface-500 block">Emotion Range</span>
-                                      <span className={`font-mono block ${d ? 'text-neutral-900' : 'text-neutral-200'}`}>{v.emotion_range}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-surface-500 block">Accent</span>
-                                      <span className={`font-mono block ${d ? 'text-neutral-900' : 'text-neutral-200'}`}>{v.accent}</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 animate-pulse">
+                                      {activeJob.message || 'Generating Voice...'}
+                                    </span>
+                                    <div className="w-full h-1 bg-white/[0.06] rounded-full mt-4 overflow-hidden">
+                                      <div 
+                                        className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                        style={{ width: `${activeJob.progress}%` }}
+                                      />
                                     </div>
                                   </div>
-                                </div>
+                                )}
 
-                                {/* Voice model configurations */}
-                                <div className="md:col-span-4 space-y-4">
-                                  <h5 className="text-[9px] font-extrabold uppercase tracking-widest text-accent">Voice Model Configuration</h5>
-                                  
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-bold uppercase text-surface-550 block">Voice ID Reference</label>
-                                    <div className="font-mono text-xs p-2 rounded-lg bg-black/45 border border-white/[0.04] text-surface-300">
-                                      {v.voice_id || 'Not Assigned'}
+                                <div className="space-y-4">
+                                  {/* Voice Card Header */}
+                                  <div className="flex justify-between items-start gap-3 border-b border-white/[0.03] pb-3">
+                                    <div className="flex items-center gap-3">
+                                      {activeCharAsset?.image_url ? (
+                                        <img 
+                                          src={activeCharAsset.image_url.startsWith('/') ? apiBaseUrl + activeCharAsset.image_url : activeCharAsset.image_url} 
+                                          alt={v.character} 
+                                          className="w-10 h-10 rounded-lg object-cover border border-white/[0.08] shrink-0" 
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-white/[0.02] border border-white/[0.06] flex items-center justify-center text-surface-400 shrink-0">
+                                          <FiUser size={16} />
+                                        </div>
+                                      )}
+                                      <div>
+                                        <h4 className={`text-sm font-extrabold tracking-wide uppercase ${d ? 'text-neutral-900' : 'text-white'}`}>
+                                          {v.character}
+                                        </h4>
+                                        <span className={`text-[9px] font-extrabold uppercase tracking-wider ${
+                                          v.role === 'Lead' ? 'text-purple-400' : 'text-blue-400'
+                                        }`}>
+                                          {v.role || 'Supporting'} Role
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <span className={`text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded border inline-flex items-center gap-1.5 ${
+                                      isCompiled 
+                                        ? d ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-500/5 border-emerald-500/25 text-emerald-400'
+                                        : d ? 'bg-neutral-100 border-neutral-200 text-neutral-500' : 'bg-white/[0.02] border-white/[0.06] text-surface-500'
+                                    }`}>
+                                      <span className={`h-1.5 w-1.5 rounded-full ${isCompiled ? 'bg-emerald-400 animate-pulse' : 'bg-surface-500'}`} />
+                                      {isCompiled ? 'Model Ready' : 'Pending'}
+                                    </span>
+                                  </div>
+
+                                  {/* Specs / Attributes Grid */}
+                                  <div className="grid grid-cols-2 gap-3 text-[10px] font-mono">
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Age Range</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{ageRange}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Voice Tone</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{tone}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Voice Energy</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{energy}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Speech Pace</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{pace}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Accent</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{accent}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Emotion Range</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{emotionRange}</span>
+                                    </div>
+                                    <div className="col-span-2 border-t border-dashed border-white/[0.04] pt-2">
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Speaking Style</span>
+                                      <span className={`block mt-0.5 text-xs leading-normal ${d ? 'text-neutral-700' : 'text-surface-350'}`}>{speakingStyle}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Narrative Function</span>
+                                      <span className={`block mt-0.5 text-xs leading-normal ${d ? 'text-neutral-700' : 'text-surface-350'}`}>{narrativeFunction}</span>
                                     </div>
                                   </div>
 
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-bold uppercase text-surface-550 block">ElevenLabs/OpenAI Model</label>
-                                    <select 
-                                      value={v.voice_model || "None Selected"}
-                                      onChange={(e) => {
-                                        const updatedVoices = voices.map(voice => {
-                                          if (voice.character === v.character) {
-                                            return { ...voice, voice_model: e.target.value };
-                                          }
-                                          return voice;
-                                        });
-                                        handleUpdateFields({ voices: updatedVoices });
-                                      }}
-                                      className="w-full text-xs bg-black/45 border border-white/[0.06] rounded-lg p-2 focus:outline-none focus:border-accent text-surface-200"
-                                    >
-                                      <option value="None Selected">None Selected</option>
-                                      <option value="Qwen-Voice-Male-V1">Qwen-Voice-Male-V1</option>
-                                      <option value="Qwen-Voice-Female-V2">Qwen-Voice-Female-V2</option>
-                                      <option value="ElevenLabs-Synthesizer-Leo">ElevenLabs-Synthesizer-Leo</option>
-                                      <option value="Whisper-Deep-Voice">Whisper-Deep-Voice</option>
-                                    </select>
-                                  </div>
-                                </div>
-
-                                {/* Preview and Compilation */}
-                                <div className="md:col-span-4 space-y-4 flex flex-col justify-between self-stretch">
-                                  <div>
+                                  {/* Audio Preview space */}
+                                  <div className="pt-2">
                                     <h5 className="text-[9px] font-extrabold uppercase tracking-widest text-accent mb-2">Voice Model Preview</h5>
                                     {isCompiled ? (
-                                      <div className="space-y-3">
+                                      <div className="bg-black/25 border border-white/[0.04] rounded-lg p-3 space-y-2.5">
+                                        <div className="flex justify-between items-center text-[8px] font-mono text-surface-500 uppercase">
+                                          <span>Voice Waveform</span>
+                                          <span>Duration: 00:05</span>
+                                        </div>
                                         <AudioWaveLines isPlaying={isPlaying} />
                                         <button
-                                          onClick={() => handlePlayVoicePreview(v.character)}
+                                          onClick={() => handlePlayVoicePreview(v.character, activeVoiceAsset?.preview_url || v.voice_preview || "")}
                                           className={`w-full flex items-center justify-center gap-1.5 rounded-lg py-2 border text-[10px] font-bold tracking-wider uppercase transition-all ${
                                             isPlaying 
-                                              ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
+                                              ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20' 
                                               : 'bg-cyan-500/5 border-cyan-500/25 text-cyan-400 hover:bg-cyan-500/10'
                                           }`}
                                         >
                                           {isPlaying ? (
                                             <>
                                               <FiPause size={10} />
-                                              <span>Pause Preview (5s Demo)</span>
+                                              <span>Pause Preview</span>
                                             </>
                                           ) : (
                                             <>
@@ -1648,42 +1771,56 @@ export default function ProductionPage() {
                                         </button>
                                       </div>
                                     ) : (
-                                      <div className="h-16 w-full bg-white/[0.005] border border-dashed border-white/[0.04] rounded-lg flex flex-col items-center justify-center text-center p-3 opacity-40">
-                                        <span className="text-[10px] text-surface-550 uppercase tracking-wider font-mono">No voice compile logged</span>
+                                      <div className="h-28 w-full bg-white/[0.005] border border-dashed border-white/[0.04] rounded-lg flex flex-col items-center justify-center text-center p-3 opacity-40">
+                                        <FiVolume2 size={24} className="text-surface-500 mb-1" />
+                                        <span className="text-[10px] text-surface-550 uppercase tracking-wider font-mono">Voice Preview Offline</span>
                                       </div>
                                     )}
                                   </div>
-
-                                  <button
-                                    onClick={() => handleCompileVoice(v.character)}
-                                    disabled={isCompiling}
-                                    className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 border cursor-pointer ${
-                                      isCompiled
-                                        ? d 
-                                          ? 'border-neutral-300 hover:bg-neutral-100 text-neutral-800' 
-                                          : 'border-white/[0.08] hover:bg-white/[0.04] text-surface-200'
-                                        : 'bg-accent border-accent text-white hover:bg-accent/90 shadow-[0_0_15px_rgba(139,92,246,0.25)]'
-                                    }`}
-                                  >
-                                    {isCompiling ? (
-                                      <>
-                                        <div className="h-3 w-3 border border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>Compiling Voice ID...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span>{isCompiled ? 'Re-compile Voice ID' : 'Compile Voice ID'}</span>
-                                      </>
-                                    )}
-                                  </button>
                                 </div>
+
+                                {/* Bottom Selection & Generation Control Bar */}
+                                {isCompiled ? (
+                                  <div className="flex gap-3 items-end mt-5 border-t border-white/[0.04] pt-4 shrink-0">
+                                    <div className="flex-1 flex flex-col gap-1">
+                                      <label className="text-[8px] font-extrabold uppercase text-surface-500 tracking-wider">Voice Version</label>
+                                      <select
+                                        value={activeVoiceAsset.id}
+                                        onChange={(e) => handleSelectVoiceVersion(v.character, Number(e.target.value))}
+                                        className="text-xs bg-[#0b0b0f] border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                      >
+                                        {characterVoiceAssets.map(asset => (
+                                          <option key={asset.id} value={asset.id}>
+                                            Version {asset.voice_profile?.version || 1} {asset.id === activeVoiceAsset.id ? '(Active)' : ''}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <button
+                                      onClick={() => handleGenerateVoice(v.character)}
+                                      disabled={isCompiling}
+                                      className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] hover:border-cyan-500/30 whitespace-nowrap"
+                                    >
+                                      Regenerate
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="mt-5 border-t border-white/[0.04] pt-4">
+                                    <button
+                                      onClick={() => handleGenerateVoice(v.character)}
+                                      disabled={isCompiling}
+                                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 bg-accent border-accent text-white hover:bg-accent/90 shadow-[0_0_15px_rgba(139,92,246,0.25)] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                                    >
+                                      Generate Voice Profile
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <Footer />
                 </div>
