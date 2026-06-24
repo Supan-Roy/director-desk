@@ -12,6 +12,9 @@ import {
   getProjectCharacters, 
   selectCharacterVersion, 
   generateCharacterAsset, 
+  getProjectEnvironments,
+  selectEnvironmentVersion,
+  generateEnvironmentAsset,
   apiBaseUrl 
 } from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
@@ -255,9 +258,34 @@ export default function ProductionPage() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // ── Character Studio State & Handlers ─────────────────────────────────────
+
+  const fetchProjectDetails = useCallback(() => {
+    let cancelled = false;
+    const numericId = decodeProjectRouteId(id);
+    getProjectById(numericId)
+      .then(data => {
+        if (!cancelled) {
+          setProject(data);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchProjectDetails();
+  }, [id, fetchProjectDetails]);
+
+  // ── Character & Environment Studio State & Handlers ───────────────────────
   const [generatedAssets, setGeneratedAssets] = useState([]);
+  const [generatedEnvAssets, setGeneratedEnvAssets] = useState([]);
   const [runningJobs, setRunningJobs] = useState({});
 
   const fetchCharactersList = useCallback(() => {
@@ -271,11 +299,23 @@ export default function ProductionPage() {
       });
   }, [id]);
 
+  const fetchEnvironmentsList = useCallback(() => {
+    const numericId = decodeProjectRouteId(id);
+    getProjectEnvironments(numericId)
+      .then(data => {
+        setGeneratedEnvAssets(data);
+      })
+      .catch(err => {
+        console.error("Failed to load environment assets:", err);
+      });
+  }, [id]);
+
   useEffect(() => {
     fetchCharactersList();
-  }, [id, fetchCharactersList]);
+    fetchEnvironmentsList();
+  }, [id, fetchCharactersList, fetchEnvironmentsList]);
 
-  // SSE Stream Listener
+  // SSE Stream Listener for both characters and environments
   useEffect(() => {
     const eventSource = new EventSource(`${apiBaseUrl}/jobs/stream`);
     
@@ -288,24 +328,44 @@ export default function ProductionPage() {
         }
         
         const numericId = decodeProjectRouteId(id);
-        if (String(data.project_id) === String(numericId) && data.type === 'character_generation') {
-          const charName = data.target_id;
-          if (charName) {
-            setRunningJobs(prev => {
-              const updated = { ...prev };
-              if (data.status === 'completed' || data.status === 'failed') {
-                delete updated[charName];
-                // Refresh assets list on completion
-                fetchCharactersList();
-              } else {
-                updated[charName] = {
-                  status: data.status,
-                  progress: data.progress || 0,
-                  message: data.message || "Processing..."
-                };
-              }
-              return updated;
-            });
+        if (String(data.project_id) === String(numericId)) {
+          if (data.type === 'character_generation') {
+            const charName = data.target_id;
+            if (charName) {
+              setRunningJobs(prev => {
+                const updated = { ...prev };
+                if (data.status === 'completed' || data.status === 'failed') {
+                  delete updated[charName];
+                  fetchCharactersList();
+                } else {
+                  updated[charName] = {
+                    status: data.status,
+                    progress: data.progress || 0,
+                    message: data.message || "Processing..."
+                  };
+                }
+                return updated;
+              });
+            }
+          } else if (data.type === 'environment_generation') {
+            const envName = data.target_id;
+            if (envName) {
+              setRunningJobs(prev => {
+                const updated = { ...prev };
+                if (data.status === 'completed' || data.status === 'failed') {
+                  delete updated[envName];
+                  fetchEnvironmentsList();
+                  fetchProjectDetails();
+                } else {
+                  updated[envName] = {
+                    status: data.status,
+                    progress: data.progress || 0,
+                    message: data.message || "Processing..."
+                  };
+                }
+                return updated;
+              });
+            }
           }
         }
       } catch (err) {
@@ -321,11 +381,10 @@ export default function ProductionPage() {
     return () => {
       eventSource.close();
     };
-  }, [id, fetchCharactersList]);
+  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchProjectDetails]);
 
   const handleGenerateCharacter = async (characterName) => {
     const numericId = decodeProjectRouteId(id);
-    // Optimistic progress update
     setRunningJobs(prev => ({
       ...prev,
       [characterName]: {
@@ -357,12 +416,45 @@ export default function ProductionPage() {
       alert("Failed to switch version: " + err.message);
     }
   };
+
+  const handleGenerateEnvironment = async (envName) => {
+    const numericId = decodeProjectRouteId(id);
+    setRunningJobs(prev => ({
+      ...prev,
+      [envName]: {
+        status: 'queued',
+        progress: 0,
+        message: 'Initializing job...'
+      }
+    }));
+    try {
+      await generateEnvironmentAsset(numericId, envName);
+    } catch (err) {
+      console.error("Failed to trigger environment generation:", err);
+      alert("Failed to start environment generation: " + err.message);
+      setRunningJobs(prev => {
+        const updated = { ...prev };
+        delete updated[envName];
+        return updated;
+      });
+    }
+  };
+
+  const handleSelectEnvVersion = async (envName, preferredAssetId) => {
+    const numericId = decodeProjectRouteId(id);
+    try {
+      await selectEnvironmentVersion(numericId, envName, preferredAssetId);
+      await fetchEnvironmentsList();
+    } catch (err) {
+      console.error("Failed to select environment version:", err);
+      alert("Failed to switch version: " + err.message);
+    }
+  };
   
   // ── Tab Management ──────────────────────────────────────────────────────
   const [activeStudioTab, setActiveStudioTab] = useState('dashboard'); // dashboard, characters, environments, voices, filmgen
   
   // ── Interactive State Compilation Mock ──────────────────────────────────
-  const [generatingEnv, setGeneratingEnv] = useState(null); // name of env being generated
   const [compilingVoice, setCompilingVoice] = useState(null); // name of char voice being compiled
   const [activeVoicePreview, setActiveVoicePreview] = useState(null); // name of char voice previewing
   const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
@@ -373,30 +465,6 @@ export default function ProductionPage() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderLogs, setRenderLogs] = useState([]);
   const [renderSuccess, setRenderSuccess] = useState(false);
-
-  const fetchProjectDetails = useCallback(() => {
-    let cancelled = false;
-    const numericId = decodeProjectRouteId(id);
-    getProjectById(numericId)
-      .then(data => {
-        if (!cancelled) {
-          setProject(data);
-          setLoading(false);
-        }
-      })
-      .catch(err => {
-        if (!cancelled) {
-          setError(err.message);
-          setLoading(false);
-        }
-      });
-    return () => { cancelled = true; };
-  }, [id]);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchProjectDetails();
-  }, [id, fetchProjectDetails]);
 
   useEffect(() => {
     if (project && !project.approved) {
@@ -426,29 +494,6 @@ export default function ProductionPage() {
       console.error("Failed to update database record:", err);
       alert("Database error: " + err.message);
     }
-  };
-
-  // ── Generate Environment Reference ──────────────────────────────────────
-  const handleGenerateEnvironment = (envName) => {
-    if (generatingEnv) return;
-    setGeneratingEnv(envName);
-    
-    // Simulate generation loop
-    setTimeout(() => {
-      const updatedEnvs = (project?.environments || []).map(env => {
-        if (env.name === envName) {
-          return {
-            ...env,
-            generation_status: 'Reference Compiled',
-            consistency_status: 'Verified consistent'
-          };
-        }
-        return env;
-      });
-      handleUpdateFields({ environments: updatedEnvs }).then(() => {
-        setGeneratingEnv(null);
-      });
-    }, 2500);
   };
 
   // ── Compile Voice Model ID ──────────────────────────────────────────────
@@ -600,7 +645,8 @@ export default function ProductionPage() {
   const characterAssetCount = characters.filter(char => generatedCharacterNames.has(char.name)).length;
   const characterReadiness = characters.length > 0 ? Math.round((characterAssetCount / characters.length) * 100) : 100;
 
-  const readyEnvs = environments.filter(e => e.generation_status === 'Reference Compiled').length;
+  const generatedEnvNames = new Set(generatedEnvAssets.map(asset => asset.environment_name));
+  const readyEnvs = environments.filter(e => generatedEnvNames.has(e.name)).length;
   const environmentReadiness = environmentsCount > 0 ? Math.round((readyEnvs / environmentsCount) * 100) : 0;
   
   const readyVoices = voices.filter(v => v.status === 'Voice Model Ready').length;
@@ -1195,159 +1241,236 @@ export default function ProductionPage() {
                     <div className={`rounded-xl border p-5 transition-colors duration-500 ${
                       d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
                     }`}>
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
-                      <div className="flex items-center gap-2">
-                        <FiMapPin className="text-accent" size={14} />
-                        <div>
-                          <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
-                            Environment Studio
-                          </h3>
-                          <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                            Compiling spatial blueprints, weather states, and architectural references
-                          </p>
+                      <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
+                        <div className="flex items-center gap-2">
+                          <FiMapPin className="text-accent" size={14} />
+                          <div>
+                            <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
+                              Environment Studio
+                            </h3>
+                            <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                              Compiling spatial blueprints, weather states, and architectural references
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2 py-1 rounded border ${
+                          d ? 'bg-neutral-50 border-neutral-200 text-neutral-600' : 'bg-white/[0.02] border-white/[0.06] text-surface-400'
+                        }`}>
+                          Environments: {environments.length}
                         </div>
                       </div>
-                      <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2 py-1 rounded border ${
-                        d ? 'bg-neutral-50 border-neutral-200 text-neutral-600' : 'bg-white/[0.02] border-white/[0.06] text-surface-400'
-                      }`}>
-                        Environments: {environments.length}
-                      </div>
-                    </div>
 
-                    {environments.length === 0 ? (
-                      <div className="text-center py-10">
-                        <p className="text-surface-600 text-xs italic">No environments extracted. Check script or breakdown stages.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-6">
-                        {environments.map((env) => {
-                          const isCompiled = env.generation_status === 'Reference Compiled';
-                          const isGenerating = generatingEnv === env.name;
-
-                          return (
-                            <div 
-                              key={env.name}
-                              className={`rounded-xl border p-5 transition-all duration-300 ${
-                                d 
-                                  ? 'bg-neutral-50/30 border-neutral-200' 
-                                  : 'bg-[#050507] border-white/[0.04] hover:border-white/[0.07]'
-                              }`}
-                            >
-                              {/* Header Card */}
-                              <div className="flex flex-wrap justify-between items-center gap-3 border-b border-white/[0.03] pb-3 mb-4">
-                                <div className="space-y-1">
-                                  <h4 className={`text-sm font-extrabold tracking-wide uppercase ${d ? 'text-neutral-900' : 'text-white'}`}>
-                                    {env.name}
-                                  </h4>
-                                  <div className="flex gap-2 flex-wrap text-[10px] text-surface-500">
-                                    <span className={`px-2 py-0.5 rounded border border-white/[0.05] bg-white/[0.01]`}>
-                                      Type: {env.type}
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded border border-white/[0.05] bg-white/[0.01]`}>
-                                      Style: {env.visual_style}
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded border border-white/[0.05] bg-white/[0.01]`}>
-                                      Scenes: {env.scenes?.join(', ')}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-[9px] font-bold font-mono uppercase px-2 py-1 rounded border inline-flex items-center gap-1.5 ${
-                                    isCompiled 
-                                      ? d ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-500/5 border-emerald-500/25 text-emerald-400'
-                                      : isGenerating
-                                        ? 'bg-accent/10 border-accent/25 text-accent'
-                                        : d ? 'bg-neutral-100 border-neutral-200 text-neutral-500' : 'bg-white/[0.02] border-white/[0.06] text-surface-500'
-                                  }`}>
-                                    {isGenerating && <div className="h-1.5 w-1.5 border border-accent border-t-transparent rounded-full animate-spin" />}
-                                    {!isGenerating && <span className={`h-1.5 w-1.5 rounded-full ${isCompiled ? 'bg-emerald-400 animate-pulse' : 'bg-surface-500'}`} />}
-                                    {isGenerating ? 'Compiling Model...' : env.generation_status}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Asset Profile Grids */}
-                              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-                                {/* Details column */}
-                                <div className="md:col-span-4 space-y-4">
-                                  <div className="space-y-2 border-b border-dashed border-white/[0.03] pb-3 text-[12px]">
-                                    <h5 className="text-[9px] font-extrabold uppercase tracking-widest text-accent mb-2">Lighting & Weather Specs</h5>
-                                    <div className="flex justify-between py-1 border-b border-white/[0.01]">
-                                      <span className="text-surface-500 font-semibold">Lighting Profile:</span>
-                                      <span className={`font-mono text-xs ${d ? 'text-neutral-900' : 'text-neutral-350'}`}>{env.lighting}</span>
+                      {environments.length === 0 ? (
+                        <div className="text-center py-10">
+                          <p className="text-surface-600 text-xs italic">No environments extracted. Check script or breakdown stages.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {environments.map((env) => {
+                            const envAssets = generatedEnvAssets.filter(asset => asset.environment_name === env.name);
+                            const activeAsset = envAssets.find(asset => asset.environment_profile?.is_preferred) || envAssets[envAssets.length - 1];
+                            const activeJob = runningJobs[env.name];
+                            
+                            const hasAsset = !!activeAsset;
+                            
+                            // Extracted fields
+                            const description = activeAsset?.environment_profile?.description || "Extracting from script...";
+                            const architecture = activeAsset?.environment_profile?.architecture || env.architecture || "Extracting...";
+                            const lighting = activeAsset?.environment_profile?.lighting || env.lighting || "Extracting...";
+                            const weather = activeAsset?.environment_profile?.weather || env.weather || "Extracting...";
+                            const colorPalette = activeAsset?.environment_profile?.color_palette || "Extracting...";
+                            const mood = activeAsset?.environment_profile?.mood || "Extracting...";
+                            const timeOfDay = activeAsset?.environment_profile?.time_of_day || "Extracting...";
+                            const envType = activeAsset?.environment_profile?.environment_type || env.type || "Exterior";
+                            const scenes = env.scenes || [];
+                            
+                            return (
+                              <div 
+                                key={env.name}
+                                className={`rounded-xl border flex flex-col overflow-hidden text-left transition-all duration-300 ${
+                                  d 
+                                    ? 'bg-white border-neutral-200 hover:border-neutral-300 shadow-sm' 
+                                    : 'bg-[#0b0b0f] border-white/[0.05] hover:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
+                                }`}
+                              >
+                                {/* Top Portrait Frame */}
+                                <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
+                                  {activeJob ? (
+                                    /* Active generation job overlay */
+                                    <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center select-none">
+                                      <div className="relative flex items-center justify-center mb-4">
+                                        <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                                        <span className="absolute text-[10px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
+                                      </div>
+                                      <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 animate-pulse">
+                                        {activeJob.message || 'Generating...'}
+                                      </span>
+                                      <div className="w-full h-1 bg-white/[0.06] rounded-full mt-4 overflow-hidden">
+                                        <div 
+                                          className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                          style={{ width: `${activeJob.progress}%` }}
+                                        />
+                                      </div>
                                     </div>
-                                    <div className="flex justify-between py-1 border-b border-white/[0.01]">
-                                      <span className="text-surface-500 font-semibold">Weather State:</span>
-                                      <span className={`font-mono text-xs ${d ? 'text-neutral-900' : 'text-neutral-350'}`}>{env.weather}</span>
-                                    </div>
-                                    <div className="flex justify-between py-1">
-                                      <span className="text-surface-500 font-semibold">Architecture Profile:</span>
-                                      <span className={`font-mono text-xs ${d ? 'text-neutral-900' : 'text-neutral-350'}`}>{env.architecture}</span>
-                                    </div>
-                                  </div>
+                                  ) : !hasAsset ? (
+                                    /* Viewfinder placeholder when not generated */
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-white/[0.08] bg-[#09090d]">
+                                      {/* Viewfinder brackets */}
+                                      <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-white/20" />
+                                      <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-white/20" />
+                                      <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-white/20" />
+                                      <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-white/20" />
+                                      
+                                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                                        <div className="w-6 h-0.5 bg-white" />
+                                        <div className="w-0.5 h-6 bg-white absolute" />
+                                        <div className="w-8 h-8 border border-white rounded-full absolute" />
+                                      </div>
 
-                                  <div className="flex justify-between items-center text-[11px] p-2 rounded-lg bg-black/20 border border-white/[0.03]">
-                                    <span className="text-surface-500 font-semibold uppercase tracking-wider text-[9px]">Consistency Verification:</span>
-                                    <span className={`font-mono font-bold ${isCompiled ? 'text-emerald-400' : 'text-amber-500'}`}>
-                                      {isCompiled ? '✓ VERIFIED' : 'PENDING'}
-                                    </span>
-                                  </div>
+                                      <div className="absolute top-4 right-4 flex items-center gap-1.5 text-[8px] font-mono text-red-500 tracking-wider">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                                        <span>AWAITING WORLD REFERENCE</span>
+                                      </div>
 
-                                  <button
-                                    onClick={() => handleGenerateEnvironment(env.name)}
-                                    disabled={isGenerating}
-                                    className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 border cursor-pointer ${
-                                      isCompiled
-                                        ? d 
-                                          ? 'border-neutral-300 hover:bg-neutral-100 text-neutral-800' 
-                                          : 'border-white/[0.08] hover:bg-white/[0.04] text-surface-200'
-                                        : 'bg-accent border-accent text-white hover:bg-accent/90 shadow-[0_0_15px_rgba(139,92,246,0.25)]'
-                                    }`}
-                                  >
-                                    {isGenerating ? (
-                                      <>
-                                        <div className="h-3 w-3 border border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>Generating Reference...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span>{isCompiled ? 'Regenerate Environment Reference' : 'Generate Environment Reference'}</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-
-                                {/* Blueprint visual column */}
-                                <div className="md:col-span-4 space-y-2">
-                                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-surface-500 block">Autodesk blueprint layout</span>
-                                  <BlueprintSVG type={env.type} />
-                                </div>
-
-                                {/* Reference image column */}
-                                <div className="md:col-span-4 space-y-2">
-                                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-surface-500 block">AI Visual Reference</span>
-                                  {isCompiled ? (
-                                    <EnvironmentRefSVG name={env.name} type={env.type} />
-                                  ) : isGenerating ? (
-                                    <div className="w-full h-32 bg-neutral-900 border border-white/[0.04] rounded-lg flex flex-col items-center justify-center text-center gap-2.5">
-                                      <div className="h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                                      <span className="text-[8px] font-mono text-accent uppercase tracking-widest animate-pulse">Orchestrating Qwen Image Agent...</span>
+                                      <div className="mb-3 text-surface-600 opacity-60">
+                                        <FiMapPin size={28} className="mx-auto text-surface-500 mb-1" />
+                                        <span className="font-bold text-[8px] text-surface-500 uppercase tracking-widest block">No Visual Reference</span>
+                                      </div>
+                                      
+                                      <button
+                                        onClick={() => handleGenerateEnvironment(env.name)}
+                                        className="relative z-20 px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(0,242,254,0.15)] hover:shadow-[0_0_20px_rgba(0,242,254,0.25)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
+                                      >
+                                        Generate Environment
+                                      </button>
                                     </div>
                                   ) : (
-                                    <div className="w-full h-32 bg-white/[0.01] border-2 border-dashed border-white/[0.05] rounded-lg flex flex-col items-center justify-center text-center gap-1.5 opacity-40">
-                                      <span className="text-xl">📷</span>
-                                      <span className="font-bold text-[8px] text-surface-500 uppercase tracking-widest">NO REF IMAGE YET</span>
+                                    /* Generated portrait rendering */
+                                    <>
+                                      <img 
+                                        src={activeAsset.image_url.startsWith('/') ? apiBaseUrl + activeAsset.image_url : activeAsset.image_url} 
+                                        alt={env.name} 
+                                        className="w-full h-full object-cover rounded-t-lg transition-transform duration-700 hover:scale-105" 
+                                      />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+                                      
+                                      {/* Badges */}
+                                      <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-md border border-white/[0.1] text-cyan-400 font-mono text-[9px] font-extrabold px-2 py-0.5 rounded-md">
+                                        V{activeAsset.environment_profile?.version || 1}
+                                      </span>
+                                      
+                                      <span className={`absolute top-3 right-3 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md backdrop-blur-md bg-purple-500/20 text-purple-300 border border-purple-500/30`}>
+                                        {envType}
+                                      </span>
+
+                                      <div className="absolute bottom-3 left-3 flex flex-col gap-0.5 font-mono text-[8px] text-surface-450 bg-black/60 backdrop-blur-sm px-2 py-1 rounded border border-white/[0.04]">
+                                        <span>ID: {activeAsset.environment_profile?.environment_id?.split('_').pop() || 'env'}</span>
+                                        <span>HASH: {activeAsset.environment_profile?.consistency_hash || 'N/A'}</span>
+                                      </div>
+                                      
+                                      <button
+                                        onClick={() => handleGenerateEnvironment(env.name)}
+                                        className="absolute bottom-3 right-3 px-2.5 py-1 bg-accent hover:bg-purple-600 text-white font-bold text-[9px] uppercase tracking-wider rounded-md transition-all cursor-pointer flex items-center gap-1 shadow-md z-20"
+                                        title="Generate a new version of this environment portrait"
+                                      >
+                                        <span>Regenerate</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+
+                                {/* Bottom Details Section */}
+                                <div className="p-5 flex flex-col justify-between flex-1 bg-[#09090d]/30 border-t border-white/[0.02]">
+                                  <div className="space-y-3.5 flex-1 flex flex-col justify-between">
+                                    <div>
+                                      <div className="flex justify-between items-center">
+                                        <h4 className={`text-sm font-extrabold uppercase tracking-wide truncate pr-2 ${d ? 'text-neutral-900' : 'text-white'}`} title={env.name}>
+                                          {env.name}
+                                        </h4>
+                                        {hasAsset ? (
+                                          <span className="text-[8px] font-extrabold font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
+                                            VERIFIED
+                                          </span>
+                                        ) : (
+                                          <span className="text-[8px] font-extrabold font-mono uppercase px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                                            PENDING
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className="text-[11px] leading-relaxed mt-3">
+                                        <span className="text-surface-500 font-semibold block uppercase text-[8px] tracking-wider mb-0.5">Location Description</span>
+                                        <p className={`line-clamp-3 hover:line-clamp-none transition-all duration-300 cursor-pointer ${d ? 'text-neutral-600' : 'text-surface-400'}`} title="Click to expand">
+                                          {description}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Metadata Grid */}
+                                    <div className="grid grid-cols-2 gap-3 text-[10px] font-mono border-t border-dashed border-white/[0.05] pt-3.5 mt-auto">
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Architecture</span>
+                                        <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`} title={architecture}>{architecture}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Lighting</span>
+                                        <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`} title={lighting}>{lighting}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Weather</span>
+                                        <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`} title={weather}>{weather}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Time of Day</span>
+                                        <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`} title={timeOfDay}>{timeOfDay}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Mood</span>
+                                        <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`} title={mood}>{mood}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Color Palette</span>
+                                        <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`} title={colorPalette}>{colorPalette}</span>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Scene Appearances ({scenes.length} count)</span>
+                                        <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`}>{scenes.join(', ')}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Controls Bar (Only visible if assets exist) */}
+                                  {hasAsset && (
+                                    <div className="flex gap-3 items-end mt-5 border-t border-white/[0.04] pt-4 shrink-0">
+                                      <div className="flex-1 flex flex-col gap-1">
+                                        <label className="text-[8px] font-extrabold uppercase text-surface-500 tracking-wider">Asset Version</label>
+                                        <select
+                                          value={activeAsset.id}
+                                          onChange={(e) => handleSelectEnvVersion(env.name, Number(e.target.value))}
+                                          className="text-xs bg-neutral-900/60 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                        >
+                                          {envAssets.map(asset => (
+                                            <option key={asset.id} value={asset.id}>
+                                              Version {asset.environment_profile?.version || 1} {asset.id === activeAsset.id ? '(Active)' : ''}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <button
+                                        onClick={() => handleGenerateEnvironment(env.name)}
+                                        className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] hover:border-cyan-500/30"
+                                      >
+                                        Regenerate
+                                      </button>
                                     </div>
                                   )}
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <Footer />
                 </div>

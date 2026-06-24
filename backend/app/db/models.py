@@ -80,3 +80,21 @@ class CharacterAsset(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class EnvironmentAsset(Base):
+    __tablename__ = "environment_assets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, index=True, nullable=False)
+    environment_name = Column(String, index=True, nullable=False)
+    environment_profile = Column(JSONType, nullable=False)
+    image_url = Column(String, nullable=True)
+    generation_prompt = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

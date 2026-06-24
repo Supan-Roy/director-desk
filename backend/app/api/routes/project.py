@@ -305,3 +305,48 @@ def select_character_version(project_id: int, payload: SelectVersionRequest, db:
     return {"status": "success"}
 
 
+class SelectEnvironmentVersionRequest(BaseModel):
+    environment_name: str
+    preferred_asset_id: int
+
+
+@router.get("/projects/{project_id}/environments")
+def get_project_environments(project_id: int, db: Session = Depends(get_db)):
+    """Return all generated environment assets for a given project."""
+    from app.db.models import EnvironmentAsset
+    assets = db.query(EnvironmentAsset).filter(EnvironmentAsset.project_id == project_id).all()
+    return [
+        {
+            "id": asset.id,
+            "project_id": asset.project_id,
+            "environment_name": asset.environment_name,
+            "environment_profile": asset.environment_profile,
+            "image_url": asset.image_url,
+            "generation_prompt": asset.generation_prompt,
+            "created_at": asset.created_at.isoformat(),
+            "updated_at": asset.updated_at.isoformat()
+        }
+        for asset in assets
+    ]
+
+
+@router.post("/projects/{project_id}/environments/select-version")
+def select_environment_version(project_id: int, payload: SelectEnvironmentVersionRequest, db: Session = Depends(get_db)):
+    """Set a specific environment version as the preferred/active one."""
+    from app.db.models import EnvironmentAsset
+    assets = db.query(EnvironmentAsset).filter(
+        EnvironmentAsset.project_id == project_id, 
+        EnvironmentAsset.environment_name == payload.environment_name
+    ).all()
+    
+    for asset in assets:
+        profile = dict(asset.environment_profile)
+        profile["is_preferred"] = (asset.id == payload.preferred_asset_id)
+        # SQLAlchemy requires assignment to mark the field as dirty
+        asset.environment_profile = profile
+        
+    db.commit()
+    return {"status": "success"}
+
+
+

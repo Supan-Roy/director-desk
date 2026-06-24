@@ -134,3 +134,28 @@ export async function generateCharacterAsset(projectId, characterName) {
   return response.data
 }
 
+/** Fetch all generated environment assets for a project. */
+export async function getProjectEnvironments(projectId) {
+  const response = await apiClient.get(`/api/projects/${projectId}/environments`)
+  return response.data
+}
+
+/** Set a specific environment version as the preferred/active one. */
+export async function selectEnvironmentVersion(projectId, environmentName, preferredAssetId) {
+  const response = await apiClient.post(`/api/projects/${projectId}/environments/select-version`, {
+    environment_name: environmentName,
+    preferred_asset_id: preferredAssetId
+  })
+  return response.data
+}
+
+/** Trigger environment asset generation job. */
+export async function generateEnvironmentAsset(projectId, environmentName) {
+  const response = await apiClient.post('/api/generate/environment', {
+    project_id: String(projectId),
+    target_id: environmentName
+  })
+  return response.data
+}
+
+
