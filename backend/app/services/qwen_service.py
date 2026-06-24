@@ -97,5 +97,177 @@ class QwenService:
         logger.info(f"Image analysis complete: {len(description)} characters")
         return description
 
+    def generate_image(self, prompt: str) -> str:
+        import urllib.request
+        import urllib.error
+        import json
+        import time
+        import os
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        api_key = os.getenv("QWEN_API_KEY")
+        if not api_key:
+            raise RuntimeError("QWEN_API_KEY is not set.")
+
+        model = os.getenv("QWEN_IMAGE_MODEL", "wan-t2i")
+        # Map wan-t2i to wan2.6-t2i on international endpoint
+        if model == "wan-t2i":
+            model = "wan2.6-t2i"
+
+        api_base = os.getenv("QWEN_API_BASE_URL") or "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        
+        if "/compatible-mode" in api_base:
+            base_host = api_base.split("/compatible-mode")[0]
+        else:
+            base_host = "https://dashscope-intl.aliyuncs.com"
+
+        # Check if we should use multimodal-generation/generation endpoint (for wan v2 models)
+        is_wan_multimodal = model.startswith("wan2.") or model in ["wan-t2i", "wan2.6-t2i", "wan2.7-image-pro"]
+
+        if is_wan_multimodal:
+            submit_url = f"{base_host}/api/v1/services/aigc/multimodal-generation/generation"
+            payload = {
+                "model": model,
+                "input": {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {"text": prompt}
+                            ]
+                        }
+                    ]
+                },
+                "parameters": {
+                    "size": "1024*1024",
+                    "n": 1
+                }
+            }
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            logger.info(f"Calling DashScope Multimodal Generation for {model} (Synchronous): {submit_url}")
+            try:
+                req = urllib.request.Request(
+                    submit_url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers=headers,
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=60) as response:
+                    resp_data = json.loads(response.read().decode("utf-8"))
+                
+                if "code" in resp_data:
+                    raise RuntimeError(f"DashScope error: {resp_data.get('code')} - {resp_data.get('message')}")
+                
+                choices = resp_data.get("output", {}).get("choices", [])
+                if not choices:
+                    raise RuntimeError(f"No choices in response: {resp_data}")
+                
+                content = choices[0].get("message", {}).get("content", [])
+                if not content:
+                    raise RuntimeError(f"No content in choice message: {resp_data}")
+                
+                image_url = None
+                for item in content:
+                    if item.get("type") == "image":
+                        image_url = item.get("image")
+                        break
+                
+                if not image_url:
+                    raise RuntimeError(f"No image URL found in response: {resp_data}")
+                
+                logger.info(f"Multimodal image generation succeeded. URL={image_url}")
+                return image_url
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode("utf-8", errors="replace")
+                logger.error(f"DashScope multimodal generation HTTP error {e.code}: {err_body}")
+                raise RuntimeError(f"DashScope image generation HTTP error {e.code}: {err_body}")
+            except Exception as e:
+                logger.error(f"Failed to run multimodal generation: {e}")
+                raise
+
+        # Fallback to legacy asynchronous text2image/image-synthesis endpoint (e.g. for wanx-v1)
+        submit_url = f"{base_host}/api/v1/services/aigc/text2image/image-synthesis"
+        payload = {
+            "model": model,
+            "input": {
+                "prompt": prompt
+            },
+            "parameters": {
+                "size": "1024*1024",
+                "n": 1
+            }
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "X-DashScope-Async": "enable"
+        }
+        
+        logger.info(f"Submitting image gen task to DashScope: Model={model}")
+        try:
+            req = urllib.request.Request(
+                submit_url, 
+                data=json.dumps(payload).encode("utf-8"), 
+                headers=headers, 
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=15) as response:
+                resp_data = json.loads(response.read().decode("utf-8"))
+                
+            task_id = resp_data.get("output", {}).get("task_id")
+            if not task_id:
+                raise RuntimeError(f"DashScope did not return a task_id. Response: {resp_data}")
+                
+            logger.info(f"Task submitted successfully. TaskID={task_id}. Polling status...")
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="replace")
+            logger.error(f"DashScope task submission failed: {e.code} - {err_body}")
+            raise RuntimeError(f"DashScope image submission HTTP error {e.code}: {err_body}")
+        except Exception as e:
+            logger.error(f"Failed to submit task: {e}")
+            raise
+
+        # Poll the task status
+        poll_url = f"{base_host}/api/v1/tasks/{task_id}"
+        poll_headers = {
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        # Max polling duration: 120 seconds
+        for attempt in range(60):
+            time.sleep(2)
+            try:
+                poll_req = urllib.request.Request(poll_url, headers=poll_headers, method="GET")
+                with urllib.request.urlopen(poll_req, timeout=10) as response:
+                    poll_data = json.loads(response.read().decode("utf-8"))
+                    
+                output = poll_data.get("output", {})
+                status = output.get("task_status")
+                logger.info(f"Polling task {task_id}: status={status}")
+                
+                if status == "SUCCEEDED":
+                    results = output.get("results", [])
+                    if results and "url" in results[0]:
+                        image_url = results[0]["url"]
+                        logger.info(f"Image generation succeeded. URL={image_url}")
+                        return image_url
+                    else:
+                        raise RuntimeError(f"SUCCEEDED task has no results url: {poll_data}")
+                elif status in ["FAILED", "CANCELED"]:
+                    err_msg = output.get("message") or "Unknown error"
+                    raise RuntimeError(f"DashScope image gen task failed/canceled: {err_msg}")
+            except urllib.error.HTTPError as e:
+                logger.warning(f"Polling HTTP error {e.code}, retrying...")
+            except Exception as e:
+                logger.warning(f"Polling error {e}, retrying...")
+                
+        raise RuntimeError("DashScope image generation task timed out after 120 seconds.")
+
+
 
 qwen_service = QwenService()

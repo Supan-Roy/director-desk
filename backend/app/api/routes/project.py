@@ -10,7 +10,7 @@ Endpoints:
 """
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.services.project_state import project_state
@@ -116,7 +116,50 @@ def get_featured_projects():
         }
     ]
 
-
+@router.post("/projects/demo")
+def create_demo_project(db: Session = Depends(get_db)):
+    """Load the pre-generated demo project JSON fixture and insert it directly into the database."""
+    import json
+    import os
+    
+    # Try different relative paths to find the JSON fixture file
+    fixture_path = os.path.join("app", "data", "demo_project_fixture.json")
+    if not os.path.exists(fixture_path):
+        fixture_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "demo_project_fixture.json")
+        
+    if not os.path.exists(fixture_path):
+        fixture_path = os.path.join("backend", "app", "data", "demo_project_fixture.json")
+        
+    if not os.path.exists(fixture_path):
+        raise HTTPException(status_code=404, detail="Demo project fixture not found.")
+        
+    try:
+        with open(fixture_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to parse demo project fixture: {str(exc)}")
+        
+    from app.db.repository import project_repository
+    try:
+        project = project_repository.create(
+            db,
+            title=data.get("title", "The Boy Who Built His Robot Best Friend"),
+            production_type=data.get("production_type", "Short Film"),
+            prompt=data.get("prompt"),
+            script=data.get("script"),
+            original_script=data.get("original_script"),
+            storyboard=data.get("storyboard"),
+            production_plan=data.get("production_plan"),
+            critic_review=data.get("critic_review"),
+            scene_breakdown=data.get("scene_breakdown"),
+            environments=data.get("environments"),
+            voices=data.get("voices"),
+            approved=data.get("approved", True),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Database insertion failed: {str(exc)}")
+        
+    return {"status": "success", "id": project.id, "title": project.title}
 @router.get("/projects", response_model=List[ProjectSummary])
 def list_projects(db: Session = Depends(get_db)):
     """Return all saved projects ordered newest-first (sidebar list)."""
@@ -214,5 +257,51 @@ def delete_all_projects(db: Session = Depends(get_db)):
     """Permanently delete all saved projects and reset workspace."""
     project_service.delete_all_projects(db)
     project_state.reset()
+
+
+from pydantic import BaseModel
+
+class SelectVersionRequest(BaseModel):
+    character_name: str
+    preferred_asset_id: int
+
+
+@router.get("/projects/{project_id}/characters")
+def get_project_characters(project_id: int, db: Session = Depends(get_db)):
+    """Return all generated character assets for a given project."""
+    from app.db.models import CharacterAsset
+    assets = db.query(CharacterAsset).filter(CharacterAsset.project_id == project_id).all()
+    return [
+        {
+            "id": asset.id,
+            "project_id": asset.project_id,
+            "character_name": asset.character_name,
+            "character_profile": asset.character_profile,
+            "image_url": asset.image_url,
+            "generation_prompt": asset.generation_prompt,
+            "created_at": asset.created_at.isoformat(),
+            "updated_at": asset.updated_at.isoformat()
+        }
+        for asset in assets
+    ]
+
+
+@router.post("/projects/{project_id}/characters/select-version")
+def select_character_version(project_id: int, payload: SelectVersionRequest, db: Session = Depends(get_db)):
+    """Set a specific character version as the preferred/active one."""
+    from app.db.models import CharacterAsset
+    assets = db.query(CharacterAsset).filter(
+        CharacterAsset.project_id == project_id, 
+        CharacterAsset.character_name == payload.character_name
+    ).all()
+    
+    for asset in assets:
+        profile = dict(asset.character_profile)
+        profile["is_preferred"] = (asset.id == payload.preferred_asset_id)
+        # SQLAlchemy requires assignment to mark the field as dirty
+        asset.character_profile = profile
+        
+    db.commit()
+    return {"status": "success"}
 
 

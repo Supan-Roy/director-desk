@@ -109,3 +109,28 @@ export async function refineRawScript(script, criticReview) {
   const response = await apiClient.post('/api/projects/refine-raw', { script, critic_review: criticReview })
   return response.data
 }
+
+/** Fetch all generated character assets for a project. */
+export async function getProjectCharacters(projectId) {
+  const response = await apiClient.get(`/api/projects/${projectId}/characters`)
+  return response.data
+}
+
+/** Set a specific character version as the preferred/active one. */
+export async function selectCharacterVersion(projectId, characterName, preferredAssetId) {
+  const response = await apiClient.post(`/api/projects/${projectId}/characters/select-version`, {
+    character_name: characterName,
+    preferred_asset_id: preferredAssetId
+  })
+  return response.data
+}
+
+/** Trigger character asset generation job. */
+export async function generateCharacterAsset(projectId, characterName) {
+  const response = await apiClient.post('/api/generate/character', {
+    project_id: String(projectId),
+    target_id: characterName
+  })
+  return response.data
+}
+
