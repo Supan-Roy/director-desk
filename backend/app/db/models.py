@@ -62,3 +62,21 @@ class Project(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class CharacterAsset(Base):
+    __tablename__ = "character_assets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, index=True, nullable=False)
+    character_name = Column(String, index=True, nullable=False)
+    character_profile = Column(JSONType, nullable=False)
+    image_url = Column(String, nullable=True)
+    generation_prompt = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

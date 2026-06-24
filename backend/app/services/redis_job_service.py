@@ -19,7 +19,7 @@ JOB_TYPE_TO_QUEUE = {
 
 
 class RedisJobService:
-    async def create_job(self, project_id: str, job_type: str) -> dict:
+    async def create_job(self, project_id: str, job_type: str, target_id: str = None) -> dict:
         """Create a new Redis job and push it to the queue list."""
         client = await redis_manager.get_client()
         job_id = f"job:{uuid.uuid4().hex[:12]}"
@@ -30,8 +30,10 @@ class RedisJobService:
             "job_id": job_id,
             "project_id": str(project_id),
             "type": job_type,
+            "target_id": target_id,
             "status": "queued",
             "progress": 0,
+            "message": "Job queued",
             "created_at": datetime.utcnow().isoformat()
         }
         
@@ -58,7 +60,7 @@ class RedisJobService:
             return None
         return json.loads(data)
 
-    async def update_job_status(self, job_id: str, status: str, progress: int = None, error: str = None) -> dict | None:
+    async def update_job_status(self, job_id: str, status: str, progress: int = None, error: str = None, message: str = None) -> dict | None:
         """Update the status and progress of a job and publish progress."""
         client = await redis_manager.get_client()
         key = job_id if job_id.startswith("job:") else f"job:{job_id}"
@@ -74,6 +76,8 @@ class RedisJobService:
             job["progress"] = progress
         if error:
             job["error"] = error
+        if message:
+            job["message"] = message
             
         # Manage active jobs set
         if status == "processing":

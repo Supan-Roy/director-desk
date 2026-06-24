@@ -6,7 +6,14 @@ import {
   FiPlay, FiPause, FiSettings, FiCheckSquare, FiAlertTriangle,
   FiTerminal, FiPlus, FiVolumeX, FiMonitor
 } from 'react-icons/fi';
-import { getProjectById, updateProject } from '../services/apiClient';
+import { 
+  getProjectById, 
+  updateProject, 
+  getProjectCharacters, 
+  selectCharacterVersion, 
+  generateCharacterAsset, 
+  apiBaseUrl 
+} from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
 import ProjectIcon from '../components/ProjectIcon';
 import AgentActivityPanel from '../components/AgentActivityPanel';
@@ -249,6 +256,108 @@ export default function ProductionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // ── Character Studio State & Handlers ─────────────────────────────────────
+  const [generatedAssets, setGeneratedAssets] = useState([]);
+  const [runningJobs, setRunningJobs] = useState({});
+
+  const fetchCharactersList = useCallback(() => {
+    const numericId = decodeProjectRouteId(id);
+    getProjectCharacters(numericId)
+      .then(data => {
+        setGeneratedAssets(data);
+      })
+      .catch(err => {
+        console.error("Failed to load character assets:", err);
+      });
+  }, [id]);
+
+  useEffect(() => {
+    fetchCharactersList();
+  }, [id, fetchCharactersList]);
+
+  // SSE Stream Listener
+  useEffect(() => {
+    const eventSource = new EventSource(`${apiBaseUrl}/jobs/stream`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === 'connected') {
+          console.log("Connected to jobs stream");
+          return;
+        }
+        
+        const numericId = decodeProjectRouteId(id);
+        if (String(data.project_id) === String(numericId) && data.type === 'character_generation') {
+          const charName = data.target_id;
+          if (charName) {
+            setRunningJobs(prev => {
+              const updated = { ...prev };
+              if (data.status === 'completed' || data.status === 'failed') {
+                delete updated[charName];
+                // Refresh assets list on completion
+                fetchCharactersList();
+              } else {
+                updated[charName] = {
+                  status: data.status,
+                  progress: data.progress || 0,
+                  message: data.message || "Processing..."
+                };
+              }
+              return updated;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error parsing jobs stream event:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("Jobs SSE connection error:", err);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [id, fetchCharactersList]);
+
+  const handleGenerateCharacter = async (characterName) => {
+    const numericId = decodeProjectRouteId(id);
+    // Optimistic progress update
+    setRunningJobs(prev => ({
+      ...prev,
+      [characterName]: {
+        status: 'queued',
+        progress: 0,
+        message: 'Initializing job...'
+      }
+    }));
+    try {
+      await generateCharacterAsset(numericId, characterName);
+    } catch (err) {
+      console.error("Failed to trigger character generation:", err);
+      alert("Failed to start character generation: " + err.message);
+      setRunningJobs(prev => {
+        const updated = { ...prev };
+        delete updated[characterName];
+        return updated;
+      });
+    }
+  };
+
+  const handleSelectVersion = async (characterName, preferredAssetId) => {
+    const numericId = decodeProjectRouteId(id);
+    try {
+      await selectCharacterVersion(numericId, characterName, preferredAssetId);
+      await fetchCharactersList();
+    } catch (err) {
+      console.error("Failed to select character version:", err);
+      alert("Failed to switch version: " + err.message);
+    }
+  };
+  
   // ── Tab Management ──────────────────────────────────────────────────────
   const [activeStudioTab, setActiveStudioTab] = useState('dashboard'); // dashboard, characters, environments, voices, filmgen
   
@@ -487,23 +596,26 @@ export default function ProductionPage() {
   const environmentsCount = environments.length;
 
   // ── Production Readiness Calculations ────────────────────────────────────
-  const characterReadiness = 100;
+  const generatedCharacterNames = new Set(generatedAssets.map(asset => asset.character_name));
+  const characterAssetCount = characters.filter(char => generatedCharacterNames.has(char.name)).length;
+  const characterReadiness = characters.length > 0 ? Math.round((characterAssetCount / characters.length) * 100) : 100;
+
   const readyEnvs = environments.filter(e => e.generation_status === 'Reference Compiled').length;
   const environmentReadiness = environmentsCount > 0 ? Math.round((readyEnvs / environmentsCount) * 100) : 0;
   
   const readyVoices = voices.filter(v => v.status === 'Voice Model Ready').length;
   const voiceReadiness = voices.length > 0 ? Math.round((readyVoices / voices.length) * 100) : 0;
   
-  const assetsReadiness = (environmentReadiness === 100 && voiceReadiness === 100) ? 100 : 0;
+  const assetsReadiness = (characterReadiness === 100 && environmentReadiness === 100 && voiceReadiness === 100) ? 100 : 0;
   
   const overallReadiness = Math.round((characterReadiness + environmentReadiness + voiceReadiness + assetsReadiness) / 4);
   const isProductionReady = overallReadiness === 100;
 
   // Pipeline Stages config
   const pipelineStages = [
-    { name: 'Characters', status: 'Ready', desc: 'Virtual Cast Definition', icon: FiUser },
+    { name: 'Characters', status: characterReadiness === 100 ? 'Ready' : 'Pending', desc: 'Virtual Cast Definition', icon: FiUser },
     { name: 'Environments', status: environmentReadiness === 100 ? 'Ready' : 'Pending', desc: 'Spatial Context Models', icon: FiMapPin },
-    { name: 'Voices', status: voiceReadiness === 100 ? 'Ready' : 'Pending', desc: 'Speech Synthesis Profiles', icon: FiVolume2 },
+    { name: 'Voices', status: voiceReadiness === 105 ? 'Ready' : (voiceReadiness === 100 ? 'Ready' : 'Pending'), desc: 'Speech Synthesis Profiles', icon: FiVolume2 },
     { name: 'Assets', status: assetsReadiness === 100 ? 'Ready' : 'Locked', desc: 'Downstream Production Files', icon: FiDatabase },
     { name: 'Video Generation', status: isProductionReady ? 'Ready' : 'Locked', desc: 'Temporal Synthesizer Orchestration', icon: FiCpu },
     { name: 'Editing', status: isProductionReady ? 'Ready' : 'Locked', desc: 'Final Montage Assembly', icon: FiSliders },
@@ -880,143 +992,194 @@ export default function ProductionPage() {
                         <p className="text-surface-600 text-xs italic">No character definitions could be extracted from planning data.</p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 gap-6">
-                        {characters.map((char) => (
-                          <div 
-                            key={char.name}
-                            className={`rounded-xl border p-5 text-left transition-all duration-300 ${
-                              d 
-                                ? 'bg-neutral-50/30 border-neutral-200 hover:border-neutral-300' 
-                                : 'bg-[#050507] border-white/[0.04] hover:border-white/[0.07]'
-                            }`}
-                          >
-                            <div className="flex flex-wrap justify-between items-start gap-3 border-b border-white/[0.03] pb-3.5 mb-4">
-                              <div>
-                                <div className="flex items-center gap-2.5 flex-wrap">
-                                  <h4 className={`text-sm font-extrabold tracking-wide uppercase ${d ? 'text-neutral-900' : 'text-white'}`}>
-                                    {char.name}
-                                  </h4>
-                                  <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded ${
-                                    char.role === 'Lead'
-                                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                  }`}>
-                                    {char.role} Role
-                                  </span>
-                                  <span className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded border ${
-                                    d ? 'bg-neutral-100 border-neutral-200 text-neutral-600' : 'bg-white/[0.02] border-white/[0.04] text-surface-400'
-                                  }`}>
-                                    Appears in: {char.scenes.join(', ')}
-                                  </span>
-                                </div>
-                                <p className={`text-[11.5px] leading-relaxed mt-2 max-w-3xl ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
-                                  <strong className={`font-semibold mr-1.5 ${d ? 'text-neutral-700' : 'text-neutral-300'}`}>Visual Profile:</strong>
-                                  {char.description}
-                                </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {characters.map((char) => {
+                          const characterAssets = generatedAssets.filter(asset => asset.character_name === char.name);
+                          const activeAsset = characterAssets.find(asset => asset.character_profile?.is_preferred) || characterAssets[characterAssets.length - 1];
+                          const activeJob = runningJobs[char.name];
+                          
+                          // Determine description
+                          const description = activeAsset?.character_profile?.visual_profile || char.description;
+                          const age = activeAsset?.character_profile?.age || 'Extracting...';
+                          const gender = activeAsset?.character_profile?.gender || 'Extracting...';
+                          const role = activeAsset?.character_profile?.role || char.role || 'Supporting';
+                          const personality = activeAsset?.character_profile?.personality || 'Extracting...';
+                          const wardrobe = activeAsset?.character_profile?.wardrobe || 'Extracting...';
+                          
+                          const hasAsset = !!activeAsset;
+
+                          return (
+                            <div 
+                              key={char.name}
+                              className={`rounded-xl border flex flex-col overflow-hidden text-left transition-all duration-300 ${
+                                d 
+                                  ? 'bg-white border-neutral-200 hover:border-neutral-300 shadow-sm' 
+                                  : 'bg-[#0b0b0f] border-white/[0.05] hover:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
+                              }`}
+                            >
+                              {/* Top Portrait Frame */}
+                              <div className="relative aspect-[3/4] max-h-[300px] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
+                                {activeJob ? (
+                                  /* Active generation job overlay */
+                                  <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center select-none">
+                                    <div className="relative flex items-center justify-center mb-4">
+                                      <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                                      <span className="absolute text-[10px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
+                                    </div>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 animate-pulse">
+                                      {activeJob.message || 'Generating...'}
+                                    </span>
+                                    <div className="w-full h-1 bg-white/[0.06] rounded-full mt-4 overflow-hidden">
+                                      <div 
+                                        className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                        style={{ width: `${activeJob.progress}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : !hasAsset ? (
+                                  /* Viewfinder placeholder when not generated */
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-white/[0.08] rounded-t-xl bg-[#09090d]">
+                                    {/* Viewfinder brackets */}
+                                    <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-white/20" />
+                                    <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-white/20" />
+                                    <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-white/20" />
+                                    <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-white/20" />
+                                    
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                                      <div className="w-6 h-0.5 bg-white" />
+                                      <div className="w-0.5 h-6 bg-white absolute" />
+                                      <div className="w-8 h-8 border border-white rounded-full absolute" />
+                                    </div>
+
+                                    <div className="absolute top-4 right-4 flex items-center gap-1.5 text-[8px] font-mono text-red-500 tracking-wider">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                                      <span>AWAITING CAST</span>
+                                    </div>
+
+                                    <div className="mb-4 text-surface-600 opacity-60">
+                                      <FiUser size={36} className="mx-auto text-surface-500 mb-1" />
+                                      <span className="font-bold text-[9px] text-surface-500 uppercase tracking-widest block">No Visual Reference</span>
+                                    </div>
+                                    
+                                    <button
+                                      onClick={() => handleGenerateCharacter(char.name)}
+                                      className="relative z-20 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[11px] uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(0,242,254,0.15)] hover:shadow-[0_0_20px_rgba(0,242,254,0.25)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
+                                    >
+                                      Generate Cast Asset
+                                    </button>
+                                  </div>
+                                ) : (
+                                  /* Generated portrait rendering */
+                                  <>
+                                    <img 
+                                      src={activeAsset.image_url.startsWith('/') ? apiBaseUrl + activeAsset.image_url : activeAsset.image_url} 
+                                      alt={char.name} 
+                                      className="w-full h-full object-cover rounded-t-lg transition-transform duration-700 hover:scale-105" 
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+                                    
+                                    {/* Badges */}
+                                    <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-md border border-white/[0.1] text-cyan-400 font-mono text-[9px] font-extrabold px-2 py-0.5 rounded-md">
+                                      V{activeAsset.character_profile?.version || 1}
+                                    </span>
+                                    
+                                    <span className={`absolute top-3 right-3 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md backdrop-blur-md ${
+                                      role === 'Lead'
+                                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                    }`}>
+                                      {role} Role
+                                    </span>
+
+                                    <div className="absolute bottom-3 left-3 flex flex-col gap-0.5 font-mono text-[8px] text-surface-450 bg-black/60 backdrop-blur-sm px-2 py-1 rounded border border-white/[0.04]">
+                                      <span>ID: {activeAsset.character_profile?.character_id?.split('_').pop() || 'char'}</span>
+                                      <span>HASH: {activeAsset.character_profile?.consistency_hash || 'N/A'}</span>
+                                    </div>
+                                    
+                                    <button
+                                      onClick={() => handleGenerateCharacter(char.name)}
+                                      className="absolute bottom-3 right-3 px-2.5 py-1 bg-accent hover:bg-purple-600 text-white font-bold text-[9px] uppercase tracking-wider rounded-md transition-all cursor-pointer flex items-center gap-1 shadow-md z-20"
+                                      title="Generate a new version of this character portrait"
+                                    >
+                                      <span>Regenerate</span>
+                                    </button>
+                                  </>
+                                )}
                               </div>
-                              <div>
-                                <span className={`text-[9px] font-bold font-mono uppercase px-2 py-1 rounded border inline-flex items-center gap-1.5 ${
-                                  d ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-500/5 border-emerald-500/25 text-emerald-400'
-                                }`}>
-                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                  {char.status} for Asset Gen
-                                </span>
+
+                              {/* Bottom Details Section */}
+                              <div className="p-5 flex flex-col justify-between flex-1 bg-[#09090d]/30 border-t border-white/[0.02]">
+                                <div className="space-y-3.5 flex-1 flex flex-col justify-between">
+                                  <div>
+                                    <div className="flex justify-between items-center">
+                                      <h4 className={`text-base font-extrabold uppercase tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>
+                                        {char.name}
+                                      </h4>
+                                      {hasAsset && (
+                                        <span className="text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                                          Active Reference
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="text-[11px] leading-relaxed mt-3">
+                                      <span className="text-surface-500 font-semibold block uppercase text-[8px] tracking-wider mb-0.5">Visual Identity Profile</span>
+                                      <p className={`line-clamp-3 hover:line-clamp-none transition-all duration-300 cursor-pointer ${d ? 'text-neutral-600' : 'text-surface-400'}`} title="Click to expand">
+                                        {description}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Metadata Grid */}
+                                  <div className="grid grid-cols-2 gap-3 text-[10px] font-mono border-t border-dashed border-white/[0.05] pt-3.5 mt-auto">
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Gender</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{gender}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Age</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{age}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Personality Schema</span>
+                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={personality}>{personality}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Wardrobe Palette</span>
+                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={wardrobe}>{wardrobe}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Controls Bar (Only visible if assets exist) */}
+                                {hasAsset && (
+                                  <div className="flex gap-3 items-end mt-5 border-t border-white/[0.04] pt-4 shrink-0">
+                                    <div className="flex-1 flex flex-col gap-1">
+                                      <label className="text-[8px] font-extrabold uppercase text-surface-500 tracking-wider">Asset Version</label>
+                                      <select
+                                        value={activeAsset.id}
+                                        onChange={(e) => handleSelectVersion(char.name, Number(e.target.value))}
+                                        className="text-xs bg-neutral-900/60 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                      >
+                                        {characterAssets.map(asset => (
+                                          <option key={asset.id} value={asset.id}>
+                                            Version {asset.character_profile?.version || 1} {asset.id === activeAsset.id ? '(Active)' : ''}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <button
+                                      onClick={() => handleGenerateCharacter(char.name)}
+                                      className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] hover:border-cyan-500/30"
+                                    >
+                                      Regenerate
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5 text-[10px]">
-                              <div className={`rounded-lg border p-3 flex flex-col justify-between items-center text-center aspect-[4/3] ${
-                                d ? 'bg-white border-neutral-200' : 'bg-[#08080C] border-white/[0.03]'
-                              }`}>
-                                <span className="font-mono text-[8px] font-extrabold uppercase tracking-widest block w-full border-b border-white/[0.03] pb-1.5 text-surface-500">
-                                  REF_IMG_HUD
-                                </span>
-                                <div className="my-auto flex flex-col items-center gap-1">
-                                  <span className="text-base text-surface-600 opacity-60">📷</span>
-                                  <span className="font-bold text-[8px] text-surface-500 uppercase tracking-wide">NO REF IMAGE</span>
-                                </div>
-                                <span className="text-[7.5px] font-bold font-mono tracking-widest text-accent uppercase select-none opacity-80">
-                                  AWAITING GEN
-                                </span>
-                              </div>
-
-                              <div className={`rounded-lg border p-3 flex flex-col justify-between items-center text-center aspect-[4/3] ${
-                                d ? 'bg-white border-neutral-200' : 'bg-[#08080C] border-white/[0.03]'
-                              }`}>
-                                <span className="font-mono text-[8px] font-extrabold uppercase tracking-widest block w-full border-b border-white/[0.03] pb-1.5 text-surface-500">
-                                  SHEET_SCHEMA
-                                </span>
-                                <div className="my-auto flex flex-col items-center gap-1">
-                                  <span className="text-base text-surface-600 opacity-60">📄</span>
-                                  <span className="font-bold text-[8px] text-surface-500 uppercase tracking-wide">CHAR SCHEMA</span>
-                                </div>
-                                <span className="text-[7.5px] font-bold font-mono tracking-widest text-surface-600 uppercase select-none">
-                                  PENDING GEN
-                                </span>
-                              </div>
-
-                              <div className={`rounded-lg border p-3 flex flex-col justify-between items-center text-center aspect-[4/3] ${
-                                d ? 'bg-white border-neutral-200' : 'bg-[#08080C] border-white/[0.03]'
-                              }`}>
-                                <span className="font-mono text-[8px] font-extrabold uppercase tracking-widest block w-full border-b border-white/[0.03] pb-1.5 text-surface-500">
-                                  WARDROBE_SPEC
-                                </span>
-                                <div className="my-auto flex flex-col items-center gap-1">
-                                  <span className="text-base text-surface-600 opacity-60">👕</span>
-                                  <span className="font-bold text-[8px] text-surface-550 uppercase tracking-wide">WARDROBE CARD</span>
-                                </div>
-                                <span className="text-[7.5px] font-bold font-mono tracking-widest text-surface-600 uppercase select-none">
-                                  AWAITING SPEC
-                                </span>
-                              </div>
-
-                              <div className={`rounded-lg border p-3 flex flex-col justify-between items-center text-center aspect-[4/3] ${
-                                d ? 'bg-white border-neutral-200' : 'bg-[#08080C] border-white/[0.03]'
-                              }`}>
-                                <span className="font-mono text-[8px] font-extrabold uppercase tracking-widest block w-full border-b border-white/[0.03] pb-1.5 text-surface-500">
-                                  COGNITIVE_SPEC
-                                </span>
-                                <div className="my-auto flex flex-col items-center gap-1">
-                                  <span className="text-base text-surface-600 opacity-60">🧠</span>
-                                  <span className="font-bold text-[8px] text-surface-550 uppercase tracking-wide">PERSONALITY</span>
-                                </div>
-                                <span className="text-[7.5px] font-bold font-mono tracking-widest text-surface-600 uppercase select-none">
-                                  AWAITING COG
-                                </span>
-                              </div>
-
-                              <div className={`rounded-lg border p-3 flex flex-col justify-between items-center text-center aspect-[4/3] ${
-                                d ? 'bg-white border-neutral-200' : 'bg-[#08080C] border-white/[0.03]'
-                              }`}>
-                                <span className="font-mono text-[8px] font-extrabold uppercase tracking-widest block w-full border-b border-white/[0.03] pb-1.5 text-surface-500">
-                                  VOICE_MODEL
-                                </span>
-                                <div className="my-auto flex flex-col items-center gap-1 w-full">
-                                  <span className="text-base text-surface-600 opacity-60">🎙️</span>
-                                  <span className="font-bold text-[8px] text-surface-500 uppercase tracking-wide block mt-1">VOICE MODEL</span>
-                                </div>
-                                <span className="text-[7.5px] font-bold font-mono tracking-widest text-surface-600 uppercase select-none">
-                                  AWAITING CHOOSE
-                                </span>
-                              </div>
-
-                              <div className={`rounded-lg border p-3 flex flex-col justify-between items-center text-center aspect-[4/3] ${
-                                d ? 'bg-white border-neutral-200' : 'bg-[#08080C] border-white/[0.03]'
-                              }`}>
-                                <span className="font-mono text-[8px] font-extrabold uppercase tracking-widest block w-full border-b border-white/[0.03] pb-1.5 text-surface-500">
-                                  AUDIT_STATUS
-                                </span>
-                                <div className="my-auto flex flex-col items-center gap-1">
-                                  <span className="text-base text-surface-600 opacity-60">⚖️</span>
-                                  <span className="font-bold text-[8px] text-surface-550 uppercase tracking-wide">CONSISTENCY</span>
-                                </div>
-                                <span className={`text-[7.5px] font-bold font-mono tracking-widest uppercase px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400`}>
-                                  Ready
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

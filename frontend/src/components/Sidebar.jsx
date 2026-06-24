@@ -30,6 +30,7 @@ import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
 import { encodeId, decodeId } from '../utils/hashids';
 import ProjectIcon from './ProjectIcon';
+import { apiBaseUrl } from '../services/apiClient';
 
 // ── Custom SVGs ─────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ export default function Sidebar() {
     projectsLoading,
     removeSavedProject,
     updateProjectDetails,
+    fetchSavedProjects,
   } = useProjectData();
   const { isDayMode: d } = useTheme();
 
@@ -202,6 +204,29 @@ export default function Sidebar() {
     window.addEventListener('user_profile_updated', handleProfileUpdate);
     return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
   }, []);
+
+  const handleCreateDemoProject = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/projects/demo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create demo project');
+      }
+      const data = await response.json();
+      setIsProfileOpen(false);
+      await fetchSavedProjects();
+      const encoded = encodeId(data.id);
+      navigate(`/projects/${encoded}`);
+      alert(`Demo project "${data.title}" successfully created!`);
+    } catch (err) {
+      console.error(err);
+      alert('Error creating demo project: ' + err.message);
+    }
+  };
 
   const handleSaveProfile = () => {
     const updated = {
@@ -999,6 +1024,22 @@ export default function Sidebar() {
                   </div>
                 );
               })()}
+            </div>
+
+            {/* Developer Operations */}
+            <div className="border-t border-white/[0.04] pt-4 text-left">
+              <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-surface-400 mb-2.5 flex items-center gap-1.5 select-none">
+                <FiDatabase size={12} className="text-accent" />
+                <span>Developer Controls</span>
+              </h4>
+              <button
+                type="button"
+                onClick={handleCreateDemoProject}
+                className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+              >
+                <FiDatabase size={12} />
+                <span>Create Demo Project</span>
+              </button>
             </div>
 
             {/* Action Buttons */}
