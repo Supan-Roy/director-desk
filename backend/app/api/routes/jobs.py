@@ -273,6 +273,167 @@ async def run_character_generation_job(job_id: str, project_id: int, character_n
         db.close()
 
 
+async def run_environment_generation_job(job_id: str, project_id: int, environment_name: str):
+    import json
+    import uuid
+    import hashlib
+    import urllib.request
+    import os
+    import logging
+    from app.db.database import SessionLocal
+    from app.db.models import Project, EnvironmentAsset
+    from app.services.qwen_service import qwen_service
+    
+    db = SessionLocal()
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info(f"Starting environment generation task for {environment_name} (Job: {job_id})")
+        await redis_job_service.update_job_status(job_id, "processing", progress=10, message=f"Generating {environment_name}...")
+        await asyncio.sleep(0.5)
+        
+        await redis_job_service.update_job_status(job_id, "processing", progress=30, message="Building World Profile...")
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise ValueError(f"Project with ID {project_id} not found.")
+            
+        script_context = project.script or ""
+        breakdown_context = json.dumps(project.scene_breakdown or {})
+        
+        # Call Qwen text model to expand the environment profile
+        prompt = f"""
+        Analyze this project's script and scene breakdown to expand the environment/location '{environment_name}' into a structured creative visual JSON profile.
+        
+        Script Context:
+        {script_context[:3000]}
+        
+        Breakdown Context:
+        {breakdown_context[:2000]}
+        
+        Provide the response strictly as a JSON block with these keys (do not add markdown code blocks or any introductory text, output pure JSON):
+        {{
+          "name": "{environment_name}",
+          "description": "creative and highly descriptive paragraph of the environment location's look and feel",
+          "environment_type": "extract or determine environment type (e.g. Interior, Exterior, Megacity, Space Station, Chamber)",
+          "architecture": "describe architectural structures, style, materials, layout, shapes",
+          "lighting": "lighting style (e.g. dawn golden light, neon glow, atmospheric shadows)",
+          "weather": "weather/atmospheric state (e.g. clear, overcast, holographic rain)",
+          "color_palette": "dominant colors (e.g. slate gray, deep amber, cobalt blue)",
+          "mood": "emotional vibe/atmosphere (e.g. optimistic, solitary, chaotic, ancient)",
+          "time_of_day": "time of day (e.g. Dawn, Sunset, Midnight, Noon)",
+          "scene_appearances": ["Scene 01", "Scene 03"]
+        }}
+        """
+        
+        try:
+            expanded_profile_str = await asyncio.to_thread(qwen_service.generate_text, prompt)
+            cleaned = expanded_profile_str.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            profile = json.loads(cleaned.strip())
+        except Exception as e:
+            logger.error(f"Failed to expand environment profile: {e}")
+            # default fallback
+            profile = {
+                "name": environment_name,
+                "description": f"A location of significance representing {environment_name}.",
+                "environment_type": "Interior",
+                "architecture": "Modern structure",
+                "lighting": "Standard dynamic lighting",
+                "weather": "Clear",
+                "color_palette": "Monochromatic",
+                "mood": "Neutral",
+                "time_of_day": "Daytime",
+                "scene_appearances": []
+            }
+            
+        await redis_job_service.update_job_status(job_id, "processing", progress=50, message="Building Visual Identity...")
+        safe_name = "".join([c if c.isalnum() else "_" for c in environment_name]).lower()
+        environment_id = f"env_{safe_name}_{uuid.uuid4().hex[:8]}"
+        environment_signature = f"{profile.get('environment_type')}, {profile.get('architecture')}, {profile.get('lighting')}, {profile.get('weather')}, {profile.get('mood')}, palette: {profile.get('color_palette')}"
+        consistency_hash = hashlib.sha256(environment_signature.encode('utf-8')).hexdigest()[:16]
+        
+        profile["environment_id"] = environment_id
+        profile["environment_signature"] = environment_signature
+        profile["consistency_hash"] = consistency_hash
+        
+        # Populate scene appearances from project's default environments mapping if profile scenes list is empty
+        if not profile.get("scene_appearances") and project.environments:
+            for env_item in project.environments:
+                if env_item.get("name") == environment_name:
+                    profile["scene_appearances"] = env_item.get("scenes", [])
+                    break
+        
+        await asyncio.sleep(0.5)
+        
+        await redis_job_service.update_job_status(job_id, "processing", progress=70, message="Generating Environment Reference...")
+        # Construct the image generation prompt focusing on world-building and establishing reference shot
+        image_prompt = f"Wide cinematic establishing shot, production reference image, concept art style of {environment_name}. Location details: {environment_signature}. Mood: {profile.get('mood')}. Style: cinematic key lighting, world building, visual identity, photorealistic, high detail."
+        
+        try:
+            raw_image_url = await asyncio.to_thread(qwen_service.generate_image, image_prompt)
+        except Exception as e:
+            logger.error(f"Failed to generate environment reference image: {e}")
+            raw_image_url = f"https://placehold.co/1024x1024.png?text={environment_name}+Reference"
+            
+        await asyncio.sleep(0.5)
+        await redis_job_service.update_job_status(job_id, "processing", progress=90, message="Saving Asset...")
+        
+        try:
+            os.makedirs("static/uploads", exist_ok=True)
+            filename = f"env_{safe_name}_{uuid.uuid4().hex[:8]}.png"
+            filepath = os.path.join("static/uploads", filename)
+            await asyncio.to_thread(urllib.request.urlretrieve, raw_image_url, filepath)
+            local_image_url = f"/static/uploads/{filename}"
+        except Exception as e:
+            logger.error(f"Failed to download generated environment portrait: {e}")
+            local_image_url = "/static/uploads/placeholder.png"
+            
+        # Get version count
+        version_count = db.query(EnvironmentAsset).filter(
+            EnvironmentAsset.project_id == project_id,
+            EnvironmentAsset.environment_name == environment_name
+        ).count()
+        version_num = version_count + 1
+        
+        profile["version"] = version_num
+        profile["is_preferred"] = (version_count == 0)
+        
+        asset = EnvironmentAsset(
+            project_id=project_id,
+            environment_name=environment_name,
+            environment_profile=profile,
+            image_url=local_image_url,
+            generation_prompt=image_prompt
+        )
+        db.add(asset)
+        
+        # update the projects.environments list record to point to the new generation_status
+        envs = list(project.environments or [])
+        env_found = False
+        for env_item in envs:
+            if env_item.get("name") == environment_name:
+                env_item["generation_status"] = "Reference Compiled"
+                env_found = True
+                break
+        if env_found:
+            project.environments = envs
+            
+        db.commit()
+        db.refresh(asset)
+        
+        logger.info(f"Environment asset saved: ID={asset.id}, Name={environment_name}, Version=v{version_num}")
+        await redis_job_service.update_job_status(job_id, "completed", progress=100, message="Completed")
+        
+    except Exception as e:
+        logger.error(f"Error running environment generation: {e}")
+        await redis_job_service.update_job_status(job_id, "failed", error=str(e), message="Failed")
+    finally:
+        db.close()
+
+
 # Production Studio endpoints
 @router.post("/api/generate/character")
 async def generate_character(background_tasks: BackgroundTasks, request: GenerateJobRequest):
@@ -295,9 +456,22 @@ async def generate_character(background_tasks: BackgroundTasks, request: Generat
 
 @router.post("/api/generate/environment")
 async def generate_environment(background_tasks: BackgroundTasks, request: GenerateJobRequest):
-    job = await redis_job_service.create_job(project_id=request.project_id, job_type="environment_generation")
-    background_tasks.add_task(run_simulated_job, job["job_id"], 5)
+    if not request.target_id:
+        raise HTTPException(status_code=400, detail="target_id (environment_name) is required")
+        
+    job = await redis_job_service.create_job(
+        project_id=request.project_id, 
+        job_type="environment_generation", 
+        target_id=request.target_id
+    )
+    background_tasks.add_task(
+        run_environment_generation_job, 
+        job["job_id"], 
+        int(request.project_id), 
+        request.target_id
+    )
     return job
+
 
 
 @router.post("/api/generate/voice")
