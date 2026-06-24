@@ -479,10 +479,12 @@ async def synthesize_speech_via_dashscope(text: str, voice_name: str, output_pat
         
     url = f"{base_host}/api/v1/services/aigc/multimodal-generation/generation"
     
-    # Map voice gender. Qwen3-TTS supports system voices like Cherry (female) and Ethan (male)
-    voice = "Ethan"
-    if voice_name.lower() in ["female", "tongtong", "cherry"]:
+    # Qwen3-TTS supports system voices like Cherry, Serena, Ethan, Pip
+    voice = voice_name
+    if voice_name.lower() in ["female", "tongtong"]:
         voice = "Cherry"
+    elif voice_name.lower() in ["male", "longanyang"]:
+        voice = "Ethan"
         
     payload = {
         "model": "qwen3-tts-flash",
@@ -583,6 +585,7 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
         Provide the response strictly as a JSON block with these keys (do not add markdown code blocks or any introductory text, output pure JSON):
         {{
           "character_name": "{character_name}",
+          "gender": "character gender (must be exactly 'male', 'female', 'child-male', 'child-female', or 'gender-neutral')",
           "age_range": "e.g. child (6-10), teenager (13-18), young adult (19-30), middle-aged (35-50), senior (60+)",
           "voice_tone": "e.g. raspy, warm, deep, breathy, melodic, crisp, metallic, gravelly",
           "voice_energy": "e.g. High, Medium, Low, Subdued, Intense",
@@ -606,6 +609,7 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
             logger.error(f"Failed to expand voice profile: {e}")
             profile = {
                 "character_name": character_name,
+                "gender": "male",
                 "age_range": "Young Adult",
                 "voice_tone": "Warm",
                 "voice_energy": "Medium",
@@ -645,18 +649,58 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
             "model_type": "Qwen-TTS-v1-Base"
         }
         
-        # Determine character's gender
+        # Determine character's gender and age
+        # 1. Fallback values from LLM-generated profile
+        gender = profile.get("gender", "male").lower()
+        age_val = profile.get("age_range", "").lower()
+        
+        # 2. Try to override from CharacterAsset database record (using case-insensitive name match)
         from app.db.models import CharacterAsset
+        from sqlalchemy import func
         char_asset = db.query(CharacterAsset).filter(
             CharacterAsset.project_id == project_id,
-            CharacterAsset.character_name == character_name
+            func.lower(CharacterAsset.character_name) == func.lower(character_name)
         ).first()
-        gender = "male"
         if char_asset and char_asset.character_profile:
-            gender = char_asset.character_profile.get("gender", "male").lower()
+            db_gender = char_asset.character_profile.get("gender")
+            if db_gender:
+                gender = db_gender.lower()
+            db_age = char_asset.character_profile.get("age")
+            if db_age:
+                age_val = str(db_age).lower()
+
+        # Map to Qwen3-TTS system voice (Cherry, Serena, Ethan, Pip)
+        voice_tts_name = "Ethan"  # default
+        
+        is_child = ("child" in gender) or ("child" in age_val)
+        try:
+            # Check if age_val contains a number under 12
+            import re
+            num_match = re.search(r'\d+', age_val)
+            if num_match and int(num_match.group()) < 12:
+                is_child = True
+        except Exception:
+            pass
             
-        voice_gender = "female" if "female" in gender else "male"
-        voice_tts_name = "tongtong" if voice_gender == "female" else "longanyang"
+        if is_child:
+            voice_tts_name = "Pip"
+        elif "female" in gender:
+            if "middle-aged" in age_val or "senior" in age_val:
+                voice_tts_name = "Serena"
+            else:
+                try:
+                    import re
+                    num_match = re.search(r'\d+', age_val)
+                    if num_match and int(num_match.group()) >= 35:
+                        voice_tts_name = "Serena"
+                    else:
+                        voice_tts_name = "Cherry"
+                except Exception:
+                    voice_tts_name = "Cherry"
+        else:
+            voice_tts_name = "Ethan"
+            
+        logger.info(f"Resolved voice for {character_name}: {voice_tts_name} (gender={gender}, age={age_val})")
         
         # Extract dialogue line to speak
         speech_text = extract_first_dialogue(script_context, character_name)
@@ -668,7 +712,7 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
         os.makedirs("static/uploads", exist_ok=True)
         preview_path = f"static/uploads/preview_{safe_name}.wav"
         
-        # Synthesize real speech via DashScope CosyVoice API
+        # Synthesize real speech via DashScope Qwen-TTS API
         tts_success = await synthesize_speech_via_dashscope(speech_text, voice_tts_name, preview_path)
         
         if not tts_success:
