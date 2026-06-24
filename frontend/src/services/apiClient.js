@@ -158,4 +158,29 @@ export async function generateEnvironmentAsset(projectId, environmentName) {
   return response.data
 }
 
+/** Fetch all generated voice assets for a project. */
+export async function getProjectVoices(projectId) {
+  const response = await apiClient.get(`/api/projects/${projectId}/voices`)
+  return response.data
+}
+
+/** Set a specific voice version as the preferred/active one. */
+export async function selectVoiceVersion(projectId, characterName, preferredAssetId) {
+  const response = await apiClient.post(`/api/projects/${projectId}/voices/select-version`, {
+    character_name: characterName,
+    preferred_asset_id: preferredAssetId
+  })
+  return response.data
+}
+
+/** Trigger voice asset generation job. */
+export async function generateVoiceAsset(projectId, characterName) {
+  const response = await apiClient.post('/api/generate/voice', {
+    project_id: String(projectId),
+    target_id: characterName
+  })
+  return response.data
+}
+
+
 

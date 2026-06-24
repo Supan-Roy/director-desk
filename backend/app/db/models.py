@@ -98,3 +98,22 @@ class EnvironmentAsset(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class VoiceAsset(Base):
+    __tablename__ = "voice_assets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, index=True, nullable=False)
+    character_name = Column(String, index=True, nullable=False)
+    voice_profile = Column(JSONType, nullable=False)
+    voice_signature = Column(String, nullable=True)
+    voice_settings = Column(JSONType, nullable=True)
+    preview_url = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

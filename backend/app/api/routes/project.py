@@ -349,4 +349,50 @@ def select_environment_version(project_id: int, payload: SelectEnvironmentVersio
     return {"status": "success"}
 
 
+class SelectVoiceVersionRequest(BaseModel):
+    character_name: str
+    preferred_asset_id: int
+
+
+@router.get("/projects/{project_id}/voices")
+def get_project_voices(project_id: int, db: Session = Depends(get_db)):
+    """Return all generated voice assets for a given project."""
+    from app.db.models import VoiceAsset
+    assets = db.query(VoiceAsset).filter(VoiceAsset.project_id == project_id).all()
+    return [
+        {
+            "id": asset.id,
+            "project_id": asset.project_id,
+            "character_name": asset.character_name,
+            "voice_profile": asset.voice_profile,
+            "voice_signature": asset.voice_signature,
+            "voice_settings": asset.voice_settings,
+            "preview_url": asset.preview_url,
+            "created_at": asset.created_at.isoformat(),
+            "updated_at": asset.updated_at.isoformat()
+        }
+        for asset in assets
+    ]
+
+
+@router.post("/projects/{project_id}/voices/select-version")
+def select_voice_version(project_id: int, payload: SelectVoiceVersionRequest, db: Session = Depends(get_db)):
+    """Set a specific voice version as the preferred/active one."""
+    from app.db.models import VoiceAsset
+    assets = db.query(VoiceAsset).filter(
+        VoiceAsset.project_id == project_id, 
+        VoiceAsset.character_name == payload.character_name
+    ).all()
+    
+    for asset in assets:
+        profile = dict(asset.voice_profile)
+        profile["is_preferred"] = (asset.id == payload.preferred_asset_id)
+        # Type mark dirty
+        asset.voice_profile = profile
+        
+    db.commit()
+    return {"status": "success"}
+
+
+
 
