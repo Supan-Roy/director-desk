@@ -834,6 +834,47 @@ async def generate_asset(background_tasks: BackgroundTasks, request: GenerateJob
     return job
 
 
+def upload_to_tmpfiles(local_path: str) -> str | None:
+    """
+    Uploads a local static asset file (from static/uploads) to tmpfiles.org
+    and returns a direct public download URL. Used as a fallback on localhost
+    for cloud-based DashScope image-to-video API access.
+    """
+    import os
+    import requests
+    import logging
+
+    logger = logging.getLogger(__name__)
+    try:
+        # Normalize local_path to strip leading slash for os.path join
+        clean_path = local_path.lstrip("/")
+        if not os.path.exists(clean_path):
+            # Check relative to backend folder if clean_path doesn't exist
+            alt_path = os.path.join("backend", clean_path)
+            if os.path.exists(alt_path):
+                clean_path = alt_path
+            else:
+                logger.error(f"Local reference image not found: {local_path} (checked {clean_path} and {alt_path})")
+                return None
+
+        logger.info(f"Uploading {clean_path} to tmpfiles.org...")
+        with open(clean_path, 'rb') as f:
+            files = {'file': f}
+            response = requests.post('https://tmpfiles.org/api/v1/upload', files=files, timeout=15)
+            if response.status_code == 200:
+                res_data = response.json()
+                url = res_data.get("data", {}).get("url")
+                if url:
+                    # Convert default link to direct download link
+                    direct_url = url.replace("https://tmpfiles.org/", "https://tmpfiles.org/dl/")
+                    logger.info(f"Upload complete. Direct URL: {direct_url}")
+                    return direct_url
+            logger.error(f"tmpfiles.org upload failed with status code {response.status_code}: {response.text}")
+    except Exception as e:
+        logger.error(f"Error in upload_to_tmpfiles for {local_path}: {e}")
+    return None
+
+
 async def run_scene_generation_job(job_id: str, project_id: int, scene_number_str: str):
     import json
     import uuid
@@ -935,8 +976,9 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         await redis_job_service.update_job_status(job_id, "processing", progress=15, message="Loading Character References...")
         await asyncio.sleep(0.5)
         
-        # Find character assets
+        # Find character assets and extract visual signatures
         character_images = []
+        character_profiles_desc = []
         for char in scene_chars:
             trimmed = char.lower().strip()
             if not trimmed:
@@ -945,15 +987,30 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
                 CharacterAsset.project_id == project_id,
                 func.lower(CharacterAsset.character_name) == trimmed
             ).first()
-            if char_asset and char_asset.image_url:
-                character_images.append(char_asset.image_url)
+            if char_asset:
+                if char_asset.image_url:
+                    character_images.append(char_asset.image_url)
+                
+                profile_dict = char_asset.character_profile
+                if isinstance(profile_dict, str):
+                    try:
+                        profile_dict = json.loads(profile_dict)
+                    except Exception:
+                        profile_dict = {}
+                if profile_dict:
+                    visual_sig = profile_dict.get("visual_signature") or profile_dict.get("visual_profile")
+                    if visual_sig:
+                        # Normalize whitespace
+                        clean_sig = re.sub(r'[\s\n\t]+', ' ', visual_sig).strip()
+                        character_profiles_desc.append(f"{char}: {clean_sig}")
                 
         await redis_job_service.update_job_status(job_id, "processing", progress=25, message="Loading Environment References...")
         await asyncio.sleep(0.5)
         
-        # Find environment asset
+        # Find environment asset and extract signature
         location_name = scene_dict.get("location") or scene_dict.get("environment") or ""
         env_image = None
+        env_profile_desc = ""
         trimmed_loc = location_name.lower().strip()
         if trimmed_loc:
             env_assets = db.query(EnvironmentAsset).filter(EnvironmentAsset.project_id == project_id).all()
@@ -961,6 +1018,16 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
                 ea_name = ea.environment_name.lower().strip()
                 if ea_name in trimmed_loc or trimmed_loc in ea_name:
                     env_image = ea.image_url
+                    env_profile_dict = ea.environment_profile
+                    if isinstance(env_profile_dict, str):
+                        try:
+                            env_profile_dict = json.loads(env_profile_dict)
+                        except Exception:
+                            env_profile_dict = {}
+                    if env_profile_dict:
+                        env_sig = env_profile_dict.get("environment_signature") or env_profile_dict.get("description")
+                        if env_sig:
+                            env_profile_desc = re.sub(r'[\s\n\t]+', ' ', env_sig).strip()
                     break
                     
         await redis_job_service.update_job_status(job_id, "processing", progress=35, message="Loading Voice Profiles...")
@@ -988,11 +1055,26 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         camera_movement = scene_dict.get("camera_movement") or scene_dict.get("camera_setup") or ""
         lighting = scene_dict.get("lighting_design") or ""
         
+        descriptions = []
+        if character_profiles_desc:
+            descriptions.append("Character visual profiles: " + "; ".join(character_profiles_desc))
+        if env_profile_desc:
+            descriptions.append(f"Setting/Environment ({location_name}): {env_profile_desc}")
+            
         compiled_prompt = raw_prompt
+        if descriptions:
+            compiled_prompt += ". " + " ".join(descriptions)
+            
         if camera_movement:
             compiled_prompt += f", camera movement: {camera_movement}"
         if lighting:
             compiled_prompt += f", lighting: {lighting}"
+            
+        # Truncate prompt to safe limits (e.g. 1000 chars) to prevent API issues
+        if len(compiled_prompt) > 1000:
+            compiled_prompt = compiled_prompt[:997] + "..."
+        
+
             
         negative_prompt = scene_dict.get("negative_prompt", "cartoonish, anime, 3D render, low quality, shaky cam, text")
         
@@ -1014,12 +1096,23 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         if api_key_set:
             try:
                 public_ref_image = ref_image
-                if public_ref_image and public_ref_image.startswith("/static/"):
-                    if not public_ref_image.startswith("http"):
+                if public_ref_image and (public_ref_image.startswith("/static/") or "localhost" in public_ref_image or "127.0.0.1" in public_ref_image):
+                    # Extract the path portion (e.g. /static/uploads/filename.png)
+                    local_relative_path = public_ref_image
+                    if "://" in local_relative_path:
+                        from urllib.parse import urlparse
+                        local_relative_path = urlparse(local_relative_path).path
+                    
+                    logger.info(f"Attempting to upload local relative reference image {local_relative_path} to tmpfiles.org...")
+                    uploaded_url = await asyncio.to_thread(upload_to_tmpfiles, local_relative_path)
+                    if uploaded_url:
+                        public_ref_image = uploaded_url
+                    else:
+                        logger.warning("Local reference image upload failed. Falling back to Text-to-Video.")
                         public_ref_image = None
                         model = "wan2.7-t2v"
                 
-                logger.info(f"Running generate_video call with model {model}...")
+                logger.info(f"Running generate_video call with model {model} using reference URL: {public_ref_image}...")
                 video_url = await asyncio.to_thread(qwen_service.generate_video, compiled_prompt, model, public_ref_image)
             except Exception as e:
                 logger.error(f"DashScope video generation error: {e}. Falling back to simulation video.")
