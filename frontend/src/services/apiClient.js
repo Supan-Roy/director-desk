@@ -182,5 +182,35 @@ export async function generateVoiceAsset(projectId, characterName) {
   return response.data
 }
 
+// Scene rendering endpoints
+export async function getSceneVideos(projectId) {
+  const response = await apiClient.get(`/api/projects/${projectId}/scenes/videos`)
+  return response.data
+}
+
+export async function getScenesStatus(projectId) {
+  const response = await apiClient.get(`/api/projects/${projectId}/scenes/status`)
+  return response.data
+}
+
+export async function generateSceneVideo(projectId, sceneNumberStr) {
+  const response = await apiClient.post('/api/generate/scene', {
+    project_id: String(projectId),
+    target_id: sceneNumberStr
+  })
+  return response.data
+}
+
+export async function approveSceneVideo(projectId, videoId) {
+  const response = await apiClient.post(`/api/projects/${projectId}/scenes/videos/${videoId}/approve`)
+  return response.data
+}
+
+export async function deleteSceneVideo(projectId, videoId) {
+  const response = await apiClient.post(`/api/projects/${projectId}/scenes/videos/${videoId}/delete`)
+  return response.data
+}
+
+
 
 

@@ -268,6 +268,118 @@ class QwenService:
                 
         raise RuntimeError("DashScope image generation task timed out after 120 seconds.")
 
+    def generate_video(self, prompt: str, model: str, image_url: str = None) -> str:
+        import urllib.request
+        import urllib.error
+        import json
+        import time
+        import os
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        api_key = os.getenv("QWEN_API_KEY")
+        if not api_key:
+            raise RuntimeError("QWEN_API_KEY is not set.")
+
+        api_base = os.getenv("QWEN_API_BASE_URL") or "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        if "/compatible-mode" in api_base:
+            base_host = api_base.split("/compatible-mode")[0]
+        else:
+            base_host = "https://dashscope-intl.aliyuncs.com"
+
+        submit_url = f"{base_host}/api/v1/services/aigc/video-generation/video-synthesis"
+
+        # Prepare payload
+        input_data = {
+            "prompt": prompt
+        }
+        if image_url:
+            input_data["image_url"] = image_url
+
+        payload = {
+            "model": model,
+            "input": input_data,
+            "parameters": {
+                "size": "1280*720"
+            }
+        }
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "X-DashScope-Async": "enable"
+        }
+
+        logger.info(f"Submitting video synthesis task to DashScope: Model={model}, Prompt='{prompt[:60]}'")
+        try:
+            req = urllib.request.Request(
+                submit_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=30) as response:
+                resp_data = json.loads(response.read().decode("utf-8"))
+                
+            task_id = resp_data.get("output", {}).get("task_id")
+            if not task_id:
+                # Check for direct error
+                if "code" in resp_data:
+                    raise RuntimeError(f"DashScope error: {resp_data.get('code')} - {resp_data.get('message')}")
+                raise RuntimeError(f"DashScope did not return a task_id. Response: {resp_data}")
+                
+            logger.info(f"Video synthesis task submitted successfully. TaskID={task_id}. Polling status...")
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="replace")
+            logger.error(f"DashScope task submission failed: {e.code} - {err_body}")
+            raise RuntimeError(f"DashScope video submission HTTP error {e.code}: {err_body}")
+        except Exception as e:
+            logger.error(f"Failed to submit task: {e}")
+            raise
+
+        # Poll the task status
+        poll_url = f"{base_host}/api/v1/tasks/{task_id}"
+        poll_headers = {
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        # Max polling duration: 300 seconds (5 minutes)
+        for attempt in range(60):
+            time.sleep(5)
+            try:
+                poll_req = urllib.request.Request(poll_url, headers=poll_headers, method="GET")
+                with urllib.request.urlopen(poll_req, timeout=15) as response:
+                    poll_data = json.loads(response.read().decode("utf-8"))
+                    
+                output = poll_data.get("output", {})
+                status = output.get("task_status")
+                logger.info(f"Polling video task {task_id}: status={status}")
+                
+                if status == "SUCCEEDED":
+                    video_url = None
+                    if "video_url" in output:
+                        video_url = output["video_url"]
+                    elif "results" in output and len(output["results"]) > 0:
+                        video_url = output["results"][0].get("url")
+                    
+                    if video_url:
+                        logger.info(f"Video synthesis succeeded. URL={video_url}")
+                        return video_url
+                    else:
+                        raise RuntimeError(f"SUCCEEDED video task has no video url in output: {poll_data}")
+                        
+                elif status in ["FAILED", "CANCELED"]:
+                    err_msg = output.get("message") or poll_data.get("message") or "Unknown error"
+                    raise RuntimeError(f"DashScope video gen task failed/canceled: {err_msg}")
+            except urllib.error.HTTPError as e:
+                logger.warning(f"Polling video HTTP error {e.code}, retrying...")
+            except Exception as e:
+                if "failed/canceled" in str(e) or "has no video url" in str(e):
+                    raise e
+                logger.warning(f"Polling video error {e}, retrying...")
+                
+        raise RuntimeError("DashScope video generation task timed out after 300 seconds.")
 
 
-qwen_service = QwenService()
+qwen_service = QwenService()

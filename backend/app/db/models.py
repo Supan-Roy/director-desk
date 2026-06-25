@@ -117,3 +117,28 @@ class VoiceAsset(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class SceneVideo(Base):
+    __tablename__ = "scene_videos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, index=True, nullable=False)
+    scene_number = Column(Integer, index=True, nullable=False)
+    video_url = Column(String, nullable=False)
+    thumbnail_url = Column(String, nullable=True)
+    duration = Column(Integer, nullable=True)
+    generation_model = Column(String, nullable=False)
+    prompt_used = Column(Text, nullable=False)
+    status = Column(String, nullable=False)
+    version = Column(Integer, default=1, nullable=False)
+    is_approved = Column(Boolean, default=False, nullable=False)
+    credits_used = Column(Integer, default=80, nullable=False)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

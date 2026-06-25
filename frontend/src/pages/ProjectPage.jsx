@@ -4,7 +4,7 @@ import { marked } from 'marked';
 import {
   FiArrowLeft, FiArrowRight, FiEdit3, FiSend, FiX, FiFileText, FiList,
   FiImage, FiClipboard, FiLoader, FiClock, FiFilm, FiCheck, FiShare2,
-  FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar
+  FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar, FiCheckCircle, FiInfo, FiAlertTriangle
 } from 'react-icons/fi';
 import { PiSparkle } from 'react-icons/pi';
 import { 
@@ -981,6 +981,16 @@ export default function ProjectPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // ── Toast Notification State ─────────────────────────────────────────────────────
+  const [toast, setToast] = useState(null);
+  const showToast = useCallback((message, type = 'info') => {
+    const id = Date.now();
+    setToast({ message, type, id });
+    setTimeout(() => {
+      setToast(current => current?.id === id ? null : current);
+    }, 5000);
+  }, []);
+
   const handleResume = async () => {
     const numericId = decodeProjectRouteId(id);
     try {
@@ -989,7 +999,7 @@ export default function ProjectPage() {
       setProject(updatedProject);
     } catch (err) {
       console.error(err);
-      alert('Failed to resume generation: ' + err.message);
+      showToast('Failed to resume generation: ' + err.message, 'error');
     }
   };
 
@@ -1023,7 +1033,7 @@ export default function ProjectPage() {
       fetchSavedProjects();
     } catch (err) {
       console.error('Failed to save script:', err);
-      alert('Failed to save script: ' + err.message);
+      showToast('Failed to save script: ' + err.message, 'error');
     }
   };
 
@@ -1036,7 +1046,7 @@ export default function ProjectPage() {
       navigate(`/projects/${id}/production`);
     } catch (err) {
       console.error('Failed to approve project:', err);
-      alert('Failed to approve project: ' + err.message);
+      showToast('Failed to approve project: ' + err.message, 'error');
     }
   };
 
@@ -1049,7 +1059,7 @@ export default function ProjectPage() {
       fetchSavedProjects();
     } catch (err) {
       console.error('Failed to refine script:', err);
-      alert('Failed to refine script: ' + err.message);
+      showToast('Failed to refine script: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -1360,6 +1370,48 @@ export default function ProjectPage() {
 
           </div>
         </div>
+      )}
+
+      {toast && (
+        <>
+          <style>{`
+            @keyframes slideUp {
+              from {
+                transform: translateY(1.5rem);
+                opacity: 0;
+              }
+              to {
+                transform: translateY(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
+          <div 
+            className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl transition-all duration-300 ${
+              toast.type === 'error' 
+                ? 'bg-red-950/90 border-red-500/30 text-red-200 shadow-red-950/40' 
+                : toast.type === 'success'
+                  ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200 shadow-emerald-950/40'
+                  : 'bg-neutral-900/90 border-white/[0.08] text-neutral-200'
+            } backdrop-blur-md`}
+            style={{
+              animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+            }}
+          >
+            {toast.type === 'error' && <FiAlertTriangle className="w-5 h-5 text-red-400 shrink-0" />}
+            {toast.type === 'success' && <FiCheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />}
+            {toast.type === 'info' && <FiInfo className="w-5 h-5 text-blue-400 shrink-0" />}
+            
+            <div className="text-[12px] font-medium pr-4">{toast.message}</div>
+            
+            <button 
+              onClick={() => setToast(null)}
+              className="text-white/40 hover:text-white/80 transition-colors ml-auto text-xs font-semibold px-1"
+            >
+              ✕
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

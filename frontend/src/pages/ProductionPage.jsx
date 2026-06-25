@@ -18,6 +18,11 @@ import {
   getProjectVoices,
   selectVoiceVersion,
   generateVoiceAsset,
+  getSceneVideos,
+  getScenesStatus,
+  generateSceneVideo,
+  approveSceneVideo,
+  deleteSceneVideo,
   apiBaseUrl 
 } from '../services/apiClient';
 import Sidebar from '../components/Sidebar';
@@ -286,6 +291,16 @@ export default function ProductionPage() {
     fetchProjectDetails();
   }, [id, fetchProjectDetails]);
 
+  // ── Toast Notification State ─────────────────────────────────────────────────────
+  const [toast, setToast] = useState(null);
+  const showToast = useCallback((message, type = 'info') => {
+    const id = Date.now();
+    setToast({ message, type, id });
+    setTimeout(() => {
+      setToast(current => current?.id === id ? null : current);
+    }, 5000);
+  }, []);
+
   // ── Character, Environment & Voice Studio State & Handlers ───────────────────────
   const [generatedAssets, setGeneratedAssets] = useState([]);
   const [generatedEnvAssets, setGeneratedEnvAssets] = useState([]);
@@ -325,11 +340,32 @@ export default function ProductionPage() {
       });
   }, [id]);
 
+  const [sceneVideos, setSceneVideos] = useState([]);
+  const [scenesStatus, setScenesStatus] = useState([]);
+  const [sceneStatusLoading, setSceneStatusLoading] = useState(true);
+
+  const fetchSceneVideosAndStatus = useCallback(() => {
+    const numericId = decodeProjectRouteId(id);
+    setSceneStatusLoading(true);
+    Promise.all([
+      getSceneVideos(numericId),
+      getScenesStatus(numericId)
+    ]).then(([videos, status]) => {
+      setSceneVideos(videos);
+      setScenesStatus(status);
+      setSceneStatusLoading(false);
+    }).catch(err => {
+      console.error("Failed to load scene videos/status:", err);
+      setSceneStatusLoading(false);
+    });
+  }, [id]);
+
   useEffect(() => {
     fetchCharactersList();
     fetchEnvironmentsList();
     fetchVoicesList();
-  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchVoicesList]);
+    fetchSceneVideosAndStatus();
+  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchVoicesList, fetchSceneVideosAndStatus]);
 
   // SSE Stream Listener for characters, environments, and voices
   useEffect(() => {
@@ -401,6 +437,24 @@ export default function ProductionPage() {
                 return updated;
               });
             }
+          } else if (data.type === 'scene_generation') {
+            const sceneName = data.target_id;
+            if (sceneName) {
+              setRunningJobs(prev => {
+                const updated = { ...prev };
+                if (data.status === 'completed' || data.status === 'failed') {
+                  delete updated[sceneName];
+                  fetchSceneVideosAndStatus();
+                } else {
+                  updated[sceneName] = {
+                    status: data.status,
+                    progress: data.progress || 0,
+                    message: data.message || "Processing..."
+                  };
+                }
+                return updated;
+              });
+            }
           }
         }
       } catch (err) {
@@ -416,7 +470,7 @@ export default function ProductionPage() {
     return () => {
       eventSource.close();
     };
-  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchVoicesList, fetchProjectDetails]);
+  }, [id, fetchCharactersList, fetchEnvironmentsList, fetchVoicesList, fetchProjectDetails, fetchSceneVideosAndStatus]);
 
   const handleGenerateCharacter = async (characterName) => {
     const numericId = decodeProjectRouteId(id);
@@ -432,7 +486,7 @@ export default function ProductionPage() {
       await generateCharacterAsset(numericId, characterName);
     } catch (err) {
       console.error("Failed to trigger character generation:", err);
-      alert("Failed to start character generation: " + err.message);
+      showToast("Failed to start character generation: " + err.message, 'error');
       setRunningJobs(prev => {
         const updated = { ...prev };
         delete updated[characterName];
@@ -448,7 +502,7 @@ export default function ProductionPage() {
       await fetchCharactersList();
     } catch (err) {
       console.error("Failed to select character version:", err);
-      alert("Failed to switch version: " + err.message);
+      showToast("Failed to switch version: " + err.message, 'error');
     }
   };
 
@@ -466,7 +520,7 @@ export default function ProductionPage() {
       await generateEnvironmentAsset(numericId, envName);
     } catch (err) {
       console.error("Failed to trigger environment generation:", err);
-      alert("Failed to start environment generation: " + err.message);
+      showToast("Failed to start environment generation: " + err.message, 'error');
       setRunningJobs(prev => {
         const updated = { ...prev };
         delete updated[envName];
@@ -482,7 +536,7 @@ export default function ProductionPage() {
       await fetchEnvironmentsList();
     } catch (err) {
       console.error("Failed to select environment version:", err);
-      alert("Failed to switch version: " + err.message);
+      showToast("Failed to switch version: " + err.message, 'error');
     }
   };
 
@@ -500,7 +554,7 @@ export default function ProductionPage() {
       await generateVoiceAsset(numericId, characterName);
     } catch (err) {
       console.error("Failed to trigger voice generation:", err);
-      alert("Failed to start voice generation: " + err.message);
+      showToast("Failed to start voice generation: " + err.message, 'error');
       setRunningJobs(prev => {
         const updated = { ...prev };
         delete updated[characterName];
@@ -516,9 +570,70 @@ export default function ProductionPage() {
       await fetchVoicesList();
     } catch (err) {
       console.error("Failed to select voice version:", err);
-      alert("Failed to switch version: " + err.message);
+      showToast("Failed to switch version: " + err.message, 'error');
     }
   };
+
+  const handleGenerateScene = async (sceneNumberStr) => {
+    const numericId = decodeProjectRouteId(id);
+    
+    // Check if any scene is currently generating
+    const isAnySceneGenerating = Object.keys(runningJobs).some(key => key.startsWith("SCENE") || key.includes("Scene"));
+    if (isAnySceneGenerating) {
+      showToast("A scene is already generating. Please wait until it completes.", 'error');
+      return;
+    }
+    
+    setRunningJobs(prev => ({
+      ...prev,
+      [sceneNumberStr]: {
+        status: 'queued',
+        progress: 0,
+        message: 'Preparing scene package...'
+      }
+    }));
+    
+    try {
+      await generateSceneVideo(numericId, sceneNumberStr);
+      showToast(`Video generation queued for ${sceneNumberStr}.`, 'success');
+      fetchSceneVideosAndStatus();
+    } catch (err) {
+      console.error("Failed to trigger scene generation:", err);
+      const customMsg = err.response?.data?.detail || err.message || "Network error";
+      showToast("Failed to start scene generation: " + customMsg, 'error');
+      setRunningJobs(prev => {
+        const updated = { ...prev };
+        delete updated[sceneNumberStr];
+        return updated;
+      });
+    }
+  };
+
+  const handleApproveScene = async (videoId) => {
+    const numericId = decodeProjectRouteId(id);
+    try {
+      await approveSceneVideo(numericId, videoId);
+      showToast("Scene version approved successfully.", 'success');
+      fetchSceneVideosAndStatus();
+    } catch (err) {
+      console.error("Failed to approve scene:", err);
+      showToast("Failed to approve scene: " + err.message, 'error');
+    }
+  };
+
+  const handleDeleteSceneVideo = async (videoId) => {
+    const numericId = decodeProjectRouteId(id);
+    try {
+      await deleteSceneVideo(numericId, videoId);
+      showToast("Scene version deleted.", 'info');
+      fetchSceneVideosAndStatus();
+    } catch (err) {
+      console.error("Failed to delete scene video:", err);
+      showToast("Failed to delete scene version: " + err.message, 'error');
+    }
+  };
+
+  const [selectedVersionsMap, setSelectedVersionsMap] = useState({});
   
   // ── Tab Management ──────────────────────────────────────────────────────
   const [activeStudioTab, setActiveStudioTab] = useState('dashboard'); // dashboard, characters, environments, voices, filmgen
@@ -550,7 +665,7 @@ export default function ProductionPage() {
       setProject(updatedProject);
     } catch (err) {
       console.error(err);
-      alert('Failed to resume generation: ' + err.message);
+      showToast("Failed to resume generation: " + err.message, 'error');
     }
   };
 
@@ -562,7 +677,7 @@ export default function ProductionPage() {
       fetchSavedProjects();
     } catch (err) {
       console.error("Failed to update database record:", err);
-      alert("Database error: " + err.message);
+      showToast("Database error: " + err.message, 'error');
     }
   };
 
@@ -836,7 +951,7 @@ export default function ProductionPage() {
             { id: 'characters', label: 'Character Studio', icon: FiUser },
             { id: 'environments', label: 'Environment Studio', icon: FiMapPin },
             { id: 'voices', label: 'Voice Studio', icon: FiVolume2 },
-            { id: 'filmgen', label: 'Film Generation', icon: FiMonitor },
+            { id: 'filmgen', label: 'Scene Production Console', icon: FiMonitor },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeStudioTab === tab.id;
@@ -1828,205 +1943,393 @@ export default function ProductionPage() {
 
               {activeStudioTab === 'filmgen' && (
                 <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
-                  <div className="max-w-7xl mx-auto w-full pb-12">
-                    {/* ── FILM GENERATION WORKSPACE ── */}
+                  <div className="max-w-7xl mx-auto w-full pb-12 space-y-6">
+                    {/* Overview Header / Diagnostics */}
                     <div className={`rounded-xl border p-5 transition-colors duration-500 ${
                       d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
                     }`}>
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
-                      <div className="flex items-center gap-2">
-                        <FiMonitor className="text-accent" size={14} />
-                        <div>
-                          <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
-                            Film Generation Pipeline
-                          </h3>
-                          <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                            Temporal synthesizer and montage editing module
-                          </p>
+                      <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-5 border-white/[0.03]">
+                        <div className="flex items-center gap-2">
+                          <FiMonitor className="text-accent" size={14} />
+                          <div>
+                            <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
+                              Scene Production Console
+                            </h3>
+                            <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                              Sequential scene rendering queue and visual asset compositor
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2.5 py-1 rounded border ${
+                          scenesStatus.length > 0 && scenesStatus.every(s => s.package_ready) 
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 animate-pulse' 
+                            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                        }`}>
+                          {scenesStatus.length > 0 && scenesStatus.every(s => s.package_ready) ? 'PRODUCTION READY' : 'PRE-PROD PENDING'}
                         </div>
                       </div>
-                      <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2 py-1 rounded border ${
-                        isProductionReady ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 animate-pulse' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                      }`}>
-                        {isProductionReady ? 'READY TO RENDER' : 'ASSETS LOCKED'}
+
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-left">
+                        <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Total Scenes</span>
+                          <span className={`text-base font-black block mt-0.5 ${d ? 'text-gray-900' : 'text-neutral-200'}`}>
+                            {scenesStatus.length}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Completed Scenes</span>
+                          <span className="text-base font-black text-emerald-400 block mt-0.5">
+                            {scenesStatus.filter(s => sceneVideos.some(v => v.scene_number === s.scene_number && v.is_approved)).length} / {scenesStatus.length}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Est. Cost</span>
+                          <span className="text-base font-black text-accent block mt-0.5 select-none">
+                            {scenesStatus.length * 80} Credits
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Est. Runtime</span>
+                          <span className={`text-base font-black block mt-0.5 ${d ? 'text-gray-900' : 'text-neutral-200'}`}>
+                            {scenesStatus.reduce((acc, s) => {
+                              const d_str = s.details?.duration || "8 seconds";
+                              const sec = parseInt(d_str) || 8;
+                              return acc + sec;
+                            }, 0)}s
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg col-span-2 md:col-span-1">
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Overall Progress</span>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <div className="h-2 flex-1 bg-black/40 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full transition-all duration-500" 
+                                style={{ 
+                                  width: `${scenesStatus.length > 0 
+                                    ? Math.round((scenesStatus.filter(s => sceneVideos.some(v => v.scene_number === s.scene_number && v.is_approved)).length / scenesStatus.length) * 100) 
+                                    : 0}%` 
+                                }} 
+                              />
+                            </div>
+                            <span className="text-[10px] font-mono font-bold">
+                              {scenesStatus.length > 0 
+                                ? Math.round((scenesStatus.filter(s => sceneVideos.some(v => v.scene_number === s.scene_number && v.is_approved)).length / scenesStatus.length) * 100) 
+                                : 0}%
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {!isProductionReady && (
-                      <div className="p-6 border border-white/[0.03] bg-white/[0.005] rounded-xl space-y-6">
-                        <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto py-10 gap-3">
-                          <div className="h-12 w-12 bg-rose-500/10 border border-rose-500/25 rounded-full flex items-center justify-center text-rose-500">
-                            <FiLock size={20} />
-                          </div>
-                          <h4 className="text-sm font-extrabold uppercase tracking-wider text-rose-500 mt-2">
-                            Film Generation Locked
-                          </h4>
-                          <p className="text-[12px] text-surface-500 leading-relaxed">
-                            Video rendering is locked until all reusable environment reference images and character voice models are compiled.
-                          </p>
+                    {/* Sequential Scene Cards List */}
+                    <div className="space-y-4">
+                      {sceneStatusLoading ? (
+                        <div className="text-center py-10">
+                          <div className="h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                          <p className="text-xs text-surface-550">Analyzing scene dependency blueprints...</p>
                         </div>
+                      ) : scenesStatus.length === 0 ? (
+                        <div className="text-center py-12 border border-dashed border-white/[0.05] rounded-xl bg-white/[0.005]">
+                          <p className="text-surface-500 text-xs italic">No scene definitions available in the project plan.</p>
+                        </div>
+                      ) : (
+                        scenesStatus.map((scene, idx) => {
+                          // Unlocked check: index 0 is always unlocked, other indices require all previous scenes to have at least one approved video
+                          let isUnlocked = true;
+                          for (let i = 0; i < idx; i++) {
+                            const priorNum = scenesStatus[i].scene_number;
+                            const approvedVideo = sceneVideos.find(v => v.scene_number === priorNum && v.is_approved);
+                            if (!approvedVideo) {
+                              isUnlocked = false;
+                              break;
+                            }
+                          }
 
-                        <div className="max-w-xl mx-auto rounded-xl border border-white/[0.03] bg-black/35 p-5 space-y-3.5 font-mono text-[11px] leading-relaxed">
-                          <h5 className="text-[9px] font-extrabold uppercase tracking-wider text-surface-500 border-b border-white/[0.03] pb-2">
-                            Production Asset Diagnostic Logs
-                          </h5>
+                          const versions = sceneVideos.filter(v => v.scene_number === scene.scene_number).sort((a, b) => b.version - a.version);
+                          const activeVideoId = selectedVersionsMap[scene.scene_number];
+                          const activeVideo = activeVideoId 
+                            ? versions.find(v => v.id === activeVideoId) 
+                            : (versions.find(v => v.is_approved) || versions[0]);
+
+                          const activeJob = runningJobs[scene.scene_number_str] || runningJobs[`Scene ${String(scene.scene_number).padStart(2, '0')}`];
                           
-                          <div className="space-y-2">
-                            {/* Environment logs */}
-                            <div className="flex items-start gap-2.5">
-                              {environmentReadiness === 100 ? (
-                                <span className="text-emerald-400 font-bold">[✓]</span>
-                              ) : (
-                                <span className="text-rose-500 font-bold">[✕]</span>
-                              )}
-                              <div>
-                                <span className="font-bold text-surface-300">Environment Reference compilation</span>
-                                <span className="text-surface-500 block">
-                                  Status: {readyEnvs}/{environmentsCount} references compiled ({environmentReadiness}% ready)
-                                  {environmentReadiness < 100 && " — Navigate to Environment Studio to generate references."}
-                                </span>
-                              </div>
-                            </div>
+                          let statusLabel = "Locked";
+                          let statusColor = "bg-neutral-800 text-surface-500 border-white/[0.03]";
+                          
+                          if (activeJob) {
+                            statusLabel = "Generating";
+                            statusColor = "bg-cyan-500/10 border-cyan-500/30 text-cyan-400";
+                          } else if (activeVideo?.is_approved) {
+                            statusLabel = "Approved";
+                            statusColor = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+                          } else if (versions.length > 0) {
+                            statusLabel = "Pending Review";
+                            statusColor = "bg-amber-500/10 border-amber-500/30 text-amber-400";
+                          } else if (isUnlocked) {
+                            statusLabel = "Ready";
+                            statusColor = "bg-blue-500/10 border-blue-500/30 text-blue-400";
+                          }
 
-                            {/* Voice logs */}
-                            <div className="flex items-start gap-2.5">
-                              {voiceReadiness === 100 ? (
-                                <span className="text-emerald-400 font-bold">[✓]</span>
-                              ) : (
-                                <span className="text-rose-500 font-bold">[✕]</span>
-                              )}
-                              <div>
-                                <span className="font-bold text-surface-300">Cast Voice Profile compilation</span>
-                                <span className="text-surface-500 block">
-                                  Status: {readyVoices}/{voices.length} models ready ({voiceReadiness}% ready)
-                                  {voiceReadiness < 100 && " — Navigate to Voice Studio to compile voice IDs."}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {isProductionReady && (
-                      <div className="space-y-6">
-                        {!isRendering && !renderSuccess && (
-                          <div className="p-8 border border-emerald-500/20 bg-emerald-500/[0.01] rounded-xl flex flex-col items-center justify-center text-center max-w-xl mx-auto py-12 gap-4">
-                            <div className="h-14 w-14 bg-emerald-500/10 border border-emerald-500/25 rounded-full flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                              <FiCheckCircle size={22} className="animate-pulse" />
-                            </div>
-                            <div className="space-y-1">
-                              <h4 className="text-sm font-extrabold uppercase tracking-wider text-emerald-400">
-                                Pre-Production Specs Fully Compiled
-                              </h4>
-                              <p className="text-[12px] text-surface-500 leading-relaxed max-w-sm">
-                                All virtual cast voice profiles and 3D reference spaces are locked. Ready to execute the final Veo short film render.
-                              </p>
-                            </div>
-                            <button
-                              onClick={handleStartRender}
-                              className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 shadow-[0_0_16px_rgba(16,185,129,0.2)] hover:shadow-[0_0_22px_rgba(16,185,129,0.35)] transition-all duration-300 cursor-pointer"
+                          return (
+                            <div 
+                              key={scene.scene_number}
+                              className={`rounded-xl border p-5 text-left transition-all duration-300 relative overflow-hidden ${
+                                isUnlocked 
+                                  ? d
+                                    ? 'bg-white border-neutral-200 shadow-sm'
+                                    : 'bg-[#0b0b0f] border-white/[0.04] shadow-[0_4px_25px_rgba(0,0,0,0.25)]'
+                                  : d
+                                    ? 'bg-neutral-50/50 border-neutral-100 opacity-60'
+                                    : 'bg-white/[0.005] border-white/[0.02] opacity-40'
+                              }`}
                             >
-                              <FiCpu size={14} className="animate-spin" />
-                              <span>Trigger Film Render Pipeline</span>
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Rendering Console */}
-                        {isRendering && (
-                          <div className="max-w-2xl mx-auto rounded-xl border border-white/[0.04] bg-[#07070a] shadow-2xl p-5 space-y-4">
-                            {/* Render Terminal Header */}
-                            <div className="flex items-center justify-between border-b border-white/[0.05] pb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="flex h-3 w-3 items-center justify-center rounded-full bg-rose-500" />
-                                <div className="flex h-3 w-3 items-center justify-center rounded-full bg-amber-500" />
-                                <div className="flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500" />
-                                <span className="font-mono text-[9px] text-surface-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                                  <FiTerminal size={10} /> render_console.log
-                                </span>
-                              </div>
-                              <span className="font-mono text-xs text-emerald-400 font-bold">{renderProgress}%</span>
-                            </div>
-
-                            {/* Render progress bar */}
-                            <div className="h-1.5 w-full bg-white/[0.02] border border-white/[0.05] rounded-full overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-cyan-400 to-accent rounded-full transition-all duration-500" style={{ width: `${renderProgress}%` }} />
-                            </div>
-
-                            {/* Console output log */}
-                            <div className="h-56 overflow-y-auto font-mono text-[10px] leading-relaxed text-surface-300 bg-black/60 p-4 rounded-lg border border-white/[0.02] flex flex-col gap-1.5 text-left">
-                              {renderLogs.map((log, idx) => {
-                                const isSuccess = log.includes("[SUCCESS]");
-                                return (
-                                  <div key={idx} className={isSuccess ? 'text-emerald-400 font-bold' : ''}>
-                                    {log}
-                                  </div>
-                                );
-                              })}
-                              {renderProgress < 100 && (
-                                <div className="text-surface-500 animate-pulse">Rendering next temporal frames...</div>
+                              {/* Left lock border overlay */}
+                              {!isUnlocked && (
+                                <div className="absolute top-0 bottom-0 left-0 w-1 bg-neutral-800" />
                               )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Rendering Completed Successfully */}
-                        {renderSuccess && (
-                          <div className="max-w-xl mx-auto p-6 border border-emerald-500/20 bg-emerald-500/[0.02] rounded-xl flex flex-col items-center justify-center text-center gap-5 py-10 animate-fade-in">
-                            <div className="h-14 w-14 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                              <FiCheck size={26} />
-                            </div>
-                            <div className="space-y-1">
-                              <h4 className="text-sm font-extrabold uppercase tracking-wider text-emerald-400">
-                                Render Successful
-                              </h4>
-                              <p className="text-[12px] text-surface-500 leading-relaxed">
-                                Veo short film assets compiled and encoded into final package block. Final editing cuts completed.
-                              </p>
-                            </div>
-
-                            {/* Video Mockup Player */}
-                            <div className="w-full max-w-sm rounded-xl border border-white/[0.04] bg-neutral-900 overflow-hidden relative group">
-                              {/* Dark overlay */}
-                              <div className="absolute inset-0 bg-black/20 z-10 transition-all duration-300 group-hover:bg-black/10" />
-                              <div className="absolute inset-0 z-20 flex items-center justify-center">
-                                <button className="h-12 w-12 bg-white text-black hover:bg-neutral-100 hover:scale-105 rounded-full flex items-center justify-center shadow-2xl transition-all cursor-pointer">
-                                  <FiPlay fill="currentColor" className="ml-1" size={16} />
-                                </button>
-                              </div>
                               
-                              {/* Background landscape mockup */}
-                              <svg className="w-full h-44 bg-neutral-900" viewBox="0 0 200 100">
-                                <rect width="100%" height="100%" fill="#0a0518" />
-                                <circle cx="100" cy="50" r="25" fill="rgba(139, 92, 246, 0.2)" filter="blur(4px)" />
-                                <polygon points="0,100 60,60 120,100" fill="#030107" />
-                                <polygon points="80,100 140,50 200,100" fill="#070311" />
-                                <text x="100" y="88" fill="rgba(255,255,255,0.4)" fontSize="6" fontFamily="monospace" textAnchor="middle">Veo Film Render — Ready</text>
-                              </svg>
-                            </div>
+                              <div className="flex flex-col lg:flex-row gap-6">
+                                {/* Left column: Info & dependencies */}
+                                <div className="flex-1 space-y-4">
+                                  <div className="flex justify-between items-start gap-4">
+                                    <div>
+                                      <h4 className={`text-base font-extrabold uppercase tracking-wide flex items-center gap-2 ${d ? 'text-neutral-900' : 'text-white'}`}>
+                                        <span>Scene {String(scene.scene_number).padStart(2, '0')}</span>
+                                        <span className={`text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded border inline-flex items-center gap-1.5 ${statusColor}`}>
+                                          {!isUnlocked && <FiLock size={10} />}
+                                          <span>{statusLabel}</span>
+                                        </span>
+                                      </h4>
+                                      <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                                        Location: {scene.details?.location || "Not Set"} | Runtime: {scene.details?.duration || "8s"}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                            <div className="flex gap-3 w-full max-w-sm">
-                              <button 
-                                onClick={() => { setIsRendering(false); setRenderSuccess(false); }}
-                                className="flex-1 py-2.5 rounded-xl border border-white/[0.08] hover:bg-white/[0.03] text-surface-300 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer"
-                              >
-                                Re-render Film
-                              </button>
-                              <button 
-                                onClick={() => alert("Mock export initiated. Film file downloaded successfully.")}
-                                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.2)]"
-                              >
-                                Export final cut
-                              </button>
+                                  <p className={`text-xs leading-relaxed ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
+                                    <span className="font-bold text-accent uppercase text-[9px] tracking-wider block mb-0.5">Scene Description</span>
+                                    {scene.details?.summary || "No description compiled."}
+                                  </p>
+
+                                  {/* Technical specifications panel */}
+                                  {isUnlocked && (
+                                    <div className="grid grid-cols-2 gap-3 text-[10px] font-mono border-t border-dashed border-white/[0.05] pt-3.5">
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Characters</span>
+                                        <span className={`block truncate mt-0.5 ${d ? 'text-neutral-800' : 'text-surface-300'}`}>
+                                          {scene.details?.characters?.length > 0 ? scene.details.characters.join(', ') : 'None'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Camera movement</span>
+                                        <span className={`block truncate mt-0.5 ${d ? 'text-neutral-800' : 'text-surface-300'}`}>
+                                          {scene.details?.prompt ? 'Anamorphic Frame' : 'Standard'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Dependency diagnostic logs */}
+                                  {isUnlocked && !scene.package_ready && (
+                                    <div className="p-3 bg-red-950/20 border border-red-500/20 text-red-200 rounded-lg text-[10px] font-mono space-y-1">
+                                      <span className="font-bold uppercase tracking-wider block text-red-400 mb-1">✕ Missing Production Assets</span>
+                                      {scene.missing_assets.map((msg, mIdx) => (
+                                        <div key={mIdx} className="flex items-center gap-1.5">
+                                          <span className="text-red-400">•</span>
+                                          <span>{msg}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  
+                                  {isUnlocked && scene.package_ready && !activeVideo && !activeJob && (
+                                    <div className="p-3 bg-emerald-950/10 border border-emerald-500/15 text-emerald-400 rounded-lg text-[10px] font-mono flex items-center gap-2">
+                                      <FiCheckCircle className="shrink-0" />
+                                      <span>Production Package complete. Ready to compose.</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Right column: Generation HUD / Video Viewer */}
+                                <div className="w-full lg:w-[350px] shrink-0 flex flex-col justify-center">
+                                  {activeJob ? (
+                                    /* Active Job progress */
+                                    <div className="border border-white/[0.05] bg-black/60 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-3.5 h-48 select-none">
+                                      <div className="relative flex items-center justify-center">
+                                        <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                                        <span className="absolute text-[10px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
+                                      </div>
+                                      <div className="space-y-1 w-full">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 animate-pulse block">
+                                          {activeJob.message || 'Generating...'}
+                                        </span>
+                                        <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-2">
+                                          <div 
+                                            className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                            style={{ width: `${activeJob.progress}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : activeVideo ? (
+                                    /* Completed scene block */
+                                    <div className="space-y-3.5">
+                                      {activeVideo.status === 'completed' ? (
+                                        <div className="relative w-full rounded-xl overflow-hidden border border-white/[0.05] bg-black group h-48 flex items-center justify-center">
+                                          <video 
+                                            controls 
+                                            src={apiBaseUrl + activeVideo.video_url} 
+                                            className="w-full h-full object-cover" 
+                                            poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
+                                          />
+                                        </div>
+                                      ) : (
+                                        /* Failed run block */
+                                        <div className="h-48 border border-red-500/20 bg-red-950/15 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2 select-none overflow-y-auto">
+                                          <span className="text-red-400 text-lg">⚠️</span>
+                                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-red-400">Generation Failed</span>
+                                          <p className="text-[10px] text-red-300/80 leading-relaxed font-mono">
+                                            {activeVideo.error_message || "Video synthesis error."}
+                                          </p>
+                                        </div>
+                                      )}
+
+                                      {/* Controls & Versions bar */}
+                                      <div className="flex gap-2 items-center">
+                                        <div className="flex-1 flex flex-col gap-0.5 text-left">
+                                          <label className="text-[8px] font-extrabold uppercase text-surface-500 tracking-wider">Version Cut</label>
+                                          <select
+                                            value={activeVideo.id}
+                                            onChange={(e) => setSelectedVersionsMap(prev => ({ ...prev, [scene.scene_number]: Number(e.target.value) }))}
+                                            className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                          >
+                                            {versions.map(v => (
+                                              <option key={v.id} value={v.id}>
+                                                V{v.version} {v.is_approved ? '(Approved)' : ''}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+
+                                        <div className="flex gap-1.5 mt-auto">
+                                          {activeVideo.status === 'completed' && !activeVideo.is_approved && (
+                                            <button
+                                              onClick={() => handleApproveScene(activeVideo.id)}
+                                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] shadow-[0_0_10px_rgba(16,185,129,0.15)] whitespace-nowrap"
+                                            >
+                                              Approve
+                                            </button>
+                                          )}
+                                          {activeVideo.status === 'completed' && (
+                                            <a
+                                              href={apiBaseUrl + activeVideo.video_url}
+                                              download={`scene_${scene.scene_number}_v${activeVideo.version}.mp4`}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="px-2.5 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] inline-flex items-center justify-center whitespace-nowrap"
+                                              title="Download MP4 video file"
+                                            >
+                                              Download
+                                            </a>
+                                          )}
+                                          <button
+                                            onClick={() => handleGenerateScene(scene.scene_number_str)}
+                                            className="px-2 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] whitespace-nowrap"
+                                            title="Queue a new version render"
+                                          >
+                                            Regen
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Model badge */}
+                                      {activeVideo.status === 'completed' && (
+                                        <div className="flex justify-between items-center text-[9px] font-mono text-surface-500 border-t border-white/[0.03] pt-2">
+                                          <span>Model: <strong className="text-cyan-400">{activeVideo.generation_model}</strong></span>
+                                          <span>Cost: 80 Credits</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : isUnlocked ? (
+                                    /* Render box if ready to generate */
+                                    <div className="border border-dashed border-white/[0.08] bg-[#09090d]/50 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-4 h-48 select-none">
+                                      <FiMonitor size={24} className="text-surface-500 opacity-60" />
+                                      <div className="space-y-1">
+                                        <span className="text-[10px] font-bold text-surface-450 uppercase tracking-widest block">Awaiting Render</span>
+                                        <p className="text-[9px] text-surface-550 max-w-[200px] leading-normal">
+                                          {scene.package_ready ? "Production assets mapped. Ready to synthesize." : "Requires missing pre-production assets."}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleGenerateScene(scene.scene_number_str)}
+                                        disabled={!scene.package_ready}
+                                        className={`px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-[0_0_12px_rgba(0,242,254,0.1)] hover:shadow-[0_0_18px_rgba(0,242,254,0.2)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none whitespace-nowrap`}
+                                      >
+                                        Generate Scene
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    /* Locked state */
+                                    <div className="border border-white/[0.02] bg-white/[0.002] rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-2 h-48 select-none">
+                                      <FiLock size={20} className="text-surface-600" />
+                                      <span className="text-[10px] font-bold text-surface-550 uppercase tracking-wider">Locked</span>
+                                      <p className="text-[9px] text-surface-600 max-w-[200px] leading-normal">
+                                        Approve prior scenes to unlock this sequence in the production pipeline.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                   <Footer />
+                  
+                  {toast && (
+                    <>
+                      <style>{`
+                        @keyframes slideUp {
+                          from {
+                            transform: translateY(1.5rem);
+                            opacity: 0;
+                          }
+                          to {
+                            transform: translateY(0);
+                            opacity: 1;
+                          }
+                        }
+                      `}</style>
+                      <div 
+                        className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl transition-all duration-300 ${
+                          toast.type === 'error' 
+                            ? 'bg-red-950/90 border-red-500/30 text-red-200 shadow-red-950/40' 
+                            : toast.type === 'success'
+                              ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200 shadow-emerald-950/40'
+                              : 'bg-neutral-900/90 border-white/[0.08] text-neutral-200'
+                        } backdrop-blur-md`}
+                        style={{
+                          animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+                        }}
+                      >
+                        {toast.type === 'error' && <FiAlertTriangle className="w-5 h-5 text-red-400 shrink-0" />}
+                        {toast.type === 'success' && <FiCheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />}
+                        {toast.type === 'info' && <FiInfo className="w-5 h-5 text-blue-400 shrink-0" />}
+                        
+                        <div className="text-[12px] font-medium pr-4">{toast.message}</div>
+                        
+                        <button 
+                          onClick={() => setToast(null)}
+                          className="text-white/40 hover:text-white/80 transition-colors ml-auto text-xs font-semibold px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
