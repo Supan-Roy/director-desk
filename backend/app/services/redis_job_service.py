@@ -12,7 +12,7 @@ JOB_TYPE_TO_QUEUE = {
     "environment_generation": "environment_generation_queue",
     "voice_generation": "voice_generation_queue",
     "asset_generation": "asset_generation_queue",
-    "scene_generation": "future_render_queue",
+    "scene_generation": "scene_generation_queue",
     "film_generation": "video_generation_queue",
     "test_job": "character_generation_queue"
 }

@@ -834,10 +834,291 @@ async def generate_asset(background_tasks: BackgroundTasks, request: GenerateJob
     return job
 
 
+async def run_scene_generation_job(job_id: str, project_id: int, scene_number_str: str):
+    import json
+    import uuid
+    import urllib.request
+    import os
+    import logging
+    from app.db.database import SessionLocal
+    from app.db.models import Project, CharacterAsset, EnvironmentAsset, VoiceAsset, SceneVideo
+    from app.services.qwen_service import qwen_service
+    from sqlalchemy import func
+    import re
+    
+    db = SessionLocal()
+    logger = logging.getLogger(__name__)
+    
+    # 1. Parse scene number integer from string (e.g. "SCENE 01" -> 1)
+    scene_number = 1
+    try:
+        digits = re.findall(r'\d+', scene_number_str)
+        if digits:
+            scene_number = int(digits[0])
+    except Exception:
+        pass
+        
+    placeholder_video = None
+    try:
+        logger.info(f"Starting scene generation task for Scene {scene_number} (Job: {job_id})")
+        await redis_job_service.update_job_status(job_id, "processing", progress=5, message="Preparing Scene Package...")
+        await asyncio.sleep(0.5)
+        
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise ValueError(f"Project with ID {project_id} not found.")
+            
+        # Get versions count for this scene to calculate next version number
+        existing_versions = db.query(SceneVideo).filter(
+            SceneVideo.project_id == project_id,
+            SceneVideo.scene_number == scene_number
+        ).count()
+        next_version = existing_versions + 1
+        
+        # Create an initial placeholder db record to enforce locking immediately
+        placeholder_video = SceneVideo(
+            project_id=project_id,
+            scene_number=scene_number,
+            video_url="",
+            thumbnail_url="",
+            duration=8,
+            generation_model="pending",
+            prompt_used="",
+            status="processing",
+            version=next_version,
+            is_approved=False,
+            credits_used=80,
+            error_message=""
+        )
+        db.add(placeholder_video)
+        db.commit()
+        db.refresh(placeholder_video)
+        
+        # Find scene details in the breakdown
+        breakdown = project.scene_breakdown or {}
+        scenes = breakdown.get("scenes", [])
+        scene_dict = None
+        for s in scenes:
+            s_num_raw = s.get("scene_number", "")
+            s_num = 0
+            try:
+                digits = re.findall(r'\d+', str(s_num_raw))
+                if digits:
+                    s_num = int(digits[0])
+            except Exception:
+                pass
+            if s_num == scene_number:
+                scene_dict = s
+                break
+                
+        if not scene_dict:
+            # Fallback to storyboard
+            storyboard = project.storyboard or []
+            if len(storyboard) >= scene_number:
+                sb_item = storyboard[scene_number - 1]
+                scene_dict = {
+                    "scene_number": scene_number_str,
+                    "summary": sb_item.get("description", ""),
+                    "ai_generation_prompt": sb_item.get("ai_generation_prompt", sb_item.get("description", "")),
+                    "negative_prompt": "cartoon, 3d, low quality",
+                    "location": sb_item.get("environment", ""),
+                    "characters": []
+                }
+            else:
+                raise ValueError(f"Scene {scene_number_str} not found in planning data.")
+                
+        # Resolve character names
+        scene_chars = scene_dict.get("characters", [])
+        if isinstance(scene_chars, str):
+            scene_chars = [scene_chars]
+            
+        await redis_job_service.update_job_status(job_id, "processing", progress=15, message="Loading Character References...")
+        await asyncio.sleep(0.5)
+        
+        # Find character assets
+        character_images = []
+        for char in scene_chars:
+            trimmed = char.lower().strip()
+            if not trimmed:
+                continue
+            char_asset = db.query(CharacterAsset).filter(
+                CharacterAsset.project_id == project_id,
+                func.lower(CharacterAsset.character_name) == trimmed
+            ).first()
+            if char_asset and char_asset.image_url:
+                character_images.append(char_asset.image_url)
+                
+        await redis_job_service.update_job_status(job_id, "processing", progress=25, message="Loading Environment References...")
+        await asyncio.sleep(0.5)
+        
+        # Find environment asset
+        location_name = scene_dict.get("location") or scene_dict.get("environment") or ""
+        env_image = None
+        trimmed_loc = location_name.lower().strip()
+        if trimmed_loc:
+            env_assets = db.query(EnvironmentAsset).filter(EnvironmentAsset.project_id == project_id).all()
+            for ea in env_assets:
+                ea_name = ea.environment_name.lower().strip()
+                if ea_name in trimmed_loc or trimmed_loc in ea_name:
+                    env_image = ea.image_url
+                    break
+                    
+        await redis_job_service.update_job_status(job_id, "processing", progress=35, message="Loading Voice Profiles...")
+        await asyncio.sleep(0.5)
+        
+        # Auto-select video model pipeline based on references
+        ref_image = None
+        if env_image:
+            ref_image = env_image
+        elif character_images:
+            ref_image = character_images[0]
+            
+        if ref_image:
+            model = "happyhorse-1.0-i2v"
+            logger.info(f"Auto-selected Image-to-Video model: {model} using reference {ref_image}")
+        else:
+            model = "wan2.7-t2v"
+            logger.info(f"Auto-selected Text-to-Video model: {model} (no references found)")
+            
+        await redis_job_service.update_job_status(job_id, "processing", progress=45, message="Building Video Prompt...")
+        await asyncio.sleep(0.5)
+        
+        # Construct compiled video prompt
+        raw_prompt = scene_dict.get("ai_generation_prompt") or scene_dict.get("summary") or "A dramatic cinematic scene"
+        camera_movement = scene_dict.get("camera_movement") or scene_dict.get("camera_setup") or ""
+        lighting = scene_dict.get("lighting_design") or ""
+        
+        compiled_prompt = raw_prompt
+        if camera_movement:
+            compiled_prompt += f", camera movement: {camera_movement}"
+        if lighting:
+            compiled_prompt += f", lighting: {lighting}"
+            
+        negative_prompt = scene_dict.get("negative_prompt", "cartoonish, anime, 3D render, low quality, shaky cam, text")
+        
+        await redis_job_service.update_job_status(job_id, "processing", progress=55, message="Submitting Generation Request...")
+        
+        # Determine duration
+        duration_str = scene_dict.get("duration", "8 seconds")
+        duration = 8
+        try:
+            digits = re.findall(r'\d+', duration_str)
+            if digits:
+                duration = int(digits[0])
+        except Exception:
+            pass
+            
+        # Call Qwen / DashScope API
+        video_url = None
+        api_key_set = bool(os.getenv("QWEN_API_KEY"))
+        if api_key_set:
+            try:
+                public_ref_image = ref_image
+                if public_ref_image and public_ref_image.startswith("/static/"):
+                    if not public_ref_image.startswith("http"):
+                        public_ref_image = None
+                        model = "wan2.7-t2v"
+                
+                logger.info(f"Running generate_video call with model {model}...")
+                video_url = await asyncio.to_thread(qwen_service.generate_video, compiled_prompt, model, public_ref_image)
+            except Exception as e:
+                logger.error(f"DashScope video generation error: {e}. Falling back to simulation video.")
+                video_url = None
+                
+        # Simulation fallback
+        if not video_url:
+            logger.info("Using simulated video fallback.")
+            await redis_job_service.update_job_status(job_id, "processing", progress=75, message="Rendering Scene...")
+            await asyncio.sleep(2.0)
+            await redis_job_service.update_job_status(job_id, "processing", progress=90, message="Downloading Result...")
+            await asyncio.sleep(1.0)
+            video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
+            
+        await redis_job_service.update_job_status(job_id, "processing", progress=95, message="Saving Video...")
+        
+        # Download video to local static storage
+        os.makedirs("static/uploads", exist_ok=True)
+        filename = f"scene_{project_id}_{scene_number}_v{next_version}.mp4"
+        filepath = os.path.join("static/uploads", filename)
+        
+        try:
+            def _download():
+                urllib.request.urlretrieve(video_url, filepath)
+            await asyncio.to_thread(_download)
+            local_video_url = f"/static/uploads/{filename}"
+        except Exception as e:
+            logger.error(f"Failed to download video: {e}. Referencing raw URL instead.")
+            local_video_url = video_url
+            
+        local_thumb_url = ref_image or f"https://placehold.co/640x360.png?text=Scene+{scene_number}"
+        
+        # Update db record
+        placeholder_video.video_url = local_video_url
+        placeholder_video.thumbnail_url = local_thumb_url
+        placeholder_video.duration = duration
+        placeholder_video.generation_model = model
+        placeholder_video.prompt_used = compiled_prompt
+        placeholder_video.status = "completed"
+        db.commit()
+        
+        logger.info(f"Scene video asset saved: ID={placeholder_video.id}, Scene={scene_number}, Version=v{next_version}")
+        await redis_job_service.update_job_status(job_id, "completed", progress=100, message="Completed")
+        
+    except Exception as e:
+        logger.error(f"Error running scene generation: {e}")
+        await redis_job_service.update_job_status(job_id, "failed", error=str(e), message="Failed")
+        
+        if placeholder_video:
+            try:
+                placeholder_video.status = "failed"
+                placeholder_video.error_message = str(e)
+                db.commit()
+            except Exception as db_err:
+                logger.error(f"Failed to save failure status to DB: {db_err}")
+            
+    finally:
+        db.close()
+
+
 @router.post("/api/generate/scene")
 async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJobRequest):
-    job = await redis_job_service.create_job(project_id=request.project_id, job_type="scene_generation")
-    background_tasks.add_task(run_simulated_job, job["job_id"], 10)
+    if not request.target_id:
+        raise HTTPException(status_code=400, detail="target_id (scene_number) is required")
+        
+    from app.db.database import SessionLocal
+    from app.db.models import SceneVideo
+    
+    db = SessionLocal()
+    try:
+        scene_number = 1
+        try:
+            import re
+            digits = re.findall(r'\d+', request.target_id)
+            if digits:
+                scene_number = int(digits[0])
+        except Exception:
+            pass
+            
+        active_count = db.query(SceneVideo).filter(
+            SceneVideo.project_id == int(request.project_id),
+            SceneVideo.status.in_(["queued", "processing"])
+        ).count()
+        if active_count > 0:
+            raise HTTPException(status_code=400, detail="Production Locked: A scene is already generating for this project.")
+    finally:
+        db.close()
+        
+    job = await redis_job_service.create_job(
+        project_id=request.project_id, 
+        job_type="scene_generation", 
+        target_id=request.target_id
+    )
+    background_tasks.add_task(
+        run_scene_generation_job, 
+        job["job_id"], 
+        int(request.project_id), 
+        request.target_id
+    )
     return job
 
 
@@ -846,3 +1127,4 @@ async def generate_film(background_tasks: BackgroundTasks, request: GenerateJobR
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="film_generation")
     background_tasks.add_task(run_simulated_job, job["job_id"], 12)
     return job
+
