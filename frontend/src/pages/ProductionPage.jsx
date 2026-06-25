@@ -389,6 +389,7 @@ export default function ProductionPage() {
                 if (data.status === 'completed' || data.status === 'failed') {
                   delete updated[charName];
                   fetchCharactersList();
+                  fetchSceneVideosAndStatus();
                 } else {
                   updated[charName] = {
                     status: data.status,
@@ -408,6 +409,7 @@ export default function ProductionPage() {
                   delete updated[envName];
                   fetchEnvironmentsList();
                   fetchProjectDetails();
+                  fetchSceneVideosAndStatus();
                 } else {
                   updated[envName] = {
                     status: data.status,
@@ -427,6 +429,7 @@ export default function ProductionPage() {
                   delete updated[charName];
                   fetchVoicesList();
                   fetchProjectDetails();
+                  fetchSceneVideosAndStatus();
                 } else {
                   updated[charName] = {
                     status: data.status,
