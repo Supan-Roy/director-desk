@@ -290,19 +290,35 @@ class QwenService:
 
         submit_url = f"{base_host}/api/v1/services/aigc/video-generation/video-synthesis"
 
-        # Prepare payload
+        # Prepare payload dynamically based on model characteristics
         input_data = {
             "prompt": prompt
         }
-        if image_url:
-            input_data["image_url"] = image_url
-
+        parameters = {}
+        
+        is_i2v = "i2v" in model or "happyhorse" in model
+        
+        if is_i2v:
+            if image_url:
+                input_data["media"] = [
+                    {
+                        "type": "first_frame",
+                        "url": image_url
+                    }
+                ]
+            parameters = {
+                "resolution": "720P"
+            }
+        else:
+            # Text-to-video models like wan2.7-t2v
+            parameters = {
+                "size": "1280*720"
+            }
+            
         payload = {
             "model": model,
             "input": input_data,
-            "parameters": {
-                "size": "1280*720"
-            }
+            "parameters": parameters
         }
 
         headers = {
