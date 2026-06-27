@@ -136,6 +136,16 @@ class ShowrunnerAgent:
         else:
             format_rules = "Standard screenplay generation rules."
 
+        is_audio = production_type in ["Podcast", "Audio Story"]
+        visual_rules = ""
+        if not is_audio:
+            visual_rules = """
+        CRITICAL SCENE DURATION RULES FOR VIDEO GENERATION:
+        - Each scene in the script and storyboard must represent a concise narrative beat that lasts exactly 10 to 15 seconds.
+        - Do NOT write long, sprawling scenes. If an event or dialogue sequence takes longer than 15 seconds, you MUST break it down into multiple separate, consecutive scenes (e.g., SCENE 1, SCENE 2), each representing 10 to 15 seconds of visual action/dialogue/motion.
+        - Each scene's action description and dialogue must be plausible and naturally fit within that 10-15 second block without feeling rushed or requiring sudden cuts.
+        """
+
         system_prompt = f"""
         You are a Showrunner Agent. Orchestrate a full pre-production package (Title, Script, Storyboard, Production Plan, Critic Review) for the following user concept.
         
@@ -146,6 +156,7 @@ class ShowrunnerAgent:
  
         Format Generation Rules:
         {format_rules}
+        {visual_rules}
  
         You must output ONLY a valid JSON object matching exactly this schema:
         {{

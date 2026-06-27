@@ -47,11 +47,10 @@ class SceneBreakdownAgent:
            - Prompts must be visual, specific, cinematic, and model-friendly.
            - Focus on visible actions, environment, camera, lighting, and motion.
            - Avoid abstract storytelling language, internal thoughts, and non-visual descriptions.
-        5. Estimate scene duration based on:
-           - Dialogue-heavy scenes: 10–20 seconds
-           - Action scenes: 5–12 seconds
-           - Establishing shots: 3–8 seconds
-           - Montage shots: 2–6 seconds
+        5. Estimate scene duration:
+           - Every scene duration MUST be set to exactly "10 seconds" or "15 seconds" depending on the scene's written content (e.g. action density, dialogue duration).
+           - Do not set durations below 10 seconds or above 15 seconds.
+           - Ensure that the action, dialogues, and motion written in the script for that scene can realistically be performed and fit naturally within that exact 10 or 15 second duration without feeling rushed or cut too early.
         6. Prepare output for downstream Production Agent.
 
         Consistency Check:
@@ -68,7 +67,7 @@ class SceneBreakdownAgent:
             {{
               "scene_number": "SCENE 01",
               "title": "Scene Title",
-              "duration": "Duration (e.g., '8 seconds')",
+              "duration": "Duration (e.g., '10 seconds')",
               "summary": "Brief summary of visible events",
               "location": "Location name",
               "environment": "Environment details (e.g., rain-slicked neon street)",
@@ -154,7 +153,7 @@ class SceneBreakdownAgent:
             scenes_found.append({
                 "scene_number": f"SCENE {idx:02d}",
                 "title": f"Scene {idx}",
-                "duration": "8 seconds",
+                "duration": "10 seconds",
                 "summary": f"Visual scene demonstrating {camera.lower()} in {env.lower()}.",
                 "location": env,
                 "environment": f"Main setup for {env}",
@@ -184,7 +183,7 @@ class SceneBreakdownAgent:
             scenes_found = [{
                 "scene_number": "SCENE 01",
                 "title": "Establishing Sequence",
-                "duration": "8 seconds",
+                "duration": "10 seconds",
                 "summary": "An establishing shot showcasing the main concept.",
                 "location": "Main Set",
                 "environment": "Standard visual space",
@@ -208,7 +207,7 @@ class SceneBreakdownAgent:
                 "negative_prompt": "low quality, blurry, extra limbs, bad anatomy, text, watermark"
             }]
 
-        total_runtime_sec = len(scenes_found) * 8
+        total_runtime_sec = len(scenes_found) * 10
         return {
             "total_runtime": f"{total_runtime_sec} seconds",
             "consistency_warnings": [],

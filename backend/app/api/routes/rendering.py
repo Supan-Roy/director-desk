@@ -137,7 +137,7 @@ def get_project_scenes_status(project_id: int, db: Session = Depends(get_db)):
             "details": {
                 "location": location_name,
                 "characters": scene_chars,
-                "duration": scene.get("duration", "8 seconds"),
+                "duration": scene.get("duration", "10 seconds"),
                 "summary": scene.get("summary", ""),
                 "prompt": scene.get("ai_generation_prompt", "")
             }
