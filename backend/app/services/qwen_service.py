@@ -268,7 +268,7 @@ class QwenService:
                 
         raise RuntimeError("DashScope image generation task timed out after 120 seconds.")
 
-    def generate_video(self, prompt: str, model: str, image_url: str = None) -> str:
+    def generate_video(self, prompt: str, model: str, image_url: str = None, duration: int = None) -> str:
         import urllib.request
         import urllib.error
         import json
@@ -314,6 +314,10 @@ class QwenService:
             parameters = {
                 "size": "1280*720"
             }
+
+        if duration is not None:
+            clamped_duration = max(2, min(15, int(duration)))
+            parameters["duration"] = clamped_duration
             
         payload = {
             "model": model,

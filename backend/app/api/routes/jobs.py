@@ -1080,15 +1080,17 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         
         await redis_job_service.update_job_status(job_id, "processing", progress=55, message="Submitting Generation Request...")
         
-        # Determine duration
-        duration_str = scene_dict.get("duration", "8 seconds")
-        duration = 8
+        # Determine duration (default to 10 seconds, clamped to 10-15s)
+        duration_str = scene_dict.get("duration", "10 seconds")
+        duration = 10
         try:
             digits = re.findall(r'\d+', duration_str)
             if digits:
                 duration = int(digits[0])
         except Exception:
             pass
+        # Clamp to 10-15 seconds range as requested by user
+        duration = max(10, min(15, duration))
             
         # Call Qwen / DashScope API
         video_url = None
@@ -1112,8 +1114,8 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
                         public_ref_image = None
                         model = "wan2.7-t2v"
                 
-                logger.info(f"Running generate_video call with model {model} using reference URL: {public_ref_image}...")
-                video_url = await asyncio.to_thread(qwen_service.generate_video, compiled_prompt, model, public_ref_image)
+                logger.info(f"Running generate_video call with model {model} using reference URL: {public_ref_image} and duration {duration}s...")
+                video_url = await asyncio.to_thread(qwen_service.generate_video, compiled_prompt, model, public_ref_image, duration)
             except Exception as e:
                 logger.error(f"DashScope video generation error: {e}. Falling back to simulation video.")
                 video_url = None

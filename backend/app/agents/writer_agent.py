@@ -12,7 +12,11 @@ class WriterAgent:
         elif production_type == "Audio Story":
             format_guidelines += "\nInclude narrator descriptions, voice lines, and sound effect (SFX) directions. Do NOT include camera shots or visual framing."
         else:
-            format_guidelines += "\nStructure it with clear scenes (e.g. SCENE 1: ...), visual action cues, and dialogue lines. Include camera shots or directions if helpful."
+            format_guidelines += (
+                "\nStructure it with clear scenes (e.g. SCENE 1: ...), visual action cues, and dialogue lines. Include camera shots or directions if helpful. "
+                "\nCRITICAL DURATION RULES: Break down the story into distinct, consecutive scenes where each scene describes a concise narrative beat designed to fit exactly within a 10 to 15 second duration. "
+                "Do not write long, sprawling scenes. If a scene contains too much action, motion, or dialogue, split it into multiple smaller consecutive scenes (e.g., SCENE 1, SCENE 2) of 10 or 15 seconds each so they can be generated properly by the AI video model."
+            )
 
         writer_prompt = f"""
         You are a Writer Agent in a production studio.
