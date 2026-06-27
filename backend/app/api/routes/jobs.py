@@ -1154,6 +1154,15 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         placeholder_video.generation_model = model
         placeholder_video.prompt_used = compiled_prompt
         placeholder_video.status = "completed"
+        
+        # Automatically approve the newly completed version and unapprove all older versions of this scene
+        db.query(SceneVideo).filter(
+            SceneVideo.project_id == project_id,
+            SceneVideo.scene_number == scene_number,
+            SceneVideo.id != placeholder_video.id
+        ).update({SceneVideo.is_approved: False})
+        
+        placeholder_video.is_approved = True
         db.commit()
         
         logger.info(f"Scene video asset saved: ID={placeholder_video.id}, Scene={scene_number}, Version=v{next_version}")

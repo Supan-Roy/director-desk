@@ -447,6 +447,12 @@ export default function ProductionPage() {
                 const updated = { ...prev };
                 if (data.status === 'completed' || data.status === 'failed') {
                   delete updated[sceneName];
+                  // Reset manual selection map for this scene name so the approved version is shown
+                  setSelectedVersionsMap(prevMap => {
+                    const updatedMap = { ...prevMap };
+                    delete updatedMap[sceneName];
+                    return updatedMap;
+                  });
                   fetchSceneVideosAndStatus();
                 } else {
                   updated[sceneName] = {
@@ -596,6 +602,13 @@ export default function ProductionPage() {
       }
     }));
     
+    // Clear manual selection map for this scene name so the approved version is shown
+    setSelectedVersionsMap(prevMap => {
+      const updatedMap = { ...prevMap };
+      delete updatedMap[sceneNumberStr];
+      return updatedMap;
+    });
+
     try {
       await generateSceneVideo(numericId, sceneNumberStr);
       showToast(`Video generation queued for ${sceneNumberStr}.`, 'success');
