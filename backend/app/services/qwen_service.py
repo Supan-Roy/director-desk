@@ -141,7 +141,7 @@ class QwenService:
                     ]
                 },
                 "parameters": {
-                    "size": "1024*1024",
+                    "size": "1920*1080",
                     "n": 1
                 }
             }
@@ -198,7 +198,7 @@ class QwenService:
                 "prompt": prompt
             },
             "parameters": {
-                "size": "1024*1024",
+                "size": "1920*1080",
                 "n": 1
             }
         }
