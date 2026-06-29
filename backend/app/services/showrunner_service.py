@@ -43,14 +43,28 @@ class ShowrunnerService:
             for s in storyboard_list
         ])
         
-        is_audio = production_type in ["Podcast", "Audio Story"]
-        sb_text = storyboard_text if not is_audio else "N/A (Audio Production - No Storyboard)"
-        breakdown = scene_breakdown_agent.generate_breakdown(
-            full_prompt,
-            result["script"],
-            sb_text,
-            result.get("production_plan")
-        )
+        is_podcast = production_type == "Podcast"
+        if is_podcast:
+            breakdown = {
+                "total_runtime": "N/A",
+                "consistency_warnings": [],
+                "scenes": [],
+                "asset_requirements": {
+                    "characters_needed": [],
+                    "locations_needed": [],
+                    "props_needed": [],
+                    "sound_requirements": ["Podcast main audio track"],
+                    "vfx_requirements": []
+                }
+            }
+        else:
+            sb_text = storyboard_text if production_type != "Audio Story" else "N/A (Audio Production - No Storyboard)"
+            breakdown = scene_breakdown_agent.generate_breakdown(
+                full_prompt,
+                result["script"],
+                sb_text,
+                result.get("production_plan")
+            )
 
         project_state.set_generation_complete(
             title=result["title"],
@@ -202,13 +216,27 @@ class ShowrunnerService:
 
             # Stage 3: Scene Breakdown Agent generates scene breakdown
             project_state.set_agent_status("scene_breakdown", "active")
-            sb_text = storyboard_text_accumulated if not is_audio else "N/A (Audio Production - No Storyboard)"
-            breakdown = scene_breakdown_agent.generate_breakdown(
-                full_prompt,
-                script_accumulated,
-                sb_text,
-                None
-            )
+            if production_type == "Podcast":
+                breakdown = {
+                    "total_runtime": "N/A",
+                    "consistency_warnings": [],
+                    "scenes": [],
+                    "asset_requirements": {
+                        "characters_needed": [],
+                        "locations_needed": [],
+                        "props_needed": [],
+                        "sound_requirements": ["Podcast main audio track"],
+                        "vfx_requirements": []
+                    }
+                }
+            else:
+                sb_text = storyboard_text_accumulated if production_type != "Audio Story" else "N/A (Audio Production - No Storyboard)"
+                breakdown = scene_breakdown_agent.generate_breakdown(
+                    full_prompt,
+                    script_accumulated,
+                    sb_text,
+                    None
+                )
             
             project_state.scene_breakdown = breakdown
             project_state.set_agent_status("scene_breakdown", "completed", "just now")
@@ -232,10 +260,16 @@ class ShowrunnerService:
 
             # Stage 5: Critic Agent generates structured review
             project_state.set_agent_status("critic", "active")
-            critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
-            project_state.critic_review = critic_review
-            project_state.critic_notes = critic_review.get("suggestions", [])
-            project_state.set_agent_status("critic", "completed", "just now")
+            if production_type == "Podcast":
+                critic_review = {"overall_rating": "N/A", "suggestions": []}
+                project_state.critic_review = critic_review
+                project_state.critic_notes = []
+                project_state.set_agent_status("critic", "completed", "N/A")
+            else:
+                critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
+                project_state.critic_review = critic_review
+                project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
+                project_state.set_agent_status("critic", "completed", "just now")
 
             yield {
                 "type": "critic_review",
@@ -323,7 +357,7 @@ class ShowrunnerService:
                 for s in storyboard_list
             ])
             
-            if is_audio:
+            if production_type == "Podcast":
                 breakdown = {
                     "total_runtime": "N/A",
                     "consistency_warnings": [],
@@ -332,7 +366,7 @@ class ShowrunnerService:
                         "characters_needed": [],
                         "locations_needed": [],
                         "props_needed": [],
-                        "sound_requirements": ["Audio Story/Podcast audio track"],
+                        "sound_requirements": ["Podcast main audio track"],
                         "vfx_requirements": []
                     }
                 }
@@ -370,10 +404,16 @@ class ShowrunnerService:
             time.sleep(0.5)
 
             # 6. Critic review
-            critic_review = result.get("critic_review")
-            project_state.critic_review = critic_review
-            project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
-            project_state.set_agent_status("critic", "completed", "just now")
+            if production_type == "Podcast":
+                critic_review = {"overall_rating": "N/A", "suggestions": []}
+                project_state.critic_review = critic_review
+                project_state.critic_notes = []
+                project_state.set_agent_status("critic", "completed", "N/A")
+            else:
+                critic_review = result.get("critic_review")
+                project_state.critic_review = critic_review
+                project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
+                project_state.set_agent_status("critic", "completed", "just now")
             
             yield {
                 "type": "critic_review",
@@ -475,13 +515,27 @@ class ShowrunnerService:
                     "status": "active"
                 }
                 
-                sb_text = storyboard_text_accumulated if not is_audio else "N/A (Audio Production - No Storyboard)"
-                breakdown = scene_breakdown_agent.generate_breakdown(
-                    full_prompt,
-                    script_accumulated,
-                    sb_text,
-                    None
-                )
+                if production_type == "Podcast":
+                    breakdown = {
+                        "total_runtime": "N/A",
+                        "consistency_warnings": [],
+                        "scenes": [],
+                        "asset_requirements": {
+                            "characters_needed": [],
+                            "locations_needed": [],
+                            "props_needed": [],
+                            "sound_requirements": ["Podcast main audio track"],
+                            "vfx_requirements": []
+                        }
+                    }
+                else:
+                    sb_text = storyboard_text_accumulated if production_type != "Audio Story" else "N/A (Audio Production - No Storyboard)"
+                    breakdown = scene_breakdown_agent.generate_breakdown(
+                        full_prompt,
+                        script_accumulated,
+                        sb_text,
+                        None
+                    )
                 project_state.scene_breakdown = breakdown
                 project_state.set_agent_status("scene_breakdown", "completed", "just now")
                 yield {
@@ -527,10 +581,16 @@ class ShowrunnerService:
                     "agent": "critic",
                     "status": "active"
                 }
-                critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
-                project_state.critic_review = critic_review
-                project_state.critic_notes = critic_review.get("suggestions", [])
-                project_state.set_agent_status("critic", "completed", "just now")
+                if production_type == "Podcast":
+                    critic_review = {"overall_rating": "N/A", "suggestions": []}
+                    project_state.critic_review = critic_review
+                    project_state.critic_notes = []
+                    project_state.set_agent_status("critic", "completed", "N/A")
+                else:
+                    critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
+                    project_state.critic_review = critic_review
+                    project_state.critic_notes = critic_review.get("suggestions", [])
+                    project_state.set_agent_status("critic", "completed", "just now")
                 yield {
                     "type": "critic_review",
                     "data": critic_review

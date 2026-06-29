@@ -977,6 +977,12 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('script');
+  
+  useEffect(() => {
+    if (project?.production_type === 'Podcast' && activeTab !== 'script' && activeTab !== 'plan') {
+      setActiveTab('script');
+    }
+  }, [project, activeTab]);
   const [modifyOpen, setModifyOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -1190,7 +1196,12 @@ export default function ProjectPage() {
               <div className="max-w-4xl mx-auto space-y-5 pb-10">
                 {/* Tab bar */}
                 <div className="flex gap-1 rounded-xl bg-white/[0.02] p-1 ring-1 ring-white/[0.04]">
-                  {TABS.map(tab => (
+                  {TABS.filter(tab => {
+                    if (project?.production_type === 'Podcast') {
+                      return tab.id === 'script' || tab.id === 'plan';
+                    }
+                    return true;
+                  }).map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}

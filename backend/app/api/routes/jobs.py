@@ -936,42 +936,57 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         db.refresh(placeholder_video)
         
         # Find scene details in the breakdown
-        breakdown = project.scene_breakdown or {}
-        scenes = breakdown.get("scenes", [])
-        scene_dict = None
-        for s in scenes:
-            s_num_raw = s.get("scene_number", "")
-            s_num = 0
+        is_podcast = project.production_type == "Podcast"
+        if is_podcast:
+            duration_minutes = 5
             try:
-                digits = re.findall(r'\d+', str(s_num_raw))
-                if digits:
-                    s_num = int(digits[0])
+                if "duration_" in scene_number_str:
+                    duration_minutes = int(scene_number_str.split("duration_")[-1])
             except Exception:
                 pass
-            if s_num == scene_number:
-                scene_dict = s
-                break
-                
-        if not scene_dict:
-            # Fallback to storyboard
-            storyboard = project.storyboard or []
-            if len(storyboard) >= scene_number:
-                sb_item = storyboard[scene_number - 1]
-                scene_dict = {
-                    "scene_number": scene_number_str,
-                    "summary": sb_item.get("description", ""),
-                    "ai_generation_prompt": sb_item.get("ai_generation_prompt", sb_item.get("description", "")),
-                    "negative_prompt": "cartoon, 3d, low quality",
-                    "location": sb_item.get("environment", ""),
-                    "characters": []
-                }
-            else:
-                raise ValueError(f"Scene {scene_number_str} not found in planning data.")
-                
-        # Resolve character names
-        scene_chars = scene_dict.get("characters", [])
-        if isinstance(scene_chars, str):
-            scene_chars = [scene_chars]
+            duration = duration_minutes * 60
+            scene_dict = {
+                "scene_number": "SCENE 01",
+                "summary": f"Full Podcast Audio Track ({duration_minutes} minutes)",
+                "ai_generation_prompt": "Podcast audio generation",
+                "characters": []
+            }
+            scene_chars = []
+        else:
+            breakdown = project.scene_breakdown or {}
+            scenes = breakdown.get("scenes", [])
+            scene_dict = None
+            for s in scenes:
+                s_num_raw = s.get("scene_number", "")
+                s_num = 0
+                try:
+                    digits = re.findall(r'\d+', str(s_num_raw))
+                    if digits:
+                        s_num = int(digits[0])
+                except Exception:
+                    pass
+                if s_num == scene_number:
+                    scene_dict = s
+                    break
+                    
+            if not scene_dict:
+                # Fallback to storyboard
+                storyboard = project.storyboard or []
+                if len(storyboard) >= scene_number:
+                    sb_item = storyboard[scene_number - 1]
+                    scene_dict = {
+                        "scene_number": scene_number_str,
+                        "summary": sb_item.get("description", ""),
+                        "ai_generation_prompt": sb_item.get("ai_generation_prompt", sb_item.get("description", "")),
+                        "negative_prompt": "cartoon, 3d, low quality",
+                        "location": sb_item.get("environment", ""),
+                        "characters": []
+                    }
+                else:
+                    raise ValueError(f"Scene {scene_number_str} not found in planning data.")
+            scene_chars = scene_dict.get("characters", [])
+            if isinstance(scene_chars, str):
+                scene_chars = [scene_chars]
             
         await redis_job_service.update_job_status(job_id, "processing", progress=15, message="Loading Character References...")
         await asyncio.sleep(0.5)
@@ -1099,21 +1114,86 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         if api_key_set:
             try:
                 if is_audio:
-                    # Audio-only generation: Synthesize the dialogue/narration text
-                    speech_text = scene_dict.get("audio_notes") or scene_dict.get("summary") or "Ambient audio track."
-                    clean_speech = re.sub(r'^[A-Z\s]+:\s*', '', speech_text)
-                    
-                    filename = f"scene_{project_id}_{scene_number}_v{next_version}.mp3"
-                    filepath = os.path.join("static/uploads", filename)
-                    os.makedirs("static/uploads", exist_ok=True)
-                    
-                    logger.info(f"Synthesizing audio scene track for Scene {scene_number} via Qwen-TTS...")
-                    default_voice = "Serena" if "host" in speech_text.lower() else "Ethan"
-                    tts_success = await synthesize_speech_via_dashscope(clean_speech, default_voice, filepath)
-                    if tts_success:
-                        video_url = f"/static/uploads/{filename}"
+                    if is_podcast:
+                        # 1. Expand podcast script to the desired length
+                        await redis_job_service.update_job_status(job_id, "processing", progress=55, message="Expanding Podcast Script...")
+                        words_needed = duration_minutes * 150
+                        expansion_prompt = f"""
+                        You are a professional Podcast Script writer. Your task is to expand the following podcast script to make it highly detailed, engaging, and matching a duration of approximately {duration_minutes} minutes.
+                        The final output must contain approximately {words_needed} words to match the timing.
+                        
+                        Original script:
+                        {project.script or project.prompt}
+                        
+                        Format the script strictly as a conversational podcast with speaker tags. 
+                        Example format:
+                        HOST: Welcome everyone to today's talk...
+                        GUEST: Glad to be here...
+                        
+                        Do not include any sound cues, brackets, formatting cues, or introduction text. Return only the raw host and guest dialogues.
+                        """
+                        
+                        try:
+                            expanded_script = await asyncio.to_thread(qwen_service.generate_text, expansion_prompt)
+                            logger.info(f"Successfully generated expanded podcast script of {len(expanded_script.split())} words.")
+                        except Exception as e:
+                            logger.error(f"Failed to expand script, falling back to original: {e}")
+                            expanded_script = project.script or "Welcome to our podcast."
+                            
+                        # 2. Synthesize paragraphs chunk-by-chunk to bypass TTS limit
+                        await redis_job_service.update_job_status(job_id, "processing", progress=75, message="Synthesizing Speech Track...")
+                        paragraphs = [p.strip() for p in expanded_script.split("\n") if p.strip()]
+                        
+                        filename = f"podcast_{project_id}_v{next_version}.mp3"
+                        filepath = os.path.join("static/uploads", filename)
+                        os.makedirs("static/uploads", exist_ok=True)
+                        
+                        temp_paths = []
+                        for idx, para in enumerate(paragraphs):
+                            # Clean speaker prefix for TTS readability
+                            clean_para = re.sub(r'^[A-Z\s]+:\s*', '', para)
+                            if not clean_para:
+                                continue
+                                
+                            # Resolve speaker voice
+                            voice = "Serena" if para.startswith("GUEST") else "Ethan"
+                            
+                            temp_file = f"static/uploads/temp_{project_id}_{idx}.mp3"
+                            tts_success = await synthesize_speech_via_dashscope(clean_para, voice, temp_file)
+                            if tts_success and os.path.exists(temp_file):
+                                temp_paths.append(temp_file)
+                            else:
+                                logger.warning(f"Failed to synthesize paragraph: {para[:50]}...")
+                                
+                        if temp_paths:
+                            # Concatenate all MP3s
+                            with open(filepath, "wb") as outfile:
+                                for tp in temp_paths:
+                                    with open(tp, "rb") as infile:
+                                        outfile.write(infile.read())
+                                    try:
+                                        os.remove(tp)
+                                    except Exception:
+                                        pass
+                            video_url = f"/static/uploads/{filename}"
+                        else:
+                            raise ValueError("No paragraphs synthesized successfully")
                     else:
-                        raise ValueError("TTS Synthesis failed")
+                        # Audio-only generation for other audio formats (Audio Story): Synthesize the dialogue/narration text
+                        speech_text = scene_dict.get("audio_notes") or scene_dict.get("summary") or "Ambient audio track."
+                        clean_speech = re.sub(r'^[A-Z\s]+:\s*', '', speech_text)
+                        
+                        filename = f"scene_{project_id}_{scene_number}_v{next_version}.mp3"
+                        filepath = os.path.join("static/uploads", filename)
+                        os.makedirs("static/uploads", exist_ok=True)
+                        
+                        logger.info(f"Synthesizing audio scene track for Scene {scene_number} via Qwen-TTS...")
+                        default_voice = "Serena" if "host" in speech_text.lower() else "Ethan"
+                        tts_success = await synthesize_speech_via_dashscope(clean_speech, default_voice, filepath)
+                        if tts_success:
+                            video_url = f"/static/uploads/{filename}"
+                        else:
+                            raise ValueError("TTS Synthesis failed")
                 else:
                     public_ref_image = ref_image
                     if public_ref_image and (public_ref_image.startswith("/static/") or "localhost" in public_ref_image or "127.0.0.1" in public_ref_image):
