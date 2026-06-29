@@ -4,7 +4,7 @@ import {
   FiArrowLeft, FiClock, FiFilm, FiActivity, FiUser, FiVolume2, 
   FiMapPin, FiCpu, FiLock, FiCheck, FiCheckCircle, FiInfo, FiSliders, FiDatabase,
   FiPlay, FiPause, FiSettings, FiCheckSquare, FiAlertTriangle,
-  FiTerminal, FiPlus, FiVolumeX, FiMonitor
+  FiTerminal, FiPlus, FiVolumeX, FiMonitor, FiArrowRight
 } from 'react-icons/fi';
 import { 
   getProjectById, 
@@ -31,6 +31,7 @@ import AgentActivityPanel from '../components/AgentActivityPanel';
 import { useTheme } from '../context/ThemeContext';
 import { useProjectData } from '../hooks/useProjectData';
 import { decodeProjectRouteId } from '../utils/hashids';
+import { useEditor } from '../context/EditorContext';
 import Footer from '../components/Footer';
 
 // ── Blueprint Vector Grid ──────────────────────────────────────────────────
@@ -695,6 +696,71 @@ export default function ProductionPage() {
     } catch (err) {
       console.error(err);
       showToast("Failed to resume generation: " + err.message, 'error');
+    }
+  };
+
+  const { loadProjectGeneratedClips } = useEditor();
+  const hasCompletedClips = sceneVideos.some(v => v.status === 'completed');
+
+  const handleTakeToEditor = async () => {
+    const isAudio = project?.production_type === 'Podcast' || project?.production_type === 'Audio Story';
+    
+    // Collect all available completed/approved clips
+    const availableClips = [];
+    scenesStatus.forEach(scene => {
+      // Find active version for this scene
+      const versions = sceneVideos.filter(v => v.scene_number === scene.scene_number);
+      let activeVideo = versions.find(v => v.is_approved);
+      if (!activeVideo && versions.length > 0) {
+        activeVideo = versions.reduce((latest, current) => {
+          if (current.status !== 'completed') return latest;
+          if (!latest || current.version > latest.version) return current;
+          return latest;
+        }, null);
+      }
+      if (activeVideo && activeVideo.status === 'completed') {
+        availableClips.push({
+          scene_number: scene.scene_number,
+          scene_number_str: scene.scene_number_str || `Scene ${scene.scene_number}`,
+          video_url: activeVideo.video_url,
+          duration: activeVideo.duration || 10,
+          thumbnail_url: activeVideo.thumbnail_url || `https://placehold.co/640x360.png?text=Scene+${scene.scene_number}`
+        });
+      }
+    });
+
+    if (availableClips.length > 0) {
+      showToast("Analyzing media durations...", "info");
+      
+      // Query HTML5 elements for true file durations
+      const resolvedClips = await Promise.all(
+        availableClips.map(async (clip) => {
+          const resolvedUrl = clip.video_url.startsWith('http') 
+            ? clip.video_url 
+            : `${apiBaseUrl}${clip.video_url}`;
+            
+          return new Promise((resolve) => {
+            const media = document.createElement(isAudio ? 'audio' : 'video');
+            media.src = resolvedUrl;
+            media.preload = 'metadata';
+            media.onloadedmetadata = () => {
+              const dur = (media.duration && isFinite(media.duration) && media.duration > 0)
+                ? media.duration 
+                : (clip.duration || 10.0);
+              resolve({ ...clip, duration: dur });
+            };
+            media.onerror = () => {
+              resolve({ ...clip, duration: clip.duration || 10.0 });
+            };
+          });
+        })
+      );
+
+      loadProjectGeneratedClips(resolvedClips, isAudio);
+      showToast(`Imported ${resolvedClips.length} clips to Editor timeline.`, 'success');
+      navigate('/editor');
+    } else {
+      showToast("No generated clips available to load.", 'error');
     }
   };
 
@@ -2044,12 +2110,30 @@ export default function ProductionPage() {
                             </p>
                           </div>
                         </div>
-                        <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2.5 py-1 rounded border ${
-                          scenesStatus.length > 0 && scenesStatus.every(s => s.package_ready) 
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 animate-pulse' 
-                            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                        }`}>
-                          {scenesStatus.length > 0 && scenesStatus.every(s => s.package_ready) ? 'PRODUCTION READY' : 'PRE-PROD PENDING'}
+                        <div className="flex items-center gap-3">
+                          <div className={`text-[9px] font-bold font-mono tracking-widest uppercase px-2.5 py-1 rounded border ${
+                            scenesStatus.length > 0 && scenesStatus.every(s => s.package_ready) 
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 animate-pulse' 
+                              : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                          }`}>
+                            {scenesStatus.length > 0 && scenesStatus.every(s => s.package_ready) ? 'PRODUCTION READY' : 'PRE-PROD PENDING'}
+                          </div>
+
+                          <button
+                            onClick={handleTakeToEditor}
+                            disabled={!hasCompletedClips}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                              hasCompletedClips
+                                ? 'bg-gradient-to-r from-accent to-purple-600 border-accent text-white shadow-[0_0_15px_rgba(139,92,246,0.35)] hover:from-accent/90 hover:to-purple-500 transform hover:scale-[1.02] active:scale-[0.98]'
+                                : d
+                                  ? 'bg-neutral-100 border-neutral-200 text-neutral-400'
+                                  : 'bg-white/[0.02] border-white/[0.06] text-surface-500'
+                            }`}
+                            title={hasCompletedClips ? "Transition to Multi-Track Editor Room with generated media clips" : "Generate at least one clip to unlock Edit Room"}
+                          >
+                            <span>Next: Edit Room</span>
+                            <FiArrowRight size={12} />
+                          </button>
                         </div>
                       </div>
 
