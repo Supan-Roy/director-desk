@@ -570,6 +570,14 @@ export default function HeroSection({
   const [errorMsg, setErrorMsg] = useState('');
   const [toastMsg, setToastMsg] = useState('');
   const { isDayMode } = useTheme();
+
+  useEffect(() => {
+    if (!errorMsg) return;
+    const timer = setTimeout(() => {
+      setErrorMsg('');
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [errorMsg]);
   
   // AI Production Orb animation states
   const [focused, setFocused] = useState(false);

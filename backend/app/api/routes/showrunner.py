@@ -18,27 +18,60 @@ def check_prompt_safety(prompt: str) -> tuple[bool, str]:
         
     prompt_lower = prompt.lower()
     
-    # 1. Harmful, violent, dangerous or illegal acts
-    harmful_keywords = [
+    # 1. ALWAYS BLOCKED keywords (regardless of context)
+    always_blocked = [
         "suicide", "self-harm", "cut myself", "kill myself", "hang myself",
-        "bomb", "explosive", "ied", "detonate", "terrorist", "terrorism",
-        "cocaine", "heroin", "methamphetamine", "fentanyl", "ecstasy", "illegal drug",
-        "how to hack", "steal money", "bank robbery", "bypass security",
-        "child abuse", "pedophile", "rape", "sexual assault", "kidnap",
-        "assassinate", "poison", "murder", "illegal act", "how to steal"
+        "ied", "terrorist", "terrorism", "child abuse", "pedophile", 
+        "pedophilia", "rape", "sexual assault", "fentanyl", "methamphetamine",
+        "heroin", "cocaine", "ecstasy", "illegal drug", "hack into", "bypass security",
+        "how to hack", "steal money", "bank robbery", "kidnap", "assassinate",
+        "poisoning", "murder", "how to steal", "cyberattack", "malware",
+        "trojan virus", "ddos attack"
     ]
     
-    # 2. Insults, hate speech, or abuse directed at AI
+    for kw in always_blocked:
+        if kw in prompt_lower:
+            return False, "I can only assist with creative storytelling, filmmaking, audio productions, and other constructive projects. Let's stick to actual work and focus on building your next masterpiece!"
+
+    # 2. Instructional Harm / Danger / Weapons manufacturing / Violence checks
+    instructional_verbs = [
+        "how to make", "how to build", "how to craft", "how to manufacture", 
+        "how to assemble", "how to construct", "guide to make", "tutorial to make",
+        "recipe for", "formula for", "instructions to make", "instructions for making",
+        "how to create", "3d print a", "3d printing a", "method to make",
+        "how to synthesize", "synthesizing", "how to cook", "assembly of",
+        "how to kill", "how to hurt", "how to shoot", "how to injure", 
+        "how to assault", "how to attack", "how to poison", "how to murder"
+    ]
+    
+    harmful_nouns = [
+        "firearm", "firearms", "gun", "guns", "weapon", "weapons", "pistol", 
+        "rifles", "rifle", "shotgun", "shotguns", "handgun", "handguns", 
+        "revolver", "revolvers", "ammunition", "ammo", "bullet", "bullets", 
+        "grenade", "grenades", "bomb", "bombs", "explosive", "explosives", 
+        "poison", "poisons", "cyanide", "nerve agent", "mustard gas",
+        "someone", "somebody", "a person", "people", "anyone", "anybody"
+    ]
+    
+    # Check if there is an instructional verb + a harmful noun in the prompt
+    for verb in instructional_verbs:
+        if verb in prompt_lower:
+            # Check if this verb by itself is a direct violent command (e.g. "how to kill" or "how to murder")
+            # which does not require an additional noun from harmful_nouns
+            if verb in ["how to kill", "how to murder", "how to poison", "how to assassinate"]:
+                return False, "I can only assist with creative storytelling, filmmaking, audio productions, and other constructive projects. Let's stick to actual work and focus on building your next masterpiece!"
+                
+            for noun in harmful_nouns:
+                if noun in prompt_lower:
+                    return False, "I can only assist with creative storytelling, filmmaking, audio productions, and other constructive projects. Let's stick to actual work and focus on building your next masterpiece!"
+
+    # 3. Direct Hate Speech, AI abuse, or offensive content
     hate_keywords = [
         "stupid ai", "dumb robot", "useless assistant", "fuck you", "bastard",
         "retard", "idiot ai", "hate you", "you are piece of shit", "hate ai",
         "ai is trash", "you suck", "kill all humans"
     ]
     
-    for kw in harmful_keywords:
-        if kw in prompt_lower:
-            return False, "I can only assist with creative storytelling, filmmaking, audio productions, and other constructive projects. Let's stick to actual work and focus on building your next masterpiece!"
-            
     for kw in hate_keywords:
         if kw in prompt_lower:
             return False, "I'm here to support your creative work and pair program constructively. Let's stick to actual work and focus on building your project!"
