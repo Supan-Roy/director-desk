@@ -988,11 +988,25 @@ export default function ProductionPage() {
             if (prodType === 'Documentary') {
               characterLabel = 'Subjects & Narrators';
               environmentLabel = 'Locations & B-Roll';
-            } else if (prodType === 'Interview' || prodType === 'Podcast') {
+            } else if (prodType === 'Trailer') {
+              characterLabel = 'Cast & Characters';
+              environmentLabel = 'Cinematic Locations';
+            } else if (prodType === 'Drama') {
+              characterLabel = 'Cast & Actors';
+              environmentLabel = 'Stages & Sets';
+            } else if (prodType === 'Series Episode') {
+              characterLabel = 'Cast & Characters';
+              environmentLabel = 'Sets & Locations';
+            } else if (prodType === 'Podcast') {
               characterLabel = 'Hosts & Guests';
               voiceLabel = 'Host & Guest Voices';
               environmentLabel = 'Sets & Backdrops';
               filmGenLabel = 'Audio Production Console';
+            } else if (prodType === 'Interview') {
+              characterLabel = 'Interviewer & Guests';
+              voiceLabel = 'Host & Guest Voices';
+              environmentLabel = 'Sets & Backdrops';
+              filmGenLabel = 'Interview Production Console';
             } else if (prodType === 'YouTube Video') {
               characterLabel = 'Presenters & Avatars';
               environmentLabel = 'Backdrops & Sets';

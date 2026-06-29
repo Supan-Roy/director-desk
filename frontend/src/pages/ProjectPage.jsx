@@ -981,6 +981,8 @@ export default function ProjectPage() {
   useEffect(() => {
     if (project?.production_type === 'Podcast' && activeTab !== 'script' && activeTab !== 'plan') {
       setActiveTab('script');
+    } else if (project?.production_type === 'Audio Story' && activeTab === 'storyboard') {
+      setActiveTab('script');
     }
   }, [project, activeTab]);
   const [modifyOpen, setModifyOpen] = useState(false);
@@ -1199,6 +1201,9 @@ export default function ProjectPage() {
                   {TABS.filter(tab => {
                     if (project?.production_type === 'Podcast') {
                       return tab.id === 'script' || tab.id === 'plan';
+                    }
+                    if (project?.production_type === 'Audio Story') {
+                      return tab.id !== 'storyboard';
                     }
                     return true;
                   }).map(tab => (
