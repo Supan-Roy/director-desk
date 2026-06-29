@@ -62,11 +62,67 @@ const initialSampleAssets = [
 ]
 
 export function EditorProvider({ children }) {
-  const [assets, setAssets] = useState(initialSampleAssets)
-  const [videoTrack, setVideoTrack] = useState([])
-  const [audioTrack, setAudioTrack] = useState([])
-  const [textTrack, setTextTrack] = useState([])
-  const [vfxTrack, setVfxTrack] = useState([])
+  const [assets, setAssets] = useState(() => {
+    try {
+      const saved = localStorage.getItem('editor_assets')
+      return saved ? JSON.parse(saved) : initialSampleAssets
+    } catch (e) {
+      return initialSampleAssets
+    }
+  })
+  const [videoTrack, setVideoTrack] = useState(() => {
+    try {
+      const saved = localStorage.getItem('editor_video_track')
+      return saved ? JSON.parse(saved) : []
+    } catch (e) {
+      return []
+    }
+  })
+  const [audioTrack, setAudioTrack] = useState(() => {
+    try {
+      const saved = localStorage.getItem('editor_audio_track')
+      return saved ? JSON.parse(saved) : []
+    } catch (e) {
+      return []
+    }
+  })
+  const [textTrack, setTextTrack] = useState(() => {
+    try {
+      const saved = localStorage.getItem('editor_text_track')
+      return saved ? JSON.parse(saved) : []
+    } catch (e) {
+      return []
+    }
+  })
+  const [vfxTrack, setVfxTrack] = useState(() => {
+    try {
+      const saved = localStorage.getItem('editor_vfx_track')
+      return saved ? JSON.parse(saved) : []
+    } catch (e) {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('editor_assets', JSON.stringify(assets))
+  }, [assets])
+
+  useEffect(() => {
+    localStorage.setItem('editor_video_track', JSON.stringify(videoTrack))
+  }, [videoTrack])
+
+  useEffect(() => {
+    localStorage.setItem('editor_audio_track', JSON.stringify(audioTrack))
+  }, [audioTrack])
+
+  useEffect(() => {
+    localStorage.setItem('editor_text_track', JSON.stringify(textTrack))
+  }, [textTrack])
+
+  useEffect(() => {
+    localStorage.setItem('editor_vfx_track', JSON.stringify(vfxTrack))
+  }, [vfxTrack])
+
   const [logo, setLogo] = useState({
     url: null,
     position: 'top-right',
@@ -900,6 +956,89 @@ export function EditorProvider({ children }) {
     setCurrentTime(0.0)
   }, [])
 
+  const loadProjectGeneratedClips = useCallback((clips, isAudioFormat = false) => {
+    if (!clips || clips.length === 0) return
+
+    // Reset current timeline
+    setVideoTrack([])
+    setAudioTrack([])
+    setTextTrack([])
+
+    const newAssets = []
+    const newVideoClips = []
+    const newAudioClips = []
+    let currentTimelineOffset = 0.0
+
+    clips.forEach((clip, index) => {
+      const assetId = `project_clip_${clip.scene_number}_${index}_${Date.now()}`
+      const resolvedUrl = clip.video_url.startsWith('http') 
+        ? clip.video_url 
+        : `${apiBaseUrl}${clip.video_url}`
+
+      // Add to assets sidebar list
+      newAssets.push({
+        id: assetId,
+        name: clip.scene_number_str || `Scene ${clip.scene_number}`,
+        url: resolvedUrl,
+        type: isAudioFormat ? 'audio' : 'video',
+        duration: clip.duration || 10.0,
+        thumbnail: clip.thumbnail_url || 'https://placehold.co/640x360.png?text=Generated+Clip'
+      })
+
+      const clipDur = clip.duration || 10.0
+
+      if (isAudioFormat) {
+        newAudioClips.push({
+          id: `clip_${assetId}`,
+          name: clip.scene_number_str || `Scene ${clip.scene_number}`,
+          url: resolvedUrl,
+          start: currentTimelineOffset,
+          end: currentTimelineOffset + clipDur,
+          sourceStart: 0.0,
+          sourceEnd: clipDur,
+          volume: 1.0,
+          fadeIn: 0.0,
+          fadeOut: 0.0
+        })
+      } else {
+        newVideoClips.push({
+          id: `clip_${assetId}`,
+          name: clip.scene_number_str || `Scene ${clip.scene_number}`,
+          url: resolvedUrl,
+          start: currentTimelineOffset,
+          end: currentTimelineOffset + clipDur,
+          sourceStart: 0.0,
+          sourceEnd: clipDur,
+          brightness: 0.0,
+          contrast: 1.0,
+          blur: 0.0,
+          volume: 1.0,
+          fadeIn: 0.0,
+          fadeOut: 0.0,
+          fitMode: 'contain',
+          zoom: 1.0,
+          panX: 0.0,
+          panY: 0.0
+        })
+      }
+
+      currentTimelineOffset += clipDur
+    })
+
+    setAssets(prev => {
+      const filteredPrev = prev.filter(existing => !newAssets.some(n => n.url === existing.url))
+      return [...newAssets, ...filteredPrev]
+    })
+    
+    if (isAudioFormat) {
+      setAudioTrack(newAudioClips)
+    } else {
+      setVideoTrack(newVideoClips)
+    }
+
+    setCurrentTime(0.0)
+  }, [])
+
   const value = {
     assets,
     videoTrack,
@@ -952,6 +1091,7 @@ export function EditorProvider({ children }) {
     addTextOverlay,
     triggerExport,
     loadDirectorDeskAssets,
+    loadProjectGeneratedClips,
     resetExport,
     cancelExport,
     undo,
