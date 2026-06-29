@@ -44,26 +44,13 @@ class ShowrunnerService:
         ])
         
         is_audio = production_type in ["Podcast", "Audio Story"]
-        if is_audio:
-            breakdown = {
-                "total_runtime": "N/A",
-                "consistency_warnings": [],
-                "scenes": [],
-                "asset_requirements": {
-                    "characters_needed": [],
-                    "locations_needed": [],
-                    "props_needed": [],
-                    "sound_requirements": ["Audio Story/Podcast audio track"],
-                    "vfx_requirements": []
-                }
-            }
-        else:
-            breakdown = scene_breakdown_agent.generate_breakdown(
-                full_prompt,
-                result["script"],
-                storyboard_text,
-                result.get("production_plan")
-            )
+        sb_text = storyboard_text if not is_audio else "N/A (Audio Production - No Storyboard)"
+        breakdown = scene_breakdown_agent.generate_breakdown(
+            full_prompt,
+            result["script"],
+            sb_text,
+            result.get("production_plan")
+        )
 
         project_state.set_generation_complete(
             title=result["title"],
@@ -215,26 +202,13 @@ class ShowrunnerService:
 
             # Stage 3: Scene Breakdown Agent generates scene breakdown
             project_state.set_agent_status("scene_breakdown", "active")
-            if is_audio:
-                breakdown = {
-                    "total_runtime": "N/A",
-                    "consistency_warnings": [],
-                    "scenes": [],
-                    "asset_requirements": {
-                        "characters_needed": [],
-                        "locations_needed": [],
-                        "props_needed": [],
-                        "sound_requirements": ["Audio Story/Podcast audio track"],
-                        "vfx_requirements": []
-                    }
-                }
-            else:
-                breakdown = scene_breakdown_agent.generate_breakdown(
-                    full_prompt,
-                    script_accumulated,
-                    storyboard_text_accumulated,
-                    None
-                )
+            sb_text = storyboard_text_accumulated if not is_audio else "N/A (Audio Production - No Storyboard)"
+            breakdown = scene_breakdown_agent.generate_breakdown(
+                full_prompt,
+                script_accumulated,
+                sb_text,
+                None
+            )
             
             project_state.scene_breakdown = breakdown
             project_state.set_agent_status("scene_breakdown", "completed", "just now")
@@ -501,26 +475,13 @@ class ShowrunnerService:
                     "status": "active"
                 }
                 
-                if is_audio:
-                    breakdown = {
-                        "total_runtime": "N/A",
-                        "consistency_warnings": [],
-                        "scenes": [],
-                        "asset_requirements": {
-                            "characters_needed": [],
-                            "locations_needed": [],
-                            "props_needed": [],
-                            "sound_requirements": ["Audio Story/Podcast audio track"],
-                            "vfx_requirements": []
-                        }
-                    }
-                else:
-                    breakdown = scene_breakdown_agent.generate_breakdown(
-                        full_prompt,
-                        script_accumulated,
-                        storyboard_text_accumulated,
-                        None
-                    )
+                sb_text = storyboard_text_accumulated if not is_audio else "N/A (Audio Production - No Storyboard)"
+                breakdown = scene_breakdown_agent.generate_breakdown(
+                    full_prompt,
+                    script_accumulated,
+                    sb_text,
+                    None
+                )
                 project_state.scene_breakdown = breakdown
                 project_state.set_agent_status("scene_breakdown", "completed", "just now")
                 yield {

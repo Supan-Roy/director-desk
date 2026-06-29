@@ -39,14 +39,11 @@ class SceneBreakdownAgent:
         - Production Plan: {plan_str}
 
         MISSION:
-        For every scene present in the storyboard:
-        1. Analyze scene content.
-        2. Extract production details.
-        3. Generate technical scene specifications.
-        4. Generate AI-video-ready generation prompts.
-           - Prompts must be visual, specific, cinematic, and model-friendly.
-           - Focus on visible actions, environment, camera, lighting, and motion.
-           - Avoid abstract storytelling language, internal thoughts, and non-visual descriptions.
+        For every scene present in the storyboard (or for every scene/segment present in the script if storyboard is not available or this is an audio-only format like Podcast or Audio Story):
+        1. Analyze scene/segment content.
+        2. Extract production details (speakers/characters, audio/dialogue notes).
+        3. Generate technical scene specifications (or N/A for visual fields).
+        4. Generate AI-video-ready generation prompts (or N/A for audio-only formats).
         5. Estimate scene duration:
            - Every scene duration MUST be set to exactly "10 seconds" or "15 seconds" depending on the scene's written content (e.g. action density, dialogue duration).
            - Do not set durations below 10 seconds or above 15 seconds.
@@ -100,7 +97,7 @@ class SceneBreakdownAgent:
           }}
         }}
 
-        IMPORTANT: If this is an audio-only format (like Podcast or Audio Story), return empty lists or "N/A" for visual-only fields, but still provide structural audio breakdowns and sound details.
+        IMPORTANT: If this is an audio-only format (like Podcast or Audio Story), you must analyze the script to identify all active speakers/hosts/guests, list them in "characters_needed" under "asset_requirements", and break down the script into conversational/narrative segments or scenes in the "scenes" list (using "N/A" for visual-only fields like "environment", "camera_setup", "ai_generation_prompt", etc. but populating "audio_notes" with the dialogues and speech text for that segment).
         Return ONLY the raw JSON object (no markdown code blocks, no trailing text, no introduction).
         """
 
