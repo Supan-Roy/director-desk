@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle } from 'react-icons/fi';
+import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle, FiAlertTriangle, FiX } from 'react-icons/fi';
 import { PiSparkle, PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
@@ -1131,9 +1131,20 @@ export default function HeroSection({
 
       {/* Error Notification */}
       {errorMsg && (
-        <div className="mt-4 rounded-xl border border-red-500/10 bg-red-500/[0.04] px-4 py-3 text-left max-w-xl mx-auto relative z-10">
-          <p className="text-[12px] font-medium text-red-400">Production system failed</p>
-          <p className="mt-1 text-[11px] text-red-300/70">{errorMsg}</p>
+        <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/[0.03] shadow-[0_0_25px_rgba(245,158,11,0.08)] px-5 py-4 text-left max-w-xl mx-auto relative z-10 animate-[bounce_0.6s_ease-out_1] flex gap-4 items-start ring-1 ring-amber-500/10 transition-all duration-300">
+          <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400 shrink-0">
+            <FiAlertTriangle size={18} className="animate-pulse" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-amber-400">System & Safety Advisory</p>
+            <p className="text-xs leading-relaxed text-amber-200/90 font-medium">{errorMsg}</p>
+          </div>
+          <button 
+            onClick={() => setErrorMsg('')}
+            className="text-amber-400/50 hover:text-amber-400 p-1 rounded-md hover:bg-amber-500/10 transition-colors"
+          >
+            <FiX size={14} />
+          </button>
         </div>
       )}
 

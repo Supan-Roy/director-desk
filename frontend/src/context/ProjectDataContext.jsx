@@ -217,7 +217,14 @@ export function ProjectDataProvider({ children }) {
 
       if (!response.ok) {
         const errText = await response.text()
-        throw new Error(errText || 'Failed to start stream')
+        let cleanMsg = errText
+        try {
+          const parsed = JSON.parse(errText)
+          if (parsed.detail) {
+            cleanMsg = parsed.detail
+          }
+        } catch (e) {}
+        throw new Error(cleanMsg || 'Failed to start stream')
       }
 
       const reader = response.body.getReader()
@@ -323,6 +330,7 @@ export function ProjectDataProvider({ children }) {
       console.error("Streaming generation failed:", err)
       const message = err.message || 'Generation failed'
       setError(message)
+      setHasProject(false)
       throw new Error(message)
     } finally {
       setLoading(false)

@@ -12,8 +12,46 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def check_prompt_safety(prompt: str) -> tuple[bool, str]:
+    if not prompt:
+        return True, ""
+        
+    prompt_lower = prompt.lower()
+    
+    # 1. Harmful, violent, dangerous or illegal acts
+    harmful_keywords = [
+        "suicide", "self-harm", "cut myself", "kill myself", "hang myself",
+        "bomb", "explosive", "ied", "detonate", "terrorist", "terrorism",
+        "cocaine", "heroin", "methamphetamine", "fentanyl", "ecstasy", "illegal drug",
+        "how to hack", "steal money", "bank robbery", "bypass security",
+        "child abuse", "pedophile", "rape", "sexual assault", "kidnap",
+        "assassinate", "poison", "murder", "illegal act", "how to steal"
+    ]
+    
+    # 2. Insults, hate speech, or abuse directed at AI
+    hate_keywords = [
+        "stupid ai", "dumb robot", "useless assistant", "fuck you", "bastard",
+        "retard", "idiot ai", "hate you", "you are piece of shit", "hate ai",
+        "ai is trash", "you suck", "kill all humans"
+    ]
+    
+    for kw in harmful_keywords:
+        if kw in prompt_lower:
+            return False, "I can only assist with creative storytelling, filmmaking, audio productions, and other constructive projects. Let's stick to actual work and focus on building your next masterpiece!"
+            
+    for kw in hate_keywords:
+        if kw in prompt_lower:
+            return False, "I'm here to support your creative work and pair program constructively. Let's stick to actual work and focus on building your project!"
+            
+    return True, ""
+
+
 @router.post("/generate")
 def generate_story(request: GenerateRequest):
+    is_safe, error_msg = check_prompt_safety(request.prompt)
+    if not is_safe:
+        raise HTTPException(status_code=400, detail=error_msg)
+        
     try:
         logger.info(f"Generating story for prompt: {request.prompt[:100]}... [Mode: {request.mode}]")
         result = showrunner_service.generate(request.prompt, mode=request.mode, production_type=request.production_type, files=request.files)
@@ -26,6 +64,10 @@ def generate_story(request: GenerateRequest):
 
 @router.post("/generate/stream")
 async def generate_story_stream(request: GenerateRequest):
+    is_safe, error_msg = check_prompt_safety(request.prompt)
+    if not is_safe:
+        raise HTTPException(status_code=400, detail=error_msg)
+        
     try:
         logger.info(f"Streaming story generation for prompt: {request.prompt[:100]}... [Mode: {request.mode}]")
         
