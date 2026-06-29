@@ -587,31 +587,35 @@ export default function ProductionPage() {
     const numericId = decodeProjectRouteId(id);
     
     // Check if any scene is currently generating
-    const isAnySceneGenerating = Object.keys(runningJobs).some(key => key.startsWith("SCENE") || key.includes("Scene"));
+    const isAnySceneGenerating = Object.keys(runningJobs).length > 0;
     if (isAnySceneGenerating) {
-      showToast("A scene is already generating. Please wait until it completes.", 'error');
+      showToast("A generation job is already running. Please wait.", 'error');
       return;
     }
     
+    const isPodcast = project?.production_type === 'Podcast';
+    const targetId = isPodcast ? `podcast_duration_${podcastDuration}` : sceneNumberStr;
+    const trackingKey = sceneNumberStr; // Use "Podcast Audio" or scene number for tracking
+    
     setRunningJobs(prev => ({
       ...prev,
-      [sceneNumberStr]: {
+      [trackingKey]: {
         status: 'queued',
         progress: 0,
-        message: 'Preparing scene package...'
+        message: 'Preparing generation...'
       }
     }));
     
     // Clear manual selection map for this scene name so the approved version is shown
     setSelectedVersionsMap(prevMap => {
       const updatedMap = { ...prevMap };
-      delete updatedMap[sceneNumberStr];
+      delete updatedMap[trackingKey];
       return updatedMap;
     });
 
     try {
-      await generateSceneVideo(numericId, sceneNumberStr);
-      showToast(`Video generation queued for ${sceneNumberStr}.`, 'success');
+      await generateSceneVideo(numericId, targetId);
+      showToast(isPodcast ? `Podcast audio synthesis started.` : `Video generation queued for ${sceneNumberStr}.`, 'success');
       fetchSceneVideosAndStatus();
     } catch (err) {
       console.error("Failed to trigger scene generation:", err);
@@ -660,6 +664,8 @@ export default function ProductionPage() {
       setActiveStudioTab('dashboard');
     }
   }, [project, activeStudioTab]);
+  
+  const [podcastDuration, setPodcastDuration] = useState(5); // 5, 10, or 15 minutes
   
   // ── Interactive State Compilation Mock ──────────────────────────────────
   const [compilingVoice, setCompilingVoice] = useState(null); // name of char voice being compiled
@@ -1006,8 +1012,16 @@ export default function ProductionPage() {
               { id: 'filmgen', label: filmGenLabel, icon: FiMonitor },
             ];
             
-            // Filter out visual tabs for audio-only formats
-            return allTabs.filter(tab => !isAudio || !tab.isVisual);
+            // Filter out tabs for audio-only formats
+            return allTabs.filter(tab => {
+              if (prodType === 'Podcast') {
+                return tab.id === 'dashboard' || tab.id === 'filmgen';
+              }
+              if (isAudio) {
+                return !tab.isVisual;
+              }
+              return true;
+            });
           })().map(tab => {
             const Icon = tab.icon;
             const isActive = activeStudioTab === tab.id;
@@ -2009,10 +2023,10 @@ export default function ProductionPage() {
                           <FiMonitor className="text-accent" size={14} />
                           <div>
                             <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
-                              Scene Production Console
+                              {project?.production_type === 'Podcast' ? 'Podcast Audio Console' : 'Scene Production Console'}
                             </h3>
                             <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                              Sequential scene rendering queue and visual asset compositor
+                              {project?.production_type === 'Podcast' ? 'Generate and export full-length podcast audio tracks' : 'Sequential scene rendering queue and visual asset compositor'}
                             </p>
                           </div>
                         </div>
@@ -2028,13 +2042,17 @@ export default function ProductionPage() {
                       {/* Stats Grid */}
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-left">
                         <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
-                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Total Scenes</span>
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">
+                            {project?.production_type === 'Podcast' ? 'Total Audio Tracks' : 'Total Scenes'}
+                          </span>
                           <span className={`text-base font-black block mt-0.5 ${d ? 'text-gray-900' : 'text-neutral-200'}`}>
                             {scenesStatus.length}
                           </span>
                         </div>
                         <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
-                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Completed Scenes</span>
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">
+                            {project?.production_type === 'Podcast' ? 'Completed Tracks' : 'Completed Scenes'}
+                          </span>
                           <span className="text-base font-black text-emerald-400 block mt-0.5">
                             {scenesStatus.filter(s => sceneVideos.some(v => v.scene_number === s.scene_number && v.is_approved)).length} / {scenesStatus.length}
                           </span>
@@ -2046,13 +2064,17 @@ export default function ProductionPage() {
                           </span>
                         </div>
                         <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
-                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Est. Runtime</span>
+                          <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">
+                            {project?.production_type === 'Podcast' ? 'Selected Duration' : 'Est. Runtime'}
+                          </span>
                           <span className={`text-base font-black block mt-0.5 ${d ? 'text-gray-900' : 'text-neutral-200'}`}>
-                            {scenesStatus.reduce((acc, s) => {
-                              const d_str = s.details?.duration || "8 seconds";
-                              const sec = parseInt(d_str) || 8;
-                              return acc + sec;
-                            }, 0)}s
+                            {project?.production_type === 'Podcast' 
+                              ? `${podcastDuration} Mins`
+                              : `${scenesStatus.reduce((acc, s) => {
+                                  const d_str = s.details?.duration || "8 seconds";
+                                  const sec = parseInt(d_str) || 8;
+                                  return acc + sec;
+                                }, 0)}s`}
                           </span>
                         </div>
                         <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg col-span-2 md:col-span-1">
@@ -2151,13 +2173,21 @@ export default function ProductionPage() {
                                   <div className="flex justify-between items-start gap-4">
                                     <div>
                                       <h4 className={`text-base font-extrabold uppercase tracking-wide flex items-center gap-2 ${d ? 'text-neutral-900' : 'text-white'}`}>
-                                        <span>Scene {String(scene.scene_number).padStart(2, '0')}</span>
+                                        {project?.production_type === 'Podcast' ? (
+                                          <span>Podcast Audio Track</span>
+                                        ) : (
+                                          <span>Scene {String(scene.scene_number).padStart(2, '0')}</span>
+                                        )}
                                         <span className={`text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded border inline-flex items-center gap-1.5 ${statusColor}`}>
                                           {!isUnlocked && <FiLock size={10} />}
                                           <span>{statusLabel}</span>
                                         </span>
                                       </h4>
-                                      {project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? (
+                                      {project?.production_type === 'Podcast' ? (
+                                        <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                                          Format: Audio MP3 | Runtime: {activeVideo?.duration ? `${activeVideo.duration}s` : '5-15 mins'}
+                                        </span>
+                                      ) : project?.production_type === 'Audio Story' ? (
                                         <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
                                           Segment: {scene.scene_number_str} | Runtime: {scene.details?.duration || "10s"}
                                         </span>
@@ -2302,11 +2332,11 @@ export default function ProductionPage() {
                                           {activeVideo.status === 'completed' && (
                                             <a
                                               href={apiBaseUrl + activeVideo.video_url}
-                                              download={`scene_${scene.scene_number}_v${activeVideo.version}.mp4`}
+                                              download={project?.production_type === 'Podcast' ? `podcast_v${activeVideo.version}.mp3` : `scene_${scene.scene_number}_v${activeVideo.version}.mp4`}
                                               target="_blank"
                                               rel="noreferrer"
                                               className="px-2.5 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] inline-flex items-center justify-center whitespace-nowrap"
-                                              title="Download MP4 video file"
+                                              title={project?.production_type === 'Podcast' ? "Download MP3 audio file" : "Download MP4 video file"}
                                             >
                                               Download
                                             </a>
@@ -2324,20 +2354,35 @@ export default function ProductionPage() {
                                       {/* Model badge */}
                                       {activeVideo.status === 'completed' && (
                                         <div className="flex justify-between items-center text-[9px] font-mono text-surface-500 border-t border-white/[0.03] pt-2">
-                                          <span>Model: <strong className="text-cyan-400">{activeVideo.generation_model}</strong></span>
+                                          <span>Model: <strong className="text-cyan-400">{project?.production_type === 'Podcast' ? 'Qwen-TTS + Script Expansion' : activeVideo.generation_model}</strong></span>
                                           <span>Cost: 80 Credits</span>
                                         </div>
                                       )}
                                     </div>
                                   ) : isUnlocked ? (
                                     /* Render box if ready to generate */
-                                    <div className="border border-dashed border-white/[0.08] bg-[#09090d]/50 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-4 h-48 select-none">
-                                      <FiMonitor size={24} className="text-surface-500 opacity-60" />
-                                      <div className="space-y-1">
-                                        <span className="text-[10px] font-bold text-surface-450 uppercase tracking-widest block">Awaiting Render</span>
-                                        <p className="text-[9px] text-surface-550 max-w-[200px] leading-normal">
-                                          {scene.package_ready ? "Production assets mapped. Ready to synthesize." : "Requires missing pre-production assets."}
-                                        </p>
+                                    <div className="border border-dashed border-white/[0.08] bg-[#09090d]/50 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-4 h-56 select-none">
+                                      <FiVolume2 size={24} className="text-accent animate-pulse" />
+                                      <div className="space-y-1 w-full max-w-[280px]">
+                                        <span className="text-[10px] font-bold text-surface-450 uppercase tracking-widest block">Awaiting Audio Synthesis</span>
+                                        {project?.production_type === 'Podcast' ? (
+                                          <div className="flex flex-col gap-2 mt-2">
+                                            <label className="text-[9px] font-mono text-surface-500 uppercase tracking-wider text-left block">Select Podcast Duration</label>
+                                            <select
+                                              value={podcastDuration}
+                                              onChange={(e) => setPodcastDuration(Number(e.target.value))}
+                                              className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                            >
+                                              <option value={5}>5 Minutes (approx. 750 words)</option>
+                                              <option value={10}>10 Minutes (approx. 1500 words)</option>
+                                              <option value={15}>15 Minutes (approx. 2250 words)</option>
+                                            </select>
+                                          </div>
+                                        ) : (
+                                          <p className="text-[9px] text-surface-550 max-w-[200px] leading-normal">
+                                            {scene.package_ready ? "Production assets mapped. Ready to synthesize." : "Requires missing pre-production assets."}
+                                          </p>
+                                        )}
                                       </div>
                                       <button
                                         onClick={() => handleGenerateScene(scene.scene_number_str)}
