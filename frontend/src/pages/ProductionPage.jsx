@@ -654,6 +654,13 @@ export default function ProductionPage() {
   // ── Tab Management ──────────────────────────────────────────────────────
   const [activeStudioTab, setActiveStudioTab] = useState('dashboard'); // dashboard, characters, environments, voices, filmgen
   
+  useEffect(() => {
+    const isAudio = project?.production_type === 'Podcast' || project?.production_type === 'Audio Story';
+    if (isAudio && (activeStudioTab === 'characters' || activeStudioTab === 'environments')) {
+      setActiveStudioTab('dashboard');
+    }
+  }, [project, activeStudioTab]);
+  
   // ── Interactive State Compilation Mock ──────────────────────────────────
   const [compilingVoice, setCompilingVoice] = useState(null); // name of char voice being compiled
   const [activeVoicePreview, setActiveVoicePreview] = useState(null); // name of char voice previewing
@@ -962,13 +969,46 @@ export default function ProductionPage() {
         <div className={`flex gap-1 border-b px-6 py-2 shrink-0 select-none transition-colors duration-500 ${
           d ? 'bg-neutral-50/50 border-neutral-200' : 'bg-[#08080C]/20 border-white/[0.04]'
         }`}>
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: FiActivity },
-            { id: 'characters', label: 'Character Studio', icon: FiUser },
-            { id: 'environments', label: 'Environment Studio', icon: FiMapPin },
-            { id: 'voices', label: 'Voice Studio', icon: FiVolume2 },
-            { id: 'filmgen', label: 'Scene Production Console', icon: FiMonitor },
-          ].map(tab => {
+          {(() => {
+            const isAudio = project?.production_type === 'Podcast' || project?.production_type === 'Audio Story';
+            const prodType = project?.production_type || 'Short Film';
+            
+            // Dynamic Labels based on project production type
+            let characterLabel = 'Character Studio';
+            let environmentLabel = 'Environment Studio';
+            let voiceLabel = 'Voice Studio';
+            let filmGenLabel = 'Scene Production Console';
+            
+            if (prodType === 'Documentary') {
+              characterLabel = 'Subjects & Narrators';
+              environmentLabel = 'Locations & B-Roll';
+            } else if (prodType === 'Interview' || prodType === 'Podcast') {
+              characterLabel = 'Hosts & Guests';
+              voiceLabel = 'Host & Guest Voices';
+              environmentLabel = 'Sets & Backdrops';
+              filmGenLabel = 'Audio Production Console';
+            } else if (prodType === 'YouTube Video') {
+              characterLabel = 'Presenters & Avatars';
+              environmentLabel = 'Backdrops & Sets';
+            } else if (prodType === 'Educational Show') {
+              characterLabel = 'Presenters & Instructors';
+              environmentLabel = 'Slides & Classrooms';
+            } else if (prodType === 'Audio Story') {
+              voiceLabel = 'Narrators & Cast';
+              filmGenLabel = 'Audio Production Console';
+            }
+            
+            const allTabs = [
+              { id: 'dashboard', label: 'Dashboard', icon: FiActivity },
+              { id: 'characters', label: characterLabel, icon: FiUser, isVisual: true },
+              { id: 'environments', label: environmentLabel, icon: FiMapPin, isVisual: true },
+              { id: 'voices', label: voiceLabel, icon: FiVolume2 },
+              { id: 'filmgen', label: filmGenLabel, icon: FiMonitor },
+            ];
+            
+            // Filter out visual tabs for audio-only formats
+            return allTabs.filter(tab => !isAudio || !tab.isVisual);
+          })().map(tab => {
             const Icon = tab.icon;
             const isActive = activeStudioTab === tab.id;
             return (
@@ -2104,7 +2144,7 @@ export default function ProductionPage() {
                               {!isUnlocked && (
                                 <div className="absolute top-0 bottom-0 left-0 w-1 bg-neutral-800" />
                               )}
-                              
+
                               <div className="flex flex-col lg:flex-row gap-6">
                                 {/* Left column: Info & dependencies */}
                                 <div className="flex-1 space-y-4">
@@ -2117,14 +2157,22 @@ export default function ProductionPage() {
                                           <span>{statusLabel}</span>
                                         </span>
                                       </h4>
-                                      <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                                        Location: {scene.details?.location || "Not Set"} | Runtime: {scene.details?.duration || "8s"}
-                                      </span>
+                                      {project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? (
+                                        <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                                          Segment: {scene.scene_number_str} | Runtime: {scene.details?.duration || "10s"}
+                                        </span>
+                                      ) : (
+                                        <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                                          Location: {scene.details?.location || "Not Set"} | Runtime: {scene.details?.duration || "10s"}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
 
                                   <p className={`text-xs leading-relaxed ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
-                                    <span className="font-bold text-accent uppercase text-[9px] tracking-wider block mb-0.5">Scene Description</span>
+                                    <span className="font-bold text-accent uppercase text-[9px] tracking-wider block mb-0.5">
+                                      {project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? 'Dialogue/Narration Script' : 'Scene Description'}
+                                    </span>
                                     {scene.details?.summary || "No description compiled."}
                                   </p>
 
@@ -2132,17 +2180,19 @@ export default function ProductionPage() {
                                   {isUnlocked && (
                                     <div className="grid grid-cols-2 gap-3 text-[10px] font-mono border-t border-dashed border-white/[0.05] pt-3.5">
                                       <div>
-                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Characters</span>
+                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Speakers</span>
                                         <span className={`block truncate mt-0.5 ${d ? 'text-neutral-800' : 'text-surface-300'}`}>
                                           {scene.details?.characters?.length > 0 ? scene.details.characters.join(', ') : 'None'}
                                         </span>
                                       </div>
-                                      <div>
-                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Camera movement</span>
-                                        <span className={`block truncate mt-0.5 ${d ? 'text-neutral-800' : 'text-surface-300'}`}>
-                                          {scene.details?.prompt ? 'Anamorphic Frame' : 'Standard'}
-                                        </span>
-                                      </div>
+                                      {!(project?.production_type === 'Podcast' || project?.production_type === 'Audio Story') && (
+                                        <div>
+                                          <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Camera movement</span>
+                                          <span className={`block truncate mt-0.5 ${d ? 'text-neutral-800' : 'text-surface-300'}`}>
+                                            {scene.details?.prompt ? 'Anamorphic Frame' : 'Standard'}
+                                          </span>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
 
@@ -2193,12 +2243,24 @@ export default function ProductionPage() {
                                     <div className="space-y-3.5">
                                       {activeVideo.status === 'completed' ? (
                                         <div className="relative w-full rounded-xl overflow-hidden border border-white/[0.05] bg-black group h-48 flex items-center justify-center">
-                                          <video 
-                                            controls 
-                                            src={apiBaseUrl + activeVideo.video_url} 
-                                            className="w-full h-full object-cover" 
-                                            poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
-                                          />
+                                          {(project?.production_type === 'Podcast' || project?.production_type === 'Audio Story') ? (
+                                            <div className="flex flex-col items-center justify-center w-full h-full p-4 bg-gradient-to-br from-neutral-900 to-neutral-950">
+                                              <FiVolume2 className="text-accent animate-pulse mb-3" size={32} />
+                                              <audio 
+                                                controls 
+                                                src={apiBaseUrl + activeVideo.video_url} 
+                                                className="w-full max-w-xs" 
+                                              />
+                                              <span className="text-[10px] text-surface-500 font-mono mt-3 select-none">AUDIO SPEECH TRACK ACTIVE</span>
+                                            </div>
+                                          ) : (
+                                            <video 
+                                              controls 
+                                              src={apiBaseUrl + activeVideo.video_url} 
+                                              className="w-full h-full object-cover" 
+                                              poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
+                                            />
+                                          )}
                                         </div>
                                       ) : (
                                         /* Failed run block */

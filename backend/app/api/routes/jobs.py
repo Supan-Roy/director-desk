@@ -1093,57 +1093,82 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         duration = max(10, min(15, duration))
             
         # Call Qwen / DashScope API
+        is_audio = project.production_type in ["Podcast", "Audio Story"]
         video_url = None
         api_key_set = bool(os.getenv("QWEN_API_KEY"))
         if api_key_set:
             try:
-                public_ref_image = ref_image
-                if public_ref_image and (public_ref_image.startswith("/static/") or "localhost" in public_ref_image or "127.0.0.1" in public_ref_image):
-                    # Extract the path portion (e.g. /static/uploads/filename.png)
-                    local_relative_path = public_ref_image
-                    if "://" in local_relative_path:
-                        from urllib.parse import urlparse
-                        local_relative_path = urlparse(local_relative_path).path
+                if is_audio:
+                    # Audio-only generation: Synthesize the dialogue/narration text
+                    speech_text = scene_dict.get("audio_notes") or scene_dict.get("summary") or "Ambient audio track."
+                    clean_speech = re.sub(r'^[A-Z\s]+:\s*', '', speech_text)
                     
-                    logger.info(f"Attempting to upload local relative reference image {local_relative_path} to tmpfiles.org...")
-                    uploaded_url = await asyncio.to_thread(upload_to_tmpfiles, local_relative_path)
-                    if uploaded_url:
-                        public_ref_image = uploaded_url
+                    filename = f"scene_{project_id}_{scene_number}_v{next_version}.mp3"
+                    filepath = os.path.join("static/uploads", filename)
+                    os.makedirs("static/uploads", exist_ok=True)
+                    
+                    logger.info(f"Synthesizing audio scene track for Scene {scene_number} via Qwen-TTS...")
+                    default_voice = "Serena" if "host" in speech_text.lower() else "Ethan"
+                    tts_success = await synthesize_speech_via_dashscope(clean_speech, default_voice, filepath)
+                    if tts_success:
+                        video_url = f"/static/uploads/{filename}"
                     else:
-                        logger.warning("Local reference image upload failed. Falling back to Text-to-Video.")
-                        public_ref_image = None
-                        model = "wan2.7-t2v"
-                
-                logger.info(f"Running generate_video call with model {model} using reference URL: {public_ref_image} and duration {duration}s...")
-                video_url = await asyncio.to_thread(qwen_service.generate_video, compiled_prompt, model, public_ref_image, duration)
+                        raise ValueError("TTS Synthesis failed")
+                else:
+                    public_ref_image = ref_image
+                    if public_ref_image and (public_ref_image.startswith("/static/") or "localhost" in public_ref_image or "127.0.0.1" in public_ref_image):
+                        # Extract the path portion (e.g. /static/uploads/filename.png)
+                        local_relative_path = public_ref_image
+                        if "://" in local_relative_path:
+                            from urllib.parse import urlparse
+                            local_relative_path = urlparse(local_relative_path).path
+                        
+                        logger.info(f"Attempting to upload local relative reference image {local_relative_path} to tmpfiles.org...")
+                        uploaded_url = await asyncio.to_thread(upload_to_tmpfiles, local_relative_path)
+                        if uploaded_url:
+                            public_ref_image = uploaded_url
+                        else:
+                            logger.warning("Local reference image upload failed. Falling back to Text-to-Video.")
+                            public_ref_image = None
+                            model = "wan2.7-t2v"
+                    
+                    logger.info(f"Running generate_video call with model {model} using reference URL: {public_ref_image} and duration {duration}s...")
+                    video_url = await asyncio.to_thread(qwen_service.generate_video, compiled_prompt, model, public_ref_image, duration)
             except Exception as e:
-                logger.error(f"DashScope video generation error: {e}. Falling back to simulation video.")
+                logger.error(f"DashScope generation error: {e}. Falling back to simulation.")
                 video_url = None
                 
         # Simulation fallback
         if not video_url:
-            logger.info("Using simulated video fallback.")
+            logger.info("Using simulated fallback.")
             await redis_job_service.update_job_status(job_id, "processing", progress=75, message="Rendering Scene...")
             await asyncio.sleep(2.0)
             await redis_job_service.update_job_status(job_id, "processing", progress=90, message="Downloading Result...")
             await asyncio.sleep(1.0)
-            video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
+            if is_audio:
+                video_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+            else:
+                video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
             
-        await redis_job_service.update_job_status(job_id, "processing", progress=95, message="Saving Video...")
+        await redis_job_service.update_job_status(job_id, "processing", progress=95, message="Saving Asset...")
         
-        # Download video to local static storage
+        # Download video/audio to local static storage
         os.makedirs("static/uploads", exist_ok=True)
-        filename = f"scene_{project_id}_{scene_number}_v{next_version}.mp4"
-        filepath = os.path.join("static/uploads", filename)
-        
-        try:
-            def _download():
-                urllib.request.urlretrieve(video_url, filepath)
-            await asyncio.to_thread(_download)
-            local_video_url = f"/static/uploads/{filename}"
-        except Exception as e:
-            logger.error(f"Failed to download video: {e}. Referencing raw URL instead.")
+        if is_audio and video_url and video_url.startswith("/static/"):
             local_video_url = video_url
+        else:
+            ext = ".mp3" if is_audio else ".mp4"
+            filename = f"scene_{project_id}_{scene_number}_v{next_version}{ext}"
+            filepath = os.path.join("static/uploads", filename)
+            
+            try:
+                def _download():
+                    urllib.request.urlretrieve(video_url, filepath)
+                await asyncio.to_thread(_download)
+                local_video_url = f"/static/uploads/{filename}"
+            except Exception as e:
+                logger.error(f"Failed to download asset: {e}. Referencing raw URL instead.")
+                local_video_url = video_url
             
         local_thumb_url = ref_image or f"https://placehold.co/640x360.png?text=Scene+{scene_number}"
         

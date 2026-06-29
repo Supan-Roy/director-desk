@@ -92,17 +92,18 @@ def get_project_scenes_status(project_id: int, db: Session = Depends(get_db)):
         # 1. Validate characters & voice profiles
         characters_ready = True
         voices_ready = True
+        is_audio = project.production_type in ["Podcast", "Audio Story"]
         for char in scene_chars:
             trimmed_char = char.lower().strip() if isinstance(char, str) else ""
             if not trimmed_char:
                 continue
-            if trimmed_char not in char_assets_set:
+            if not is_audio and trimmed_char not in char_assets_set:
                 characters_ready = False
                 missing_assets.append(f"Character asset for '{char}' is missing")
             if trimmed_char not in voice_assets_set:
                 voices_ready = False
                 missing_assets.append(f"Voice profile for '{char}' is missing")
-                
+                 
         # 2. Validate environment concept reference
         environments_ready = True
         location_name = scene.get("location") or scene.get("environment") or ""
@@ -113,7 +114,7 @@ def get_project_scenes_status(project_id: int, db: Session = Depends(get_db)):
                 if ea in trimmed_loc or trimmed_loc in ea:
                     env_found = True
                     break
-            if not env_found:
+            if not is_audio and not env_found:
                 environments_ready = False
                 missing_assets.append(f"Environment asset for '{location_name}' is missing")
                 
