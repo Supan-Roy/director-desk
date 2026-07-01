@@ -850,45 +850,7 @@ async def generate_asset(background_tasks: BackgroundTasks, request: GenerateJob
     return job
 
 
-def upload_to_tmpfiles(local_path: str) -> str | None:
-    """
-    Uploads a local static asset file (from static/uploads) to tmpfiles.org
-    and returns a direct public download URL. Used as a fallback on localhost
-    for cloud-based DashScope image-to-video API access.
-    """
-    import os
-    import requests
-    import logging
 
-    logger = logging.getLogger(__name__)
-    try:
-        # Normalize local_path to strip leading slash for os.path join
-        clean_path = local_path.lstrip("/")
-        if not os.path.exists(clean_path):
-            # Check relative to backend folder if clean_path doesn't exist
-            alt_path = os.path.join("backend", clean_path)
-            if os.path.exists(alt_path):
-                clean_path = alt_path
-            else:
-                logger.error(f"Local reference image not found: {local_path} (checked {clean_path} and {alt_path})")
-                return None
-
-        logger.info(f"Uploading {clean_path} to tmpfiles.org...")
-        with open(clean_path, 'rb') as f:
-            files = {'file': f}
-            response = requests.post('https://tmpfiles.org/api/v1/upload', files=files, timeout=15)
-            if response.status_code == 200:
-                res_data = response.json()
-                url = res_data.get("data", {}).get("url")
-                if url:
-                    # Convert default link to direct download link
-                    direct_url = url.replace("https://tmpfiles.org/", "https://tmpfiles.org/dl/")
-                    logger.info(f"Upload complete. Direct URL: {direct_url}")
-                    return direct_url
-            logger.error(f"tmpfiles.org upload failed with status code {response.status_code}: {response.text}")
-    except Exception as e:
-        logger.error(f"Error in upload_to_tmpfiles for {local_path}: {e}")
-    return None
 
 
 async def run_scene_generation_job(job_id: str, project_id: int, scene_number_str: str):
@@ -1165,7 +1127,7 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
                 logger.error(f"Failed to download asset: {e}. Referencing raw URL instead.")
                 local_video_url = video_url
             
-        local_thumb_url = ref_image or f"https://placehold.co/640x360.png?text=Scene+{scene_number}"
+        local_thumb_url = raw_ref_image or f"https://placehold.co/640x360.png?text=Scene+{scene_number}"
         
         # Update db record
         placeholder_video.video_url = local_video_url
