@@ -20,9 +20,9 @@ export default {
           950: '#050505',
         },
         accent: {
-          DEFAULT: '#8b5cf6',
-          dim: '#7c3aed',
-          glow: 'transparent',
+          DEFAULT: 'var(--accent-color, #ffffff)',
+          dim: 'var(--accent-dim, #e2e8f0)',
+          glow: 'var(--accent-glow, rgba(255, 255, 255, 0.15))',
         },
       },
       fontFamily: {

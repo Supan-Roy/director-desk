@@ -2,14 +2,14 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext({
   isDayMode: false,
-  themeMode: 'system',
+  themeMode: 'dark',
   setThemeMode: () => {},
   toggleTheme: () => {}
 });
 
 export function ThemeProvider({ children }) {
   const [themeMode, setThemeMode] = useState(() => {
-    return localStorage.getItem('dd-theme-mode') || 'system';
+    return localStorage.getItem('dd-theme-mode') || 'dark';
   });
 
   const [isDayMode, setIsDayMode] = useState(false);

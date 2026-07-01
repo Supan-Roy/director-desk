@@ -14,6 +14,11 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    --accent-color: #ffffff;
+    --accent-dim: #e2e8f0;
+    --accent-glow: rgba(255, 255, 255, 0.15);
+    --accent-text: #000000;
   }
 
   html,
@@ -774,11 +779,12 @@
   color: #D1D5DB !important;
 }
 
-/* Hero accent tag stays purple */
-[data-theme="day"] .text-accent { color: #8b5cf6 !important; }
-[data-theme="day"] .bg-accent { background-color: #8b5cf6 !important; }
-[data-theme="day"] .border-accent { border-color: #8b5cf6 !important; }
-[data-theme="day"] .bg-accent\/10 { background-color: rgba(139, 92, 246, 0.08) !important; }
+[data-theme="day"] {
+  --accent-color: #000000 !important;
+  --accent-dim: #18181b !important;
+  --accent-glow: rgba(0, 0, 0, 0.15) !important;
+  --accent-text: #ffffff !important;
+}
 
 /* Textarea / input inside console */
 [data-theme="day"] textarea,
@@ -941,8 +947,7 @@
 /* Sidebar navigation styling adjustments */
 aside nav button.bg-accent\/10 {
   box-shadow: none !important;
-  background-color: #101010 !important;
-  border-left: 2px solid #8b5cf6 !important;
+  border-left: 2px solid var(--accent-color, #ffffff) !important;
   border-radius: 4px !important;
 }
 aside nav button.bg-accent\/10 .blur-sm {
@@ -1006,6 +1011,50 @@ aside nav button.bg-accent\/10 .blur-sm {
 
 .animate-toast-in {
   animation: toastSlideUpDown 5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Dynamic Accent and Text Overrides */
+.bg-accent {
+  background-color: var(--accent-color, #ffffff) !important;
+  color: var(--accent-text, #000000) !important;
+}
+.bg-accent * {
+  color: var(--accent-text, #000000) !important;
+}
+.text-accent {
+  color: var(--accent-color, #ffffff) !important;
+}
+.border-accent {
+  border-color: var(--accent-color, #ffffff) !important;
+}
+
+/* Custom btn-accent helper */
+.btn-accent {
+  background: var(--accent-color, #ffffff) !important;
+  color: var(--accent-text, #000000) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.75rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-accent svg {
+  stroke: var(--accent-text, #000000) !important;
+  color: var(--accent-text, #000000) !important;
+}
+.btn-accent:hover {
+  opacity: 0.9;
+}
+.btn-accent:active {
+  transform: scale(0.98);
 }
 
 

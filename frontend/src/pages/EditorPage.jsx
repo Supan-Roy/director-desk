@@ -1590,7 +1590,7 @@ export default function EditorPage() {
             <button
               onClick={triggerExport}
               disabled={isExporting || videoTrack.length === 0}
-              className="px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-500 text-white shadow-[0_4px_16px_rgba(139,92,246,0.2)] disabled:opacity-40 flex items-center gap-2 cursor-pointer transition-all"
+              className="btn-accent px-4 py-2 text-[11px] disabled:opacity-40 flex items-center gap-2 cursor-pointer transition-all shadow-none"
             >
               {isExporting ? (
                 <>
@@ -1918,7 +1918,7 @@ export default function EditorPage() {
                           setCustomText('')
                         }}
                         disabled={!customText.trim()}
-                        className="w-full py-2.5 rounded-xl bg-accent hover:bg-purple-600 text-white font-bold uppercase tracking-widest text-[10px] transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
+                        className="btn-accent w-full py-2.5 disabled:opacity-40 flex items-center justify-center gap-1.5 shadow-none"
                       >
                         <FiType size={11} />
                         <span>Add Text Overlay</span>
@@ -2002,7 +2002,7 @@ export default function EditorPage() {
                     
                     <button
                       onClick={handleAddSubtitleAtPlayhead}
-                      className="w-full py-2 px-4 rounded-xl bg-accent hover:bg-purple-600 text-white font-bold uppercase tracking-widest text-[10px] cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                      className="btn-accent w-full py-2 px-4 flex items-center justify-center gap-1.5 transition-colors shadow-none"
                     >
                       <FiPlus size={11} />
                       <span>Add Subtitle at Playhead</span>
@@ -2432,7 +2432,7 @@ export default function EditorPage() {
                     <div className="flex items-center gap-2.5">
                       <button
                          onClick={() => setIsPlaying(!isPlaying)}
-                         className="w-7 h-7 rounded-full bg-accent hover:bg-purple-600 text-white flex items-center justify-center cursor-pointer transition-colors shadow-lg"
+                         className="btn-accent w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all shadow-none"
                       >
                         {isPlaying ? <FiPause size={10} /> : <FiPlay size={10} className="ml-0.5" />}
                       </button>
@@ -3753,8 +3753,8 @@ export default function EditorPage() {
                         }}
                         className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-[#2e1065] border-[#a78bfa] text-white shadow-[0_0_12px_rgba(167,139,250,0.15)] border-[1.5px]'
-                            : 'bg-[#2e1065]/40 border-[#a78bfa]/20 hover:border-[#a78bfa]/50 text-purple-200'
+                            ? 'bg-accent border-accent text-[var(--accent-text)] border-[1.5px]'
+                            : 'bg-neutral-800/40 border-white/[0.04] text-neutral-400 hover:border-white/10 [data-theme="day"]_&:bg-neutral-200/40 [data-theme="day"]_&:border-black/[0.04] [data-theme="day"]_&:text-neutral-600 [data-theme="day"]_&:hover:border-black/10'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3932,7 +3932,7 @@ export default function EditorPage() {
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-accent to-purple-600 transition-all duration-300"
+                  className="h-full bg-accent transition-all duration-300"
                   style={{ width: `${exportProgress}%` }}
                 />
               </div>
@@ -3973,7 +3973,7 @@ export default function EditorPage() {
               <a
                 href={exportUrl}
                 download={`export_${Date.now()}.${exportFormat}`}
-                className="flex-1 py-2.5 rounded-xl bg-accent text-white font-bold uppercase tracking-widest text-[10.5px] flex items-center justify-center gap-2 hover:bg-purple-600 transition-all"
+                className="btn-accent flex-1 py-2.5 flex items-center justify-center gap-2 transition-all shadow-none"
               >
                 <FiDownload size={12} />
                 <span>Download {exportFormat.toUpperCase()}</span>

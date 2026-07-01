@@ -175,7 +175,7 @@ function StoryboardView({ storyboard, productionType, onProceed, loading }) {
         <button
           onClick={onProceed}
           disabled={loading}
-          className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-colors cursor-pointer"
+          className="btn-accent px-4 py-2 disabled:opacity-50 text-xs tracking-wider transition-colors shadow-none"
         >
           {loading ? 'Resuming...' : 'Compile Storyboard & subsequent steps'}
         </button>
@@ -215,7 +215,7 @@ function PlanView({ plan, onProceed, loading }) {
         <button
           onClick={onProceed}
           disabled={loading}
-          className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer"
+          className="btn-accent px-4 py-2 disabled:opacity-50 text-xs tracking-wider transition-all shadow-none"
         >
           {loading ? 'Resuming...' : 'Compile Production Plan & Critic Review'}
         </button>
@@ -283,7 +283,7 @@ function SceneBreakdownView({ breakdown, productionType, onProceed, loading }) {
           <button
             onClick={onProceed}
             disabled={loading}
-            className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer"
+            className="btn-accent px-4 py-2 disabled:opacity-50 text-xs tracking-wider transition-all shadow-none"
           >
             {loading ? 'Resuming...' : 'Compile Scene Breakdown & Plan'}
           </button>
@@ -811,7 +811,7 @@ function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGo
           <button
             onClick={onProceed}
             disabled={loading}
-            className="px-4 py-2 bg-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer"
+            className="btn-accent px-4 py-2 disabled:opacity-50 text-xs tracking-wider transition-all shadow-none"
           >
             {loading ? 'Resuming...' : 'Generate Critic Review'}
           </button>

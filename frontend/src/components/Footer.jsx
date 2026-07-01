@@ -15,7 +15,7 @@ export default function Footer() {
         <div className="flex flex-col gap-4 max-w-sm">
           <div className="flex items-center gap-3 select-none">
             <div className={`p-1.5 rounded-lg border transition-colors ${
-              d ? 'border-purple-200 bg-purple-50' : 'border-white/[0.06] bg-black/40'
+              d ? 'border-neutral-200 bg-neutral-100/60' : 'border-white/[0.06] bg-black/40'
             }`}>
               <img
                 src="/logo.svg"
