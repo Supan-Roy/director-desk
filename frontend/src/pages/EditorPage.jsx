@@ -3555,7 +3555,7 @@ export default function EditorPage() {
 
         {/* Bottom Multi-track Timeline Panel */}
         <div 
-          className="border-t flex flex-col shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-[#08080f]/90 relative z-30 overflow-hidden"
+          className="border-t flex flex-col shrink-0 border-white/[0.06] bg-[#0a0a0f] relative z-30 overflow-hidden"
           style={{ height: `${timelineHeight}px` }}
         >
           {/* Timeline Resize Handle */}
@@ -3726,10 +3726,10 @@ export default function EditorPage() {
 
                 {/* Timeline Current Time Indicator Needle */}
                 <div
-                  className="absolute top-0 bottom-0 w-[1.5px] bg-accent z-40 pointer-events-none"
+                  className="absolute top-0 bottom-0 w-[1.5px] bg-[#8b5cf6] z-40 pointer-events-none"
                   style={{ left: `${currentTime * zoom}px` }}
                 >
-                  <div className="w-2.5 h-2.5 bg-accent rounded-full -ml-1 -mt-0.5 shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+                  <div className="w-3 h-3 bg-[#8b5cf6] rotate-45 -ml-1.5 -mt-1.5 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
                 </div>
               </div>
 
@@ -3751,10 +3751,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('video')
                         }}
-                        className={`absolute h-12 rounded-xl flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-accent/20 border-accent/70 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]'
-                            : 'bg-purple-950/40 border-purple-800/30 hover:border-purple-600/50 text-purple-200'
+                            ? 'bg-[#2e1065] border-[#a78bfa] text-white shadow-[0_0_12px_rgba(167,139,250,0.15)] border-[1.5px]'
+                            : 'bg-[#2e1065]/40 border-[#a78bfa]/20 hover:border-[#a78bfa]/50 text-purple-200'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3764,13 +3764,13 @@ export default function EditorPage() {
                       >
                         {/* Trim handlers */}
                         <div
-                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l-xl cursor-ew-resize transition-colors"
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'video', 'trim-start')}
                         />
                         <span className="truncate flex-1 select-none pr-2">{clip.name}</span>
                         <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
                         <div
-                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r-xl cursor-ew-resize transition-colors"
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'video', 'trim-end')}
                         />
                       </div>
@@ -3790,10 +3790,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('audio')
                         }}
-                        className={`absolute h-12 rounded-xl flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-accent/20 border-accent/70 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]'
-                            : 'bg-cyan-950/40 border-cyan-800/30 hover:border-cyan-600/50 text-cyan-200'
+                            ? 'bg-[#064e3b] border-[#34d399] text-white shadow-[0_0_12px_rgba(52,211,153,0.15)] border-[1.5px]'
+                            : 'bg-[#064e3b]/40 border-[#34d399]/20 hover:border-[#34d399]/50 text-cyan-200'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3803,13 +3803,13 @@ export default function EditorPage() {
                       >
                         {/* Trim handlers */}
                         <div
-                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l-xl cursor-ew-resize transition-colors"
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'audio', 'trim-start')}
                         />
                         <span className="truncate flex-1 select-none pr-2">🔊 {clip.name}</span>
                         <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
                         <div
-                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r-xl cursor-ew-resize transition-colors"
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'audio', 'trim-end')}
                         />
                       </div>
@@ -3829,10 +3829,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('text')
                         }}
-                        className={`absolute h-12 rounded-xl flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-accent/20 border-accent/70 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]'
-                            : 'bg-amber-950/40 border-amber-800/30 hover:border-amber-600/50 text-amber-200'
+                            ? 'bg-[#0c4a6e] border-[#38bdf8] text-white shadow-[0_0_12px_rgba(56,189,248,0.15)] border-[1.5px]'
+                            : 'bg-[#0c4a6e]/40 border-[#38bdf8]/20 hover:border-[#38bdf8]/50 text-amber-200'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3842,13 +3842,13 @@ export default function EditorPage() {
                       >
                         {/* Trim handlers */}
                         <div
-                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l-xl cursor-ew-resize transition-colors"
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'text', 'trim-start')}
                         />
                         <span className="truncate flex-1 select-none pr-2">💬 {clip.text}</span>
                         <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
                         <div
-                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r-xl cursor-ew-resize transition-colors"
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'text', 'trim-end')}
                         />
                       </div>
@@ -3868,10 +3868,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('vfx')
                         }}
-                        className={`absolute h-12 rounded-xl flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-purple-900/35 border-accent/80 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]'
-                            : 'bg-indigo-950/40 border-indigo-850/30 hover:border-indigo-600/50 text-indigo-200'
+                            ? 'bg-[#701a75] border-[#f472b6] text-white shadow-[0_0_12px_rgba(244,114,182,0.15)] border-[1.5px]'
+                            : 'bg-[#701a75]/40 border-[#f472b6]/20 hover:border-[#f472b6]/50 text-indigo-200'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
