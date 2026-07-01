@@ -1207,7 +1207,7 @@ export default function ProductionPage() {
                       </div>
                       <button
                         onClick={handleResume}
-                        className="px-4 py-2 bg-accent hover:bg-purple-600 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap"
+                        className="btn-primary whitespace-nowrap"
                       >
                         Proceed Generation
                       </button>
@@ -1280,7 +1280,7 @@ export default function ProductionPage() {
                             <span className="text-[9px] font-mono text-emerald-400 font-extrabold">READY FOR ASSEMBLY</span>
                           </div>
                           <div className="w-full bg-white/[0.04] h-2 rounded-full overflow-hidden mt-3 border border-white/[0.05]">
-                            <div className="bg-gradient-to-r from-purple-600 to-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${overallReadiness}%` }} />
+                            <div className="bg-accent h-full rounded-full transition-all duration-1000" style={{ width: `${overallReadiness}%` }} />
                           </div>
                         </div>
 
@@ -1493,7 +1493,7 @@ export default function ProductionPage() {
                                     </span>
                                     <div className="w-full h-1 bg-white/[0.06] rounded-full mt-4 overflow-hidden">
                                       <div 
-                                        className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                        className="bg-accent h-full rounded-full transition-all duration-300"
                                         style={{ width: `${activeJob.progress}%` }}
                                       />
                                     </div>
@@ -1525,7 +1525,7 @@ export default function ProductionPage() {
                                     
                                     <button
                                       onClick={() => handleGenerateCharacter(char.name)}
-                                      className="relative z-20 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[11px] uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(0,242,254,0.15)] hover:shadow-[0_0_20px_rgba(0,242,254,0.25)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
+                                      className="btn-accent relative z-20 px-5 py-2.5 font-bold text-[11px] uppercase tracking-wider rounded transition-all duration-300 transform active:scale-[0.98] cursor-pointer shadow-none"
                                     >
                                       Generate Cast Asset
                                     </button>
@@ -1560,7 +1560,7 @@ export default function ProductionPage() {
                                     
                                     <button
                                       onClick={() => handleGenerateCharacter(char.name)}
-                                      className="absolute bottom-3 right-3 px-2.5 py-1 bg-accent hover:bg-purple-600 text-white font-bold text-[9px] uppercase tracking-wider rounded-md transition-all cursor-pointer flex items-center gap-1 shadow-md z-20"
+                                      className="btn-accent absolute bottom-3 right-3 px-2.5 py-1 text-[9px] flex items-center gap-1 shadow-none z-20"
                                       title="Generate a new version of this character portrait"
                                     >
                                       <span>Regenerate</span>
@@ -1739,7 +1739,7 @@ export default function ProductionPage() {
                                       </span>
                                       <div className="w-full h-1 bg-white/[0.06] rounded-full mt-4 overflow-hidden">
                                         <div 
-                                          className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                          className="bg-accent h-full rounded-full transition-all duration-300"
                                           style={{ width: `${activeJob.progress}%` }}
                                         />
                                       </div>
@@ -1771,7 +1771,7 @@ export default function ProductionPage() {
                                       
                                       <button
                                         onClick={() => handleGenerateEnvironment(env.name)}
-                                        className="relative z-20 px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-[0_0_15px_rgba(0,242,254,0.15)] hover:shadow-[0_0_20px_rgba(0,242,254,0.25)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
+                                        className="btn-accent relative z-20 px-4 py-2 font-bold text-[10px] uppercase tracking-wider rounded transition-all duration-300 transform active:scale-[0.98] cursor-pointer shadow-none"
                                       >
                                         Generate Environment
                                       </button>
@@ -1802,7 +1802,7 @@ export default function ProductionPage() {
                                       
                                       <button
                                         onClick={() => handleGenerateEnvironment(env.name)}
-                                        className="absolute bottom-3 right-3 px-2.5 py-1 bg-accent hover:bg-purple-600 text-white font-bold text-[9px] uppercase tracking-wider rounded-md transition-all cursor-pointer flex items-center gap-1 shadow-md z-20"
+                                        className="btn-accent absolute bottom-3 right-3 px-2.5 py-1 text-[9px] flex items-center gap-1 shadow-none z-20"
                                         title="Generate a new version of this environment portrait"
                                       >
                                         <span>Regenerate</span>
@@ -1982,7 +1982,7 @@ export default function ProductionPage() {
                                     </span>
                                     <div className="w-full h-1 bg-white/[0.06] rounded-full mt-4 overflow-hidden">
                                       <div 
-                                        className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                        className="bg-accent h-full rounded-full transition-all duration-300"
                                         style={{ width: `${activeJob.progress}%` }}
                                       />
                                     </div>
@@ -2132,7 +2132,7 @@ export default function ProductionPage() {
                                     <button
                                       onClick={() => handleGenerateVoice(v.character)}
                                       disabled={isCompiling}
-                                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 bg-accent border-accent text-white hover:bg-accent/90 shadow-[0_0_15px_rgba(139,92,246,0.25)] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                                      className="btn-accent w-full py-2.5 shadow-none"
                                     >
                                       Generate Voice Profile
                                     </button>
@@ -2182,7 +2182,7 @@ export default function ProductionPage() {
                             disabled={!hasCompletedClips}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                               hasCompletedClips
-                                ? 'bg-gradient-to-r from-accent to-purple-600 border-accent text-white shadow-[0_0_15px_rgba(139,92,246,0.35)] hover:from-accent/90 hover:to-purple-500 transform hover:scale-[1.02] active:scale-[0.98]'
+                                ? 'btn-accent transform hover:scale-[1.02] active:scale-[0.98] shadow-none'
                                 : d
                                   ? 'bg-neutral-100 border-neutral-200 text-neutral-400'
                                   : 'bg-white/[0.02] border-white/[0.06] text-surface-500'
@@ -2235,10 +2235,10 @@ export default function ProductionPage() {
                         </div>
                         <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg col-span-2 md:col-span-1">
                           <span className="text-[9px] font-extrabold tracking-widest text-surface-500 uppercase block">Overall Progress</span>
-                          <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex items-center gap-2 mt-1.5 w-full">
                             <div className="h-2 flex-1 bg-black/40 rounded-full overflow-hidden">
                               <div 
-                                className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full transition-all duration-500" 
+                                className="h-full bg-accent rounded-full transition-all duration-500" 
                                 style={{ 
                                   width: `${scenesStatus.length > 0 
                                     ? Math.round((scenesStatus.filter(s => sceneVideos.some(v => v.scene_number === s.scene_number && v.is_approved)).length / scenesStatus.length) * 100) 
@@ -2341,7 +2341,7 @@ export default function ProductionPage() {
                                         </span>
                                         <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-2">
                                           <div 
-                                            className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                            className="bg-accent h-full rounded-full transition-all duration-300"
                                             style={{ width: `${activeJob.progress}%` }}
                                           />
                                         </div>
@@ -2405,7 +2405,7 @@ export default function ProductionPage() {
                                       <button
                                         onClick={() => handleGenerateScene(scene.scene_number_str)}
                                         disabled={!scene.package_ready}
-                                        className={`px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-[0_0_12px_rgba(0,242,254,0.1)] hover:shadow-[0_0_18px_rgba(0,242,254,0.2)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none whitespace-nowrap`}
+                                        className="btn-accent px-5 py-2 text-[10px] tracking-wider transition-all transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none whitespace-nowrap shadow-none"
                                       >
                                         Generate Scene
                                       </button>

@@ -349,7 +349,7 @@ export default function Sidebar() {
         className={`group relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-200 cursor-pointer ${
           isActive
             ? d
-              ? 'bg-accent/10 border border-accent/25'
+              ? 'bg-black/[0.05] border border-black/10 text-black'
               : 'bg-surface-800 border border-surface-700 text-white'
             : d
               ? 'hover:bg-black/[0.04] border border-transparent hover:border-black/[0.06]'
@@ -399,7 +399,7 @@ export default function Sidebar() {
             <div className="flex items-center gap-1.5 min-w-0">
               <p className={`text-[11.5px] font-semibold leading-tight truncate transition-colors duration-200 ${
                 isActive
-                  ? 'text-accent font-bold'
+                  ? d ? 'text-black font-bold' : 'text-white font-bold'
                   : d
                     ? 'text-gray-700 group-hover:text-gray-900'
                     : 'text-surface-200 group-hover:text-white'
@@ -407,7 +407,7 @@ export default function Sidebar() {
                 {project.title}
               </p>
               {project.is_pinned && (
-                <PinIcon size={10} className="shrink-0 text-accent/60" filled />
+                <PinIcon size={10} className={`shrink-0 ${d ? 'text-black/60' : 'text-white/60'}`} filled />
               )}
             </div>
           )}
@@ -470,7 +470,7 @@ export default function Sidebar() {
                     d ? 'hover:bg-neutral-50' : 'hover:bg-surface-800 hover:text-white'
                   }`}
                 >
-                  <FiShare2 size={12} className={`mr-2 ${copiedId === project.id ? 'text-emerald-500' : 'text-purple-400'}`} />
+                  <FiShare2 size={12} className={`mr-2 ${copiedId === project.id ? 'text-emerald-500' : 'text-surface-400'}`} />
                   <span>{copiedId === project.id ? 'Link Copied!' : 'Share'}</span>
                 </button>
 
@@ -499,7 +499,7 @@ export default function Sidebar() {
                     d ? 'hover:bg-neutral-50' : 'hover:bg-surface-800 hover:text-white'
                   }`}
                 >
-                  <PinIcon size={12} className={`mr-2 ${project.is_pinned ? 'text-yellow-500' : 'text-purple-400'}`} filled={project.is_pinned} />
+                  <PinIcon size={12} className={`mr-2 ${project.is_pinned ? 'text-yellow-500' : 'text-surface-400'}`} filled={project.is_pinned} />
                   <span>{project.is_pinned ? 'Unpin' : 'Pin'}</span>
                 </button>
 
@@ -540,7 +540,7 @@ export default function Sidebar() {
 
         {/* Active indicator bar */}
         {isActive && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent rounded-r-full" />
+          <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${d ? 'bg-black' : 'bg-white'}`} />
         )}
       </div>
     );
@@ -559,12 +559,12 @@ export default function Sidebar() {
       }`}>
         <div className="flex items-center gap-3">
           <div className={`relative p-1.5 rounded-lg border transition-colors duration-500 ${
-            d ? 'border-purple-200/50 bg-purple-50/60' : 'border-surface-600 bg-surface-950'
+            d ? 'border-neutral-200 bg-neutral-100/60' : 'border-surface-600 bg-surface-950'
           }`}>
-            <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-accent/80" />
-            <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-accent/80" />
-            <div className="absolute bottom-0 left-0 w-1.5 h-1.5 border-b border-l border-accent/80" />
-            <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-accent/80" />
+            <div className={`absolute top-0 left-0 w-1.5 h-1.5 border-t border-l ${d ? 'border-black/80' : 'border-white/80'}`} />
+            <div className={`absolute top-0 right-0 w-1.5 h-1.5 border-t border-r ${d ? 'border-black/80' : 'border-white/80'}`} />
+            <div className={`absolute bottom-0 left-0 w-1.5 h-1.5 border-b border-l ${d ? 'border-black/80' : 'border-white/80'}`} />
+            <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r ${d ? 'border-black/80' : 'border-white/80'}`} />
             <img
               src="/logo.svg"
               alt="Director Desk Logo"
@@ -578,7 +578,7 @@ export default function Sidebar() {
               }`}>
                 DIRECTOR DESK
               </span>
-              <span className="text-[8px] text-accent font-bold tracking-widest mt-1.5 uppercase leading-none">
+              <span className={`text-[8px] font-bold tracking-widest mt-1.5 uppercase leading-none ${d ? 'text-black/60' : 'text-white/60'}`}>
                 creative studio
               </span>
             </div>
@@ -630,8 +630,8 @@ export default function Sidebar() {
                 } ${
                   isActive
                     ? d
-                      ? 'bg-accent/10 text-accent border-l-2 border-accent'
-                      : 'bg-surface-800 text-white border-l-2 border-accent'
+                      ? 'bg-black/[0.06] text-black border-l-2 border-black'
+                      : 'bg-surface-800 text-white border-l-2 border-white'
                     : d
                       ? 'text-gray-500 hover:bg-black/[0.04] hover:text-gray-800'
                       : 'text-surface-400 hover:bg-white/[0.02] hover:text-surface-200'
@@ -642,7 +642,7 @@ export default function Sidebar() {
                   strokeWidth={isActive ? 2.2 : 1.5}
                   className={`shrink-0 ${
                     isActive
-                      ? 'text-accent'
+                      ? d ? 'text-black' : 'text-white'
                       : d
                         ? 'text-gray-400 group-hover:text-gray-700 transition-colors'
                         : 'text-surface-400 group-hover:text-surface-200 transition-colors'
@@ -674,7 +674,9 @@ export default function Sidebar() {
               }`}
             >
               <FiFolder size={18} />
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full text-[8px] font-black bg-accent text-white">
+              <span className={`absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1.25rem] h-4 px-1.5 rounded-full text-[8px] font-black ${
+                d ? 'bg-black text-white' : 'bg-white text-black'
+              }`}>
                 {savedProjects.length}
               </span>
             </button>
@@ -692,8 +694,8 @@ export default function Sidebar() {
                 <div className="flex items-center gap-2">
                   <FiFolder size={11} />
                   <span>Projects</span>
-                  <span className={`inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full text-[9px] font-black ${
-                    d ? 'bg-accent/15 text-accent' : 'bg-accent/20 text-accent'
+                  <span className={`inline-flex items-center justify-center min-w-[1.25rem] h-4 px-1.5 rounded-full text-[9px] font-black ${
+                    d ? 'bg-black text-white' : 'bg-white text-black'
                   }`}>
                     {savedProjects.length}
                   </span>
@@ -786,15 +788,15 @@ export default function Sidebar() {
             isCollapsed ? 'p-1.5 justify-center w-10 h-10 items-center' : 'gap-2.5 p-3 w-full items-center'
           } ${
             d 
-              ? 'bg-gray-50/80 border-black/[0.07] hover:bg-neutral-100 hover:border-accent/15' 
-              : 'bg-surface-900 border-surface-700 hover:bg-surface-800/80 hover:border-accent/15'
+              ? 'bg-gray-50/80 border-black/[0.07] hover:bg-neutral-100 hover:border-black/15' 
+              : 'bg-surface-900 border-surface-700 hover:bg-surface-800/80 hover:border-white/15'
           }`}
           title="Open User Profile Control Room"
         >
           <div className="absolute inset-0 bg-grid-lines opacity-[0.02] pointer-events-none" />
           <div className={`flex items-center gap-3 relative z-10 ${isCollapsed ? 'justify-center' : 'w-full'}`}>
             {profile.photo ? (
-              <img src={profile.photo} className="h-8 w-8 rounded-full object-cover border border-accent/25 shrink-0 animate-fade-in" alt="Avatar" />
+              <img src={profile.photo} className={`h-8 w-8 rounded-full object-cover border shrink-0 animate-fade-in ${d ? 'border-black/25' : 'border-white/25'}`} alt="Avatar" />
             ) : (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-700 text-[10px] font-black text-white border border-surface-600 uppercase">
                 {getInitials(profile.firstName, profile.lastName)}
@@ -807,8 +809,8 @@ export default function Sidebar() {
                     {`${profile.firstName || ''} ${profile.lastName || ''}`.trim()}
                   </p>
                 ) : null}
-                <p className="truncate text-[9.5px] font-extrabold text-accent mt-0.5 leading-none">
-                  {profile.plan || 'Free Plan'}
+                <p className={`truncate text-[9.5px] font-extrabold mt-0.5 leading-none ${d ? 'text-black' : 'text-white'}`}>
+                   {profile.plan || 'Free Plan'}
                 </p>
                 {profile.email && (
                   <p className="truncate text-[9px] text-surface-500 mt-1 leading-none">{profile.email}</p>
@@ -837,7 +839,7 @@ export default function Sidebar() {
             {/* Header */}
             <div className="flex items-center justify-between border-b pb-3 border-white/[0.04]">
               <div className="flex items-center gap-2">
-                <FiUser size={16} className="text-accent" />
+                <FiUser size={16} className={d ? 'text-black' : 'text-white'} />
                 <h3 className="text-xs font-black uppercase tracking-wider">User Profile Console</h3>
               </div>
               <button 
@@ -854,7 +856,7 @@ export default function Sidebar() {
               <div className="flex flex-col items-center gap-3">
                 <div className="relative group/avatar cursor-pointer" onClick={handleTriggerFileInput}>
                   {formPhoto ? (
-                    <img src={formPhoto} className="h-16 w-16 rounded-full object-cover border-2 border-accent/40 shadow-lg" alt="Preview" />
+                    <img src={formPhoto} className={`h-16 w-16 rounded-full object-cover border-2 shadow-lg ${d ? 'border-black/40' : 'border-white/40'}`} alt="Preview" />
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-700 text-lg font-black text-white border-2 border-surface-600 shadow-lg uppercase select-none">
                       {getInitials(formFirstName, formLastName)}
@@ -904,10 +906,10 @@ export default function Sidebar() {
                       value={formFirstName}
                       onChange={(e) => setFormFirstName(e.target.value)}
                       placeholder="Creative"
-                      className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                      className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none ${
                         d 
-                          ? 'bg-white border-neutral-200 text-neutral-800' 
-                          : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                          ? 'bg-white border-neutral-200 text-neutral-800 focus:border-black' 
+                          : 'bg-black/35 border-white/[0.06] text-white focus:border-white focus:ring-1 focus:ring-white'
                       }`}
                     />
                   </div>
@@ -918,10 +920,10 @@ export default function Sidebar() {
                       value={formLastName}
                       onChange={(e) => setFormLastName(e.target.value)}
                       placeholder="Director"
-                      className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                      className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none ${
                         d 
-                          ? 'bg-white border-neutral-200 text-neutral-800' 
-                          : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                          ? 'bg-white border-neutral-200 text-neutral-800 focus:border-black' 
+                          : 'bg-black/35 border-white/[0.06] text-white focus:border-white focus:ring-1 focus:ring-white'
                       }`}
                     />
                   </div>
@@ -935,10 +937,10 @@ export default function Sidebar() {
                     value={formEmail}
                     onChange={(e) => setFormEmail(e.target.value)}
                     placeholder="director@director-desk.com"
-                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none ${
                       d 
-                        ? 'bg-white border-neutral-200 text-neutral-800' 
-                        : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                        ? 'bg-white border-neutral-200 text-neutral-800 focus:border-black' 
+                        : 'bg-black/35 border-white/[0.06] text-white focus:border-white focus:ring-1 focus:ring-white'
                     }`}
                   />
                 </div>
@@ -950,10 +952,10 @@ export default function Sidebar() {
                     type="date"
                     value={formDob}
                     onChange={(e) => setFormDob(e.target.value)}
-                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none ${
                       d 
-                        ? 'bg-white border-neutral-200 text-neutral-800' 
-                        : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                        ? 'bg-white border-neutral-200 text-neutral-800 focus:border-black' 
+                        : 'bg-black/35 border-white/[0.06] text-white focus:border-white focus:ring-1 focus:ring-white'
                     }`}
                   />
                 </div>
@@ -964,10 +966,10 @@ export default function Sidebar() {
                   <select
                     value={formPlan}
                     onChange={(e) => setFormPlan(e.target.value)}
-                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none focus:border-accent ${
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none ${
                       d 
-                        ? 'bg-white border-neutral-200 text-neutral-800' 
-                        : 'bg-black/35 border-white/[0.06] text-white focus:ring-1 focus:ring-accent'
+                        ? 'bg-white border-neutral-200 text-neutral-800 focus:border-black' 
+                        : 'bg-black/35 border-white/[0.06] text-white focus:border-white focus:ring-1 focus:ring-white'
                     }`}
                   >
                     <option value="Free Plan" className={d ? 'text-neutral-800' : 'bg-surface-900 text-white'}>Free Plan</option>
@@ -981,7 +983,7 @@ export default function Sidebar() {
             {/* Archived Productions section */}
             <div className="border-t border-white/[0.04] pt-4 text-left">
               <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-surface-400 mb-2.5 flex items-center gap-1.5 select-none">
-                <FiArchive size={12} className="text-accent" />
+                <FiArchive size={12} className={d ? 'text-black' : 'text-white'} />
                 <span>Restore Archived Productions</span>
               </h4>
               
@@ -1014,7 +1016,11 @@ export default function Sidebar() {
                             e.stopPropagation();
                             await updateProjectDetails(project.id, { is_archived: false });
                           }}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-accent/15 hover:bg-accent/25 text-accent transition-all cursor-pointer select-none"
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none ${
+                            d
+                              ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'
+                              : 'bg-white/5 hover:bg-white/10 text-white border border-white/5'
+                          }`}
                         >
                           <FiRefreshCw size={9} />
                           <span>Restore</span>
@@ -1029,13 +1035,17 @@ export default function Sidebar() {
             {/* Developer Operations */}
             <div className="border-t border-white/[0.04] pt-4 text-left">
               <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-surface-400 mb-2.5 flex items-center gap-1.5 select-none">
-                <FiDatabase size={12} className="text-accent" />
+                <FiDatabase size={12} className={d ? 'text-black' : 'text-white'} />
                 <span>Developer Controls</span>
               </h4>
               <button
                 type="button"
                 onClick={handleCreateDemoProject}
-                className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                className={`w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+                  d
+                    ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
+                    : 'bg-white/5 hover:bg-white/10 text-white border border-white/[0.06]'
+                }`}
               >
                 <FiDatabase size={12} />
                 <span>Create Demo Project</span>
@@ -1058,7 +1068,7 @@ export default function Sidebar() {
               <button
                 type="button"
                 onClick={handleSaveProfile}
-                className="flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-accent hover:bg-accent/90 text-white cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                className="btn-accent flex-1 py-2 text-[11px] shadow-none"
               >
                 <FiCheck size={12} />
                 <span>Save Changes</span>

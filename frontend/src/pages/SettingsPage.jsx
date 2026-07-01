@@ -392,7 +392,7 @@ export default function SettingsPage() {
                     <button
                       onClick={handleExportData}
                       disabled={exporting}
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent hover:bg-purple-600 text-white-force font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer disabled:opacity-50"
+                      className="btn-accent shrink-0 flex items-center gap-1.5 px-3 py-2 text-[9px] transition-all disabled:opacity-50 shadow-none"
                     >
                       {exporting ? <FiLoader size={11} className="animate-spin" /> : <FiDownload size={11} />}
                       <span>Export Data</span>
