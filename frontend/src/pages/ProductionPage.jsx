@@ -776,6 +776,41 @@ export default function ProductionPage() {
     }
   };
 
+  const handleUpdateSceneSpecs = async (sceneNumber, specs) => {
+    try {
+      const updatedBreakdown = { ...project.scene_breakdown };
+      const scenes = [...(updatedBreakdown.scenes || [])];
+      const sceneIdx = scenes.findIndex(s => {
+        const digits = (s.scene_number || '').match(/\d+/);
+        return digits ? parseInt(digits[0]) === sceneNumber : false;
+      });
+      
+      if (sceneIdx !== -1) {
+        scenes[sceneIdx] = {
+          ...scenes[sceneIdx],
+          ...specs
+        };
+        updatedBreakdown.scenes = scenes;
+        await handleUpdateFields({ scene_breakdown: updatedBreakdown });
+        showToast(`Scene ${sceneNumber} specifications updated.`, 'success');
+      } else {
+        // Fallback to storyboard modification if scene breakdown is not found
+        const updatedStoryboard = [...(project.storyboard || [])];
+        if (updatedStoryboard.length >= sceneNumber) {
+          updatedStoryboard[sceneNumber - 1] = {
+            ...updatedStoryboard[sceneNumber - 1],
+            ...specs
+          };
+          await handleUpdateFields({ storyboard: updatedStoryboard });
+          showToast(`Scene ${sceneNumber} storyboard specifications updated.`, 'success');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to save scene specifications: " + err.message, 'error');
+    }
+  };
+
   // ── Compile Voice Model ID ──────────────────────────────────────────────
   const handleCompileVoice = (charName) => {
     if (compilingVoice) return;
@@ -1419,12 +1454,17 @@ export default function ProductionPage() {
                           const activeJob = runningJobs[char.name];
                           
                           // Determine description
-                          const description = activeAsset?.character_profile?.visual_profile || char.description;
+                          const description = activeAsset?.character_profile?.appearance || activeAsset?.character_profile?.visual_profile || char.description;
                           const age = activeAsset?.character_profile?.age || 'Extracting...';
                           const gender = activeAsset?.character_profile?.gender || 'Extracting...';
                           const role = activeAsset?.character_profile?.role || char.role || 'Supporting';
                           const personality = activeAsset?.character_profile?.personality || 'Extracting...';
                           const wardrobe = activeAsset?.character_profile?.wardrobe || 'Extracting...';
+                          const hair = activeAsset?.character_profile?.hair || 'Extracting...';
+                          const face = activeAsset?.character_profile?.face || 'Extracting...';
+                          const accessories = activeAsset?.character_profile?.accessories || 'Extracting...';
+                          const colorPalette = activeAsset?.character_profile?.color_palette || 'Extracting...';
+                          const bodyType = activeAsset?.character_profile?.body_type || 'Extracting...';
                           
                           const hasAsset = !!activeAsset;
 
@@ -1560,13 +1600,29 @@ export default function ProductionPage() {
                                       <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Age</span>
                                       <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{age}</span>
                                     </div>
-                                    <div className="col-span-2">
-                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Personality Schema</span>
-                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={personality}>{personality}</span>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Body Type</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{bodyType}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Color Palette</span>
+                                      <span className={`truncate block mt-0.5 font-bold ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{colorPalette}</span>
                                     </div>
                                     <div className="col-span-2">
-                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Wardrobe Palette</span>
-                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={wardrobe}>{wardrobe}</span>
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Hair Specs</span>
+                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`}>{hair}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Face Specs</span>
+                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`}>{face}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Wardrobe</span>
+                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`}>{wardrobe}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-surface-500 block uppercase text-[8px] tracking-wider">Accessories</span>
+                                      <span className={`block mt-0.5 text-xs ${d ? 'text-neutral-800' : 'text-neutral-350'}`}>{accessories}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -2315,10 +2371,16 @@ export default function ProductionPage() {
                                       </div>
                                       {!(project?.production_type === 'Podcast' || project?.production_type === 'Audio Story') && (
                                         <div>
-                                          <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Camera movement</span>
-                                          <span className={`block truncate mt-0.5 ${d ? 'text-neutral-800' : 'text-surface-300'}`}>
-                                            {scene.details?.prompt ? 'Anamorphic Frame' : 'Standard'}
-                                          </span>
+                                          <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Reference Strategy</span>
+                                          <select
+                                            value={scene.details?.reference_strategy || 'automatic'}
+                                            onChange={(e) => handleUpdateSceneSpecs(scene.scene_number, { reference_strategy: e.target.value })}
+                                            className="text-[9px] mt-1 bg-neutral-900 border border-white/[0.08] rounded-md p-1 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                          >
+                                            <option value="automatic">Automatic (Recommended)</option>
+                                            <option value="character_priority">Character Priority</option>
+                                            <option value="environment_priority">Environment Priority</option>
+                                          </select>
                                         </div>
                                       )}
                                     </div>

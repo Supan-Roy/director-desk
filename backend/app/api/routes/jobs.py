@@ -160,7 +160,7 @@ async def run_character_generation_job(job_id: str, project_id: int, character_n
         breakdown_context = json.dumps(project.scene_breakdown or {})
         
         prompt = f"""
-        Analyze this project's script and scene breakdown to expand the character '{character_name}' into a structured JSON profile.
+        Analyze this project's script and scene breakdown to expand the character '{character_name}' into a structured JSON profile with specific detailed physical fields.
         
         Script Context:
         {script_context[:3000]}
@@ -175,8 +175,13 @@ async def run_character_generation_job(job_id: str, project_id: int, character_n
           "gender": "extract gender",
           "role": "Lead or Supporting",
           "personality": "summary of character personality",
-          "wardrobe": "clothing description matching their scenes",
-          "visual_profile": "detailed physical appearance, facial features, hair, build, styling keys",
+          "appearance": "general physical build, height, shape, posture",
+          "wardrobe": "clothing description, outfit details matching their scenes",
+          "hair": "hair style, color, cut, length",
+          "face": "facial features, eyes, nose, expression, skin tone",
+          "accessories": "any glasses, jewelry, hats, gloves, gear, weapons, or items",
+          "color_palette": "dominant aesthetic colors associated with them",
+          "body_type": "physical build type (e.g. athletic, slim, stocky)",
           "environment_context": "environments they appear in",
           "story_context": "their narrative goal and motivations",
           "scene_appearances": ["Scene 1", "Scene 2"]
@@ -199,8 +204,13 @@ async def run_character_generation_job(job_id: str, project_id: int, character_n
                 "gender": "Unknown",
                 "role": "Supporting",
                 "personality": "Intriguing character from the script.",
+                "appearance": "Standard build.",
                 "wardrobe": "Standard apparel.",
-                "visual_profile": "No visual details specified.",
+                "hair": "Standard hair.",
+                "face": "Standard face.",
+                "accessories": "None.",
+                "color_palette": "Neutral.",
+                "body_type": "Average",
                 "environment_context": "Default scene setting.",
                 "story_context": "Appears in narrative scenes.",
                 "scene_appearances": ["Scene 1"]
@@ -210,7 +220,13 @@ async def run_character_generation_job(job_id: str, project_id: int, character_n
         
         await redis_job_service.update_job_status(job_id, "processing", progress=50, message="Building Visual Identity...")
         character_id = f"char_{character_name.lower()}_{uuid.uuid4().hex[:8]}"
-        visual_signature = f"{profile.get('age')}, {profile.get('gender')}, {profile.get('visual_profile')}, wearing {profile.get('wardrobe')}"
+        visual_signature = f"A {profile.get('age')}-year-old {profile.get('gender')}. " \
+                           f"Build: {profile.get('body_type')}, {profile.get('appearance')}. " \
+                           f"Hair: {profile.get('hair')}. " \
+                           f"Face: {profile.get('face')}. " \
+                           f"Wardrobe: {profile.get('wardrobe')}. " \
+                           f"Accessories: {profile.get('accessories')}. " \
+                           f"Color Palette: {profile.get('color_palette')}."
         consistency_hash = hashlib.sha256(visual_signature.encode('utf-8')).hexdigest()[:16]
         
         profile["character_id"] = character_id
@@ -988,124 +1004,31 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
             if isinstance(scene_chars, str):
                 scene_chars = [scene_chars]
             
-        await redis_job_service.update_job_status(job_id, "processing", progress=15, message="Loading Character References...")
-        await asyncio.sleep(0.5)
+        # Compile Scene Package using ScenePackageCompiler
+        await redis_job_service.update_job_status(job_id, "processing", progress=15, message="Compiling Scene Production Package...")
+        from app.services.scene_compiler import ScenePackageCompiler
+        from app.services.asset_resolver import AssetResolver
         
-        # Find character assets and extract visual signatures
-        character_images = []
-        character_profiles_desc = []
-        for char in scene_chars:
-            trimmed = char.lower().strip()
-            if not trimmed:
-                continue
-            char_asset = db.query(CharacterAsset).filter(
-                CharacterAsset.project_id == project_id,
-                func.lower(CharacterAsset.character_name) == trimmed
-            ).first()
-            if char_asset:
-                if char_asset.image_url:
-                    character_images.append(char_asset.image_url)
-                
-                profile_dict = char_asset.character_profile
-                if isinstance(profile_dict, str):
-                    try:
-                        profile_dict = json.loads(profile_dict)
-                    except Exception:
-                        profile_dict = {}
-                if profile_dict:
-                    visual_sig = profile_dict.get("visual_signature") or profile_dict.get("visual_profile")
-                    if visual_sig:
-                        # Normalize whitespace
-                        clean_sig = re.sub(r'[\s\n\t]+', ' ', visual_sig).strip()
-                        character_profiles_desc.append(f"{char}: {clean_sig}")
-                
-        await redis_job_service.update_job_status(job_id, "processing", progress=25, message="Loading Environment References...")
-        await asyncio.sleep(0.5)
+        scene_package = ScenePackageCompiler.compile_scene_package(project_id, scene_number, scene_dict)
         
-        # Find environment asset and extract signature
-        location_name = scene_dict.get("location") or scene_dict.get("environment") or ""
-        env_image = None
-        env_profile_desc = ""
-        trimmed_loc = location_name.lower().strip()
-        if trimmed_loc:
-            env_assets = db.query(EnvironmentAsset).filter(EnvironmentAsset.project_id == project_id).all()
-            for ea in env_assets:
-                ea_name = ea.environment_name.lower().strip()
-                if ea_name in trimmed_loc or trimmed_loc in ea_name:
-                    env_image = ea.image_url
-                    env_profile_dict = ea.environment_profile
-                    if isinstance(env_profile_dict, str):
-                        try:
-                            env_profile_dict = json.loads(env_profile_dict)
-                        except Exception:
-                            env_profile_dict = {}
-                    if env_profile_dict:
-                        env_sig = env_profile_dict.get("environment_signature") or env_profile_dict.get("description")
-                        if env_sig:
-                            env_profile_desc = re.sub(r'[\s\n\t]+', ' ', env_sig).strip()
-                    break
-                    
-        await redis_job_service.update_job_status(job_id, "processing", progress=35, message="Loading Voice Profiles...")
-        await asyncio.sleep(0.5)
+        # Read compiled parameters
+        compiled_prompt = scene_package["enriched_prompt"]
+        raw_ref_image = scene_package["composed_reference"]
+        duration = scene_package["duration"]
+        negative_prompt = scene_package["negative_prompt"]
         
-        # Auto-select video model pipeline based on references
-        ref_image = None
-        if env_image:
-            ref_image = env_image
-        elif character_images:
-            ref_image = character_images[0]
-            
-        if ref_image:
+        # Auto-select video model pipeline based on reference image presence
+        if raw_ref_image:
             model = "happyhorse-1.0-i2v"
-            logger.info(f"Auto-selected Image-to-Video model: {model} using reference {ref_image}")
+            logger.info(f"Auto-selected Image-to-Video model: {model} using reference {raw_ref_image}")
         else:
             model = "wan2.7-t2v"
             logger.info(f"Auto-selected Text-to-Video model: {model} (no references found)")
             
-        await redis_job_service.update_job_status(job_id, "processing", progress=45, message="Building Video Prompt...")
+        await redis_job_service.update_job_status(job_id, "processing", progress=35, message="Loading Voice Profiles...")
         await asyncio.sleep(0.5)
         
-        # Construct compiled video prompt
-        raw_prompt = scene_dict.get("ai_generation_prompt") or scene_dict.get("summary") or "A dramatic cinematic scene"
-        camera_movement = scene_dict.get("camera_movement") or scene_dict.get("camera_setup") or ""
-        lighting = scene_dict.get("lighting_design") or ""
-        
-        descriptions = []
-        if character_profiles_desc:
-            descriptions.append("Character visual profiles: " + "; ".join(character_profiles_desc))
-        if env_profile_desc:
-            descriptions.append(f"Setting/Environment ({location_name}): {env_profile_desc}")
-            
-        compiled_prompt = raw_prompt
-        if descriptions:
-            compiled_prompt += ". " + " ".join(descriptions)
-            
-        if camera_movement:
-            compiled_prompt += f", camera movement: {camera_movement}"
-        if lighting:
-            compiled_prompt += f", lighting: {lighting}"
-            
-        # Truncate prompt to safe limits (e.g. 1000 chars) to prevent API issues
-        if len(compiled_prompt) > 1000:
-            compiled_prompt = compiled_prompt[:997] + "..."
-        
-
-            
-        negative_prompt = scene_dict.get("negative_prompt", "cartoonish, anime, 3D render, low quality, shaky cam, text")
-        
         await redis_job_service.update_job_status(job_id, "processing", progress=55, message="Submitting Generation Request...")
-        
-        # Determine duration (default to 10 seconds, clamped to 10-15s)
-        duration_str = scene_dict.get("duration", "10 seconds")
-        duration = 10
-        try:
-            digits = re.findall(r'\d+', duration_str)
-            if digits:
-                duration = int(digits[0])
-        except Exception:
-            pass
-        # Clamp to 10-15 seconds range as requested by user
-        duration = max(10, min(15, duration))
             
         # Call Qwen / DashScope API
         is_audio = project.production_type in ["Podcast", "Audio Story"]
@@ -1195,20 +1118,12 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
                         else:
                             raise ValueError("TTS Synthesis failed")
                 else:
-                    public_ref_image = ref_image
-                    if public_ref_image and (public_ref_image.startswith("/static/") or "localhost" in public_ref_image or "127.0.0.1" in public_ref_image):
-                        # Extract the path portion (e.g. /static/uploads/filename.png)
-                        local_relative_path = public_ref_image
-                        if "://" in local_relative_path:
-                            from urllib.parse import urlparse
-                            local_relative_path = urlparse(local_relative_path).path
-                        
-                        logger.info(f"Attempting to upload local relative reference image {local_relative_path} to tmpfiles.org...")
-                        uploaded_url = await asyncio.to_thread(upload_to_tmpfiles, local_relative_path)
-                        if uploaded_url:
-                            public_ref_image = uploaded_url
-                        else:
-                            logger.warning("Local reference image upload failed. Falling back to Text-to-Video.")
+                    public_ref_image = None
+                    if raw_ref_image:
+                        await redis_job_service.update_job_status(job_id, "processing", progress=60, message="Resolving Reference Assets...")
+                        public_ref_image = await AssetResolver.resolve_asset(raw_ref_image)
+                        if not public_ref_image or public_ref_image.startswith("/static/"):
+                            logger.warning("Asset resolution returned local/empty reference. Falling back to Text-to-Video.")
                             public_ref_image = None
                             model = "wan2.7-t2v"
                     
