@@ -1008,6 +1008,9 @@ export default function ProductionPage() {
   
   const assetsReadiness = (characterReadiness === 100 && environmentReadiness === 100 && voiceReadiness === 100) ? 100 : 0;
   
+  const approvedScenesCount = scenesStatus.filter(s => sceneVideos.some(v => v.scene_number === s.scene_number && v.is_approved)).length;
+  const sceneVideosReadiness = scenesStatus.length > 0 ? Math.round((approvedScenesCount / scenesStatus.length) * 100) : 0;
+  
   const overallReadiness = Math.round((characterReadiness + environmentReadiness + voiceReadiness + assetsReadiness) / 4);
   const isProductionReady = overallReadiness === 100;
 
@@ -1258,81 +1261,80 @@ export default function ProductionPage() {
                     </div>
 
                     {/* 2. PRODUCTION READINESS HUD */}
-                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
+                    <div className={`rounded-xl border p-6 transition-colors duration-500 ${
+                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#08080c] border-white/[0.04]'
                     }`}>
                       <div className="flex items-center gap-2 border-b pb-3.5 mb-5 border-white/[0.03]">
                         <FiSettings className="text-accent" size={14} />
                         <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
-                          Production Readiness HUD
+                          Production Progress Widget
                         </h3>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                        {/* Dial Indicator */}
-                        <div className="md:col-span-4 flex flex-col items-center justify-center text-center p-4 border-r border-dashed border-white/[0.05]">
-                          <div className="relative flex items-center justify-center">
-                            {/* Outer radial boundary */}
-                            <svg className="w-28 h-28 transform -rotate-90">
-                              <circle cx="56" cy="56" r="46" stroke="rgba(255,255,255,0.02)" strokeWidth="6" fill="transparent" />
-                              <circle 
-                                cx="56" 
-                                cy="56" 
-                                r="46" 
-                                stroke="#8b5cf6" 
-                                strokeWidth="6" 
-                                fill="transparent" 
-                                strokeDasharray={2 * Math.PI * 46}
-                                strokeDashoffset={2 * Math.PI * 46 * (1 - overallReadiness / 100)}
-                                className="transition-all duration-1000 ease-out"
-                              />
-                            </svg>
-                            <div className="absolute text-center">
-                              <span className="text-2xl font-black block tracking-tight">{overallReadiness}%</span>
-                              <span className="text-[8px] font-extrabold font-mono tracking-widest text-surface-500 uppercase">READINESS</span>
-                            </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                        {/* Overall progress indicator */}
+                        <div className="lg:col-span-5 flex flex-col justify-center p-4 border-r border-dashed border-white/[0.04] pr-8">
+                          <span className="text-[10px] font-extrabold tracking-widest text-surface-500 uppercase block mb-1">Overall Project Status</span>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-3xl font-black tracking-tight text-white">{overallReadiness}%</span>
+                            <span className="text-[9px] font-mono text-emerald-400 font-extrabold">READY FOR ASSEMBLY</span>
+                          </div>
+                          <div className="w-full bg-white/[0.04] h-2 rounded-full overflow-hidden mt-3 border border-white/[0.05]">
+                            <div className="bg-gradient-to-r from-purple-600 to-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${overallReadiness}%` }} />
                           </div>
                         </div>
 
-                        {/* Breakdown Grid */}
-                        <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                        {/* Breakdown Progress Bars */}
+                        <div className="lg:col-span-7 space-y-4">
+                          {/* Characters Progress */}
+                          <div>
                             <div className="flex justify-between items-center text-[10px] uppercase font-bold text-surface-450 tracking-wider">
-                              <span>Cast Profiles</span>
-                              <span className="text-emerald-400 font-mono">100%</span>
+                              <span>Cast & Characters</span>
+                              <span className="font-mono text-emerald-400">{characterReadiness}%</span>
                             </div>
-                            <div className="h-1.5 w-full bg-black/40 rounded-full mt-2 overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }} />
+                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
+                              <span className="text-emerald-400">
+                                {"█".repeat(Math.round(characterReadiness / 10)) + "░".repeat(10 - Math.round(characterReadiness / 10))}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                          {/* Environment Progress */}
+                          <div>
                             <div className="flex justify-between items-center text-[10px] uppercase font-bold text-surface-450 tracking-wider">
-                              <span>Environment Specs</span>
+                              <span>Cinematic Locations</span>
                               <span className={`${environmentReadiness === 100 ? 'text-emerald-400' : 'text-accent'} font-mono`}>{environmentReadiness}%</span>
                             </div>
-                            <div className="h-1.5 w-full bg-black/40 rounded-full mt-2 overflow-hidden">
-                              <div className="h-full bg-accent rounded-full transition-all duration-1000" style={{ width: `${environmentReadiness}%` }} />
+                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
+                              <span className={environmentReadiness === 100 ? "text-emerald-400" : "text-accent"}>
+                                {"█".repeat(Math.round(environmentReadiness / 10)) + "░".repeat(10 - Math.round(environmentReadiness / 10))}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                          {/* Voice Profiles Progress */}
+                          <div>
                             <div className="flex justify-between items-center text-[10px] uppercase font-bold text-surface-450 tracking-wider">
-                              <span>Voice Profiles</span>
+                              <span>Voice Synthesis Profiles</span>
                               <span className={`${voiceReadiness === 100 ? 'text-emerald-400' : 'text-accent'} font-mono`}>{voiceReadiness}%</span>
                             </div>
-                            <div className="h-1.5 w-full bg-black/40 rounded-full mt-2 overflow-hidden">
-                              <div className="h-full bg-accent rounded-full transition-all duration-1000" style={{ width: `${voiceReadiness}%` }} />
+                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
+                              <span className={voiceReadiness === 100 ? "text-emerald-400" : "text-accent"}>
+                                {"█".repeat(Math.round(voiceReadiness / 10)) + "░".repeat(10 - Math.round(voiceReadiness / 10))}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="p-3 bg-white/[0.01] border border-white/[0.03] rounded-lg">
+                          {/* Scenes Video Composites Progress */}
+                          <div>
                             <div className="flex justify-between items-center text-[10px] uppercase font-bold text-surface-450 tracking-wider">
-                              <span>Asset Packages</span>
-                              <span className={`${assetsReadiness === 100 ? 'text-emerald-400' : 'text-surface-500'} font-mono`}>{assetsReadiness}%</span>
+                              <span>Approved Scenes</span>
+                              <span className={`${sceneVideosReadiness === 100 ? 'text-emerald-400' : 'text-accent'} font-mono`}>{sceneVideosReadiness}%</span>
                             </div>
-                            <div className="h-1.5 w-full bg-black/40 rounded-full mt-2 overflow-hidden">
-                              <div className="h-full bg-accent rounded-full transition-all duration-1000" style={{ width: `${assetsReadiness}%` }} />
+                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
+                              <span className={sceneVideosReadiness === 100 ? "text-emerald-400" : "text-accent"}>
+                                {"█".repeat(Math.round(sceneVideosReadiness / 10)) + "░".repeat(10 - Math.round(sceneVideosReadiness / 10))}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1478,7 +1480,7 @@ export default function ProductionPage() {
                               }`}
                             >
                               {/* Top Portrait Frame */}
-                              <div className="relative aspect-[3/4] max-h-[300px] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
+                              <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
                                 {activeJob ? (
                                   /* Active generation job overlay */
                                   <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center select-none">
@@ -1576,7 +1578,7 @@ export default function ProductionPage() {
                                         {char.name}
                                       </h4>
                                       {hasAsset && (
-                                        <span className="text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                                        <span className="status-badge approved">
                                           Active Reference
                                         </span>
                                       )}
@@ -1724,7 +1726,7 @@ export default function ProductionPage() {
                                 }`}
                               >
                                 {/* Top Portrait Frame */}
-                                <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
+                                <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
                                   {activeJob ? (
                                     /* Active generation job overlay */
                                     <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center select-none">
@@ -1818,12 +1820,12 @@ export default function ProductionPage() {
                                           {env.name}
                                         </h4>
                                         {hasAsset ? (
-                                          <span className="text-[8px] font-extrabold font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
-                                            VERIFIED
+                                          <span className="status-badge approved shrink-0">
+                                            APPROVED
                                           </span>
                                         ) : (
-                                          <span className="text-[8px] font-extrabold font-mono uppercase px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
-                                            PENDING
+                                          <span className="status-badge waiting shrink-0">
+                                            WAITING
                                           </span>
                                         )}
                                       </div>
@@ -2286,31 +2288,33 @@ export default function ProductionPage() {
 
                           const activeJob = runningJobs[scene.scene_number_str] || runningJobs[`Scene ${String(scene.scene_number).padStart(2, '0')}`];
                           
-                          let statusLabel = "Locked";
-                          let statusColor = "bg-neutral-800 text-surface-500 border-white/[0.03]";
+                          let badgeClass = "waiting";
+                          let statusLabel = "LOCKED";
                           
                           if (activeJob) {
-                            statusLabel = "Generating";
-                            statusColor = "bg-cyan-500/10 border-cyan-500/30 text-cyan-400";
+                            statusLabel = "RENDERING";
+                            badgeClass = "generating";
                           } else if (activeVideo?.is_approved) {
-                            statusLabel = "Approved";
-                            statusColor = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+                            statusLabel = "APPROVED";
+                            badgeClass = "approved";
                           } else if (versions.length > 0) {
-                            statusLabel = "Pending Review";
-                            statusColor = "bg-amber-500/10 border-amber-500/30 text-amber-400";
+                            statusLabel = "PENDING REVIEW";
+                            badgeClass = "ready";
                           } else if (isUnlocked) {
-                            statusLabel = "Ready";
-                            statusColor = "bg-blue-500/10 border-blue-500/30 text-blue-400";
+                            statusLabel = "READY";
+                            badgeClass = "ready";
                           }
+
+                          const raw_ref_image = scene.details?.composed_reference || scene.details?.image_url || null;
 
                           return (
                             <div 
                               key={scene.scene_number}
-                              className={`rounded-xl border p-5 text-left transition-all duration-300 relative overflow-hidden ${
+                              className={`rounded-xl border p-6 text-left transition-all duration-300 relative overflow-hidden ${
                                 isUnlocked 
                                   ? d
                                     ? 'bg-white border-neutral-200 shadow-sm'
-                                    : 'bg-[#0b0b0f] border-white/[0.04] shadow-[0_4px_25px_rgba(0,0,0,0.25)]'
+                                    : 'bg-[#08080c] border-white/[0.04] shadow-[0_4px_25px_rgba(0,0,0,0.25)]'
                                   : d
                                     ? 'bg-neutral-50/50 border-neutral-100 opacity-60'
                                     : 'bg-white/[0.005] border-white/[0.02] opacity-40'
@@ -2319,6 +2323,95 @@ export default function ProductionPage() {
                               {/* Left lock border overlay */}
                               {!isUnlocked && (
                                 <div className="absolute top-0 bottom-0 left-0 w-1 bg-neutral-800" />
+                              )}
+
+                              {/* Media Player Box (Top, Full Width) */}
+                              {isUnlocked && (
+                                <div className="w-full mb-6 rounded-lg overflow-hidden border border-white/[0.06] bg-black">
+                                  {activeJob ? (
+                                    /* Active Job progress */
+                                    <div className="bg-black/85 backdrop-blur-[2px] flex flex-col items-center justify-center text-center space-y-3.5 h-[280px] select-none">
+                                      <div className="relative flex items-center justify-center">
+                                        <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                                        <span className="absolute text-[10px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
+                                      </div>
+                                      <div className="space-y-1 w-full max-w-xs">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 animate-pulse block">
+                                          {activeJob.message || 'Generating...'}
+                                        </span>
+                                        <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-2">
+                                          <div 
+                                            className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
+                                            style={{ width: `${activeJob.progress}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : activeVideo ? (
+                                    activeVideo.status === 'completed' ? (
+                                      project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? (
+                                        <div className="flex flex-col items-center justify-center w-full h-[180px] p-4 bg-gradient-to-br from-neutral-900 to-neutral-950">
+                                          <FiVolume2 className="text-accent animate-pulse mb-3" size={32} />
+                                          <audio 
+                                            controls 
+                                            src={apiBaseUrl + activeVideo.video_url} 
+                                            className="w-full max-w-md" 
+                                          />
+                                          <span className="text-[10px] text-surface-500 font-mono mt-3 select-none">AUDIO SPEECH TRACK ACTIVE</span>
+                                        </div>
+                                      ) : (
+                                        <video 
+                                          controls 
+                                          src={apiBaseUrl + activeVideo.video_url} 
+                                          className="w-full aspect-[21/9] md:aspect-[2.39/1] object-cover" 
+                                          poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
+                                        />
+                                      )
+                                    ) : (
+                                      /* Failed run block */
+                                      <div className="h-[200px] border border-red-500/20 bg-red-950/15 p-4 flex flex-col items-center justify-center text-center space-y-2 select-none overflow-y-auto">
+                                        <span className="text-red-400 text-lg">⚠️</span>
+                                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-red-400">Generation Failed</span>
+                                        <p className="text-[10px] text-red-300/80 leading-relaxed font-mono">
+                                          {activeVideo.error_message || "Video synthesis error."}
+                                        </p>
+                                      </div>
+                                    )
+                                  ) : (
+                                    /* Render box if ready to generate */
+                                    <div className="border border-dashed border-white/[0.08] bg-[#09090d]/50 p-5 flex flex-col items-center justify-center text-center space-y-4 h-[240px] select-none">
+                                      <FiVolume2 size={24} className="text-accent animate-pulse animate-duration-1000" />
+                                      <div className="space-y-1 w-full max-w-xs">
+                                        <span className="text-[10px] font-bold text-surface-450 uppercase tracking-widest block">Awaiting Render</span>
+                                        {project?.production_type === 'Podcast' ? (
+                                          <div className="flex flex-col gap-2 mt-2">
+                                            <label className="text-[9px] font-mono text-surface-500 uppercase tracking-wider text-left block">Select Podcast Duration</label>
+                                            <select
+                                              value={podcastDuration}
+                                              onChange={(e) => setPodcastDuration(Number(e.target.value))}
+                                              className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                            >
+                                              <option value={5}>5 Minutes (approx. 750 words)</option>
+                                              <option value={10}>10 Minutes (approx. 1500 words)</option>
+                                              <option value={15}>15 Minutes (approx. 2250 words)</option>
+                                            </select>
+                                          </div>
+                                        ) : (
+                                          <p className="text-[9px] text-surface-550 max-w-[200px] leading-normal mx-auto">
+                                            {scene.package_ready ? "Production assets mapped. Ready to synthesize." : "Requires missing pre-production assets."}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <button
+                                        onClick={() => handleGenerateScene(scene.scene_number_str)}
+                                        disabled={!scene.package_ready}
+                                        className={`px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-[0_0_12px_rgba(0,242,254,0.1)] hover:shadow-[0_0_18px_rgba(0,242,254,0.2)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none whitespace-nowrap`}
+                                      >
+                                        Generate Scene
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               )}
 
                               <div className="flex flex-col lg:flex-row gap-6">
@@ -2332,23 +2425,27 @@ export default function ProductionPage() {
                                         ) : (
                                           <span>Scene {String(scene.scene_number).padStart(2, '0')}</span>
                                         )}
-                                        <span className={`text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded border inline-flex items-center gap-1.5 ${statusColor}`}>
+                                        <span className={`status-badge ${badgeClass} inline-flex items-center gap-1.5`}>
                                           {!isUnlocked && <FiLock size={10} />}
                                           <span>{statusLabel}</span>
                                         </span>
                                       </h4>
-                                      {project?.production_type === 'Podcast' ? (
-                                        <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                                          Format: Audio MP3 | Runtime: {activeVideo?.duration ? `${activeVideo.duration}s` : '5-15 mins'}
-                                        </span>
-                                      ) : project?.production_type === 'Audio Story' ? (
-                                        <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                                          Segment: {scene.scene_number_str} | Runtime: {scene.details?.duration || "10s"}
-                                        </span>
-                                      ) : (
-                                        <span className={`text-[9px] font-mono block mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                                          Location: {scene.details?.location || "Not Set"} | Runtime: {scene.details?.duration || "10s"}
-                                        </span>
+
+                                      {/* Rich Scene Metadata Details */}
+                                      {isUnlocked && (
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[9px] font-mono text-surface-500 uppercase">
+                                          <span>Model: {activeVideo?.generation_model || (raw_ref_image ? "HappyHorse I2V" : "Wan2.7 T2V")}</span>
+                                          <span>•</span>
+                                          <span>Aspect: {project.aspect_ratio || "16:9"}</span>
+                                          <span>•</span>
+                                          <span>Length: {activeVideo?.duration ? `${activeVideo.duration}s` : "10s"}</span>
+                                          {activeVideo?.status === 'completed' && (
+                                            <>
+                                              <span>•</span>
+                                              <span className="text-emerald-400 font-semibold">Generated: Just Now</span>
+                                            </>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -2407,162 +2504,63 @@ export default function ProductionPage() {
                                   )}
                                 </div>
 
-                                {/* Right column: Generation HUD / Video Viewer */}
-                                <div className="w-full lg:w-[350px] shrink-0 flex flex-col justify-center">
-                                  {activeJob ? (
-                                    /* Active Job progress */
-                                    <div className="border border-white/[0.05] bg-black/60 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-3.5 h-48 select-none">
-                                      <div className="relative flex items-center justify-center">
-                                        <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                                        <span className="absolute text-[10px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
-                                      </div>
-                                      <div className="space-y-1 w-full">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 animate-pulse block">
-                                          {activeJob.message || 'Generating...'}
-                                        </span>
-                                        <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-2">
-                                          <div 
-                                            className="bg-gradient-to-r from-cyan-400 to-purple-500 h-full rounded-full transition-all duration-300"
-                                            style={{ width: `${activeJob.progress}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : activeVideo ? (
-                                    /* Completed scene block */
-                                    <div className="space-y-3.5">
-                                      {activeVideo.status === 'completed' ? (
-                                        <div className="relative w-full rounded-xl overflow-hidden border border-white/[0.05] bg-black group h-48 flex items-center justify-center">
-                                          {(project?.production_type === 'Podcast' || project?.production_type === 'Audio Story') ? (
-                                            <div className="flex flex-col items-center justify-center w-full h-full p-4 bg-gradient-to-br from-neutral-900 to-neutral-950">
-                                              <FiVolume2 className="text-accent animate-pulse mb-3" size={32} />
-                                              <audio 
-                                                controls 
-                                                src={apiBaseUrl + activeVideo.video_url} 
-                                                className="w-full max-w-xs" 
-                                              />
-                                              <span className="text-[10px] text-surface-500 font-mono mt-3 select-none">AUDIO SPEECH TRACK ACTIVE</span>
-                                            </div>
-                                          ) : (
-                                            <video 
-                                              controls 
-                                              src={apiBaseUrl + activeVideo.video_url} 
-                                              className="w-full h-full object-cover" 
-                                              poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
-                                            />
-                                          )}
-                                        </div>
-                                      ) : (
-                                        /* Failed run block */
-                                        <div className="h-48 border border-red-500/20 bg-red-950/15 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2 select-none overflow-y-auto">
-                                          <span className="text-red-400 text-lg">⚠️</span>
-                                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-red-400">Generation Failed</span>
-                                          <p className="text-[10px] text-red-300/80 leading-relaxed font-mono">
-                                            {activeVideo.error_message || "Video synthesis error."}
-                                          </p>
-                                        </div>
-                                      )}
-
-                                      {/* Controls & Versions bar */}
-                                      <div className="flex gap-2 items-center">
-                                        <div className="flex-1 flex flex-col gap-0.5 text-left">
-                                          <label className="text-[8px] font-extrabold uppercase text-surface-500 tracking-wider">Version Cut</label>
-                                          <select
-                                            value={activeVideo.id}
-                                            onChange={(e) => setSelectedVersionsMap(prev => ({ ...prev, [scene.scene_number]: Number(e.target.value) }))}
-                                            className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
-                                          >
-                                            {versions.map(v => (
-                                              <option key={v.id} value={v.id}>
-                                                V{v.version} {v.is_approved ? '(Approved)' : ''}
-                                              </option>
-                                            ))}
-                                          </select>
-                                        </div>
-
-                                        <div className="flex gap-1.5 mt-auto">
-                                          {activeVideo.status === 'completed' && !activeVideo.is_approved && (
-                                            <button
-                                              onClick={() => handleApproveScene(activeVideo.id)}
-                                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] shadow-[0_0_10px_rgba(16,185,129,0.15)] whitespace-nowrap"
-                                            >
-                                              Approve
-                                            </button>
-                                          )}
-                                          {activeVideo.status === 'completed' && (
-                                            <a
-                                              href={apiBaseUrl + activeVideo.video_url}
-                                              download={project?.production_type === 'Podcast' ? `podcast_v${activeVideo.version}.mp3` : `scene_${scene.scene_number}_v${activeVideo.version}.mp4`}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className="px-2.5 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] inline-flex items-center justify-center whitespace-nowrap"
-                                              title={project?.production_type === 'Podcast' ? "Download MP3 audio file" : "Download MP4 video file"}
-                                            >
-                                              Download
-                                            </a>
-                                          )}
-                                          <button
-                                            onClick={() => handleGenerateScene(scene.scene_number_str)}
-                                            className="px-2 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] whitespace-nowrap"
-                                            title="Queue a new version render"
-                                          >
-                                            Regen
-                                          </button>
-                                        </div>
-                                      </div>
-
-                                      {/* Model badge */}
-                                      {activeVideo.status === 'completed' && (
-                                        <div className="flex justify-between items-center text-[9px] font-mono text-surface-500 border-t border-white/[0.03] pt-2">
-                                          <span>Model: <strong className="text-cyan-400">{project?.production_type === 'Podcast' ? 'Qwen-TTS + Script Expansion' : activeVideo.generation_model}</strong></span>
-                                          <span>Cost: 80 Credits</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : isUnlocked ? (
-                                    /* Render box if ready to generate */
-                                    <div className="border border-dashed border-white/[0.08] bg-[#09090d]/50 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-4 h-56 select-none">
-                                      <FiVolume2 size={24} className="text-accent animate-pulse" />
-                                      <div className="space-y-1 w-full max-w-[280px]">
-                                        <span className="text-[10px] font-bold text-surface-450 uppercase tracking-widest block">Awaiting Audio Synthesis</span>
-                                        {project?.production_type === 'Podcast' ? (
-                                          <div className="flex flex-col gap-2 mt-2">
-                                            <label className="text-[9px] font-mono text-surface-500 uppercase tracking-wider text-left block">Select Podcast Duration</label>
-                                            <select
-                                              value={podcastDuration}
-                                              onChange={(e) => setPodcastDuration(Number(e.target.value))}
-                                              className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
-                                            >
-                                              <option value={5}>5 Minutes (approx. 750 words)</option>
-                                              <option value={10}>10 Minutes (approx. 1500 words)</option>
-                                              <option value={15}>15 Minutes (approx. 2250 words)</option>
-                                            </select>
-                                          </div>
-                                        ) : (
-                                          <p className="text-[9px] text-surface-550 max-w-[200px] leading-normal">
-                                            {scene.package_ready ? "Production assets mapped. Ready to synthesize." : "Requires missing pre-production assets."}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <button
-                                        onClick={() => handleGenerateScene(scene.scene_number_str)}
-                                        disabled={!scene.package_ready}
-                                        className={`px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-[0_0_12px_rgba(0,242,254,0.1)] hover:shadow-[0_0_18px_rgba(0,242,254,0.2)] transition-all duration-300 transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none whitespace-nowrap`}
+                                {/* Right column: Action Controls & Versions Bar */}
+                                {isUnlocked && activeVideo && (
+                                  <div className="w-full lg:w-[300px] shrink-0 flex flex-col justify-end border-t lg:border-t-0 lg:border-l border-white/[0.03] lg:pt-0 lg:pl-6 pt-4 space-y-4">
+                                    <div className="flex flex-col gap-1 text-left">
+                                      <label className="text-[8px] font-extrabold uppercase text-surface-500 tracking-wider">Version Cut</label>
+                                      <select
+                                        value={activeVideo.id}
+                                        onChange={(e) => setSelectedVersionsMap(prev => ({ ...prev, [scene.scene_number]: Number(e.target.value) }))}
+                                        className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
                                       >
-                                        Generate Scene
-                                      </button>
+                                        {versions.map(v => (
+                                          <option key={v.id} value={v.id}>
+                                            V{v.version} {v.is_approved ? '(Approved)' : ''}
+                                          </option>
+                                        ))}
+                                      </select>
                                     </div>
-                                  ) : (
-                                    /* Locked state */
-                                    <div className="border border-white/[0.02] bg-white/[0.002] rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-2 h-48 select-none">
-                                      <FiLock size={20} className="text-surface-600" />
-                                      <span className="text-[10px] font-bold text-surface-550 uppercase tracking-wider">Locked</span>
-                                      <p className="text-[9px] text-surface-600 max-w-[200px] leading-normal">
-                                        Approve prior scenes to unlock this sequence in the production pipeline.
-                                      </p>
+
+                                    <div className="flex flex-col gap-2">
+                                      {activeVideo.status === 'completed' && !activeVideo.is_approved && (
+                                        <button
+                                          onClick={() => handleApproveScene(activeVideo.id)}
+                                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.15)] whitespace-nowrap active:scale-[0.98]"
+                                        >
+                                          Approve Version
+                                        </button>
+                                      )}
+                                      
+                                      <div className="flex gap-2">
+                                        {activeVideo.status === 'completed' && (
+                                          <a
+                                            href={apiBaseUrl + activeVideo.video_url}
+                                            download={project?.production_type === 'Podcast' ? `podcast_v${activeVideo.version}.mp3` : `scene_${scene.scene_number}_v${activeVideo.version}.mp4`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex-1 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] inline-flex items-center justify-center whitespace-nowrap active:scale-[0.98]"
+                                            title="Download generated asset"
+                                          >
+                                            Download
+                                          </a>
+                                        )}
+                                        <button
+                                          onClick={() => handleGenerateScene(scene.scene_number_str)}
+                                          className="flex-1 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] whitespace-nowrap active:scale-[0.98]"
+                                        >
+                                          Regen
+                                        </button>
+                                      </div>
                                     </div>
-                                  )}
-                                </div>
+
+                                    {activeVideo.status === 'completed' && (
+                                      <div className="flex justify-between items-center text-[9px] font-mono text-surface-600 border-t border-white/[0.03] pt-2">
+                                        <span>Cost: 80 Credits</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
