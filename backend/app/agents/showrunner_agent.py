@@ -153,6 +153,9 @@ class ShowrunnerAgent:
         
         Concept:
         {prompt}
+
+        CRITICAL USER CONSTRAINT RULE:
+        If the user concept/prompt specifies any explicit production constraints (such as a strict limit on the number of scenes, specific locations, pacing, mood, character attributes, or narrative style), you MUST prioritize and strictly adhere to those instructions. Do not let default format generation guidelines override explicit user requests.
  
         Format Generation Rules:
         {format_rules}

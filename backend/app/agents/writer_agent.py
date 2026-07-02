@@ -28,7 +28,7 @@ class WriterAgent:
         Guidelines:
         {format_guidelines}
 
-        Return 5 to 7 detailed scenes or sections. Use standard dialogue blocks starting with '>'.
+        Return 5 to 7 detailed scenes or sections (UNLESS the user concept/prompt explicitly requests a specific number of scenes, in which case strictly respect the requested number of scenes). Use standard dialogue blocks starting with '>'.
         """
         script = qwen_service.generate_text(writer_prompt)
         return script

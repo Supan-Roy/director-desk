@@ -218,4 +218,214 @@ class SceneBreakdownAgent:
             }
         }
 
+    def generate_single_scene_breakdown(
+        self,
+        prompt: str,
+        script: str,
+        storyboard_scene: dict,
+        scene_idx: int,
+        total_scenes: int
+    ) -> Dict[str, Any]:
+        """
+        Generate detailed specs for a single scene.
+        """
+        sb_scene_str = json.dumps(storyboard_scene, indent=2)
+        system_prompt = f"""
+        You are the Scene Breakdown Agent, a production coordinator in an AI film studio.
+        Your task is to analyze the script and the storyboard scene information, and generate a highly detailed, professional production specification for a SINGLE scene.
+        
+        PRODUCTION INFO:
+        - Original Prompt: {prompt}
+        - Script: {script}
+        - Storyboard Scene details: {sb_scene_str}
+        - Scene Index: SCENE {scene_idx} of {total_scenes}
+        
+        MISSION:
+        Generate detailed scene specifications matching exactly the schema below for SCENE {scene_idx}.
+        Every scene duration MUST be set to exactly "10 seconds" or "15 seconds" depending on the scene's content.
+        
+        You must output ONLY a valid JSON object matching exactly this schema:
+        {{
+          "scene_number": "SCENE {scene_idx:02d}",
+          "title": "Scene Title",
+          "duration": "10 seconds" or "15 seconds",
+          "summary": "Brief summary of visible events",
+          "location": "Location name",
+          "environment": "Environment details",
+          "time_of_day": "Time of day (e.g. Night, Day, Dusk, Dawn)",
+          "weather": "Weather condition",
+          "characters": ["Character names"],
+          "character_descriptions": "Character visual details",
+          "wardrobe": "Wardrobe description",
+          "props": ["List of props"],
+          "visual_style": "Visual style theme",
+          "mood": "Mood description",
+          "color_palette": ["List of dominant colors"],
+          "camera_setup": "Camera setup",
+          "camera_movement": "Camera movement description",
+          "shot_type": "Shot type (e.g. Close Up, Wide Shot)",
+          "lighting_design": "Lighting description",
+          "audio_notes": "Audio notes, dialogue, voice or sound SFX cues",
+          "special_effects": "VFX details",
+          "transition_notes": "Transition notes",
+          "ai_generation_prompt": "Cinematic visual description prompt for AI video generator (focus on visible actions, camera, lighting, and motion)",
+          "negative_prompt": "Negative prompt text"
+        }}
+        
+        Return ONLY the raw JSON object (no markdown code blocks, no trailing text, no introduction).
+        """
+        try:
+            response_text = qwen_service.generate_text(system_prompt).strip()
+            if response_text.startswith("```"):
+                response_text = re.sub(r"^```[a-zA-Z]*\n", "", response_text)
+                response_text = re.sub(r"\n```$", "", response_text)
+                response_text = response_text.strip()
+            return json.loads(response_text)
+        except Exception as e:
+            logger.error(f"Failed to generate single scene breakdown for scene {scene_idx}: {e}")
+            s = storyboard_scene
+            s_scene = s.get("scene", s.get("scene_number", scene_idx))
+            s_shot = s.get("shot", s.get("camera_shot", "Wide Shot"))
+            s_env = s.get("environment", "Set")
+            s_mood = s.get("mood", "Neutral")
+            return {
+                "scene_number": f"SCENE {scene_idx:02d}",
+                "title": s_shot,
+                "duration": "10 seconds",
+                "summary": f"Visual scene demonstrating {s_shot} in {s_env}.",
+                "location": s_env,
+                "environment": s_env,
+                "time_of_day": "Day",
+                "weather": "Clear",
+                "characters": [],
+                "character_descriptions": "N/A",
+                "wardrobe": "N/A",
+                "props": [],
+                "visual_style": "Cinematic",
+                "mood": s_mood,
+                "color_palette": ["cinematic colors"],
+                "camera_setup": "Standard Setup",
+                "camera_movement": "Static",
+                "shot_type": s_shot,
+                "lighting_design": "Natural lighting",
+                "audio_notes": "Ambient sound",
+                "special_effects": "None",
+                "transition_notes": "Cut",
+                "ai_generation_prompt": f"Grounded cinematic shot, {s_shot} in {s_env}, {s_mood} mood, natural lighting, high quality",
+                "negative_prompt": "blurry, low quality, cartoon, static"
+            }
+
+    def generate_breakdown_progressive(
+        self,
+        prompt: str,
+        script: str,
+        storyboard_scenes: list
+    ):
+        """
+        Progressively generates scene breakdown card by card.
+        Yields the breakdown dictionary after each card is generated.
+        """
+        scenes = []
+        total_runtime_seconds = 0
+        all_characters = set()
+        all_locations = set()
+        all_props = set()
+        all_sounds = set()
+        all_vfx = set()
+
+        total_scenes = len(storyboard_scenes)
+        
+        # Initial empty breakdown structure to begin streaming immediately
+        breakdown_accumulated = {
+            "total_runtime": "Calculating...",
+            "consistency_warnings": [],
+            "scenes": [],
+            "asset_requirements": {
+                "characters_needed": [],
+                "locations_needed": [],
+                "props_needed": [],
+                "sound_requirements": [],
+                "vfx_requirements": []
+            }
+        }
+        yield breakdown_accumulated
+
+        for idx, s in enumerate(storyboard_scenes, 1):
+            s_dict = {
+                "scene_number": s.scene_number if hasattr(s, "scene_number") else s.get("scene_number", s.get("scene", idx)),
+                "camera_shot": s.camera_shot if hasattr(s, "camera_shot") else s.get("camera_shot", s.get("shot", "Wide Shot")),
+                "environment": s.environment if hasattr(s, "environment") else s.get("environment", s.get("location", "Set")),
+                "mood": s.mood if hasattr(s, "mood") else s.get("mood", "Neutral")
+            }
+            
+            # Generate single scene card spec
+            scene_card = self.generate_single_scene_breakdown(prompt, script, s_dict, idx, total_scenes)
+            scenes.append(scene_card)
+
+            # Process duration
+            dur_str = scene_card.get("duration", "10 seconds")
+            try:
+                dur_val = int(re.search(r'\d+', dur_str).group())
+            except Exception:
+                dur_val = 10
+            total_runtime_seconds += dur_val
+
+            # Accumulate assets
+            for char in scene_card.get("characters", []):
+                if char: all_characters.add(char.strip())
+            loc = scene_card.get("location")
+            if loc: all_locations.add(loc.strip())
+            for prop in scene_card.get("props", []):
+                if prop: all_props.add(prop.strip())
+            audio_n = scene_card.get("audio_notes")
+            if audio_n and "dialogue" not in audio_n.lower():
+                all_sounds.add(audio_n.strip())
+            vfx = scene_card.get("special_effects")
+            if vfx and vfx.lower() != "none" and vfx.lower() != "n/a":
+                all_vfx.add(vfx.strip())
+
+            breakdown_accumulated = {
+                "total_runtime": f"{total_runtime_seconds} seconds",
+                "consistency_warnings": [],
+                "scenes": list(scenes),
+                "asset_requirements": {
+                    "characters_needed": sorted(list(all_characters)),
+                    "locations_needed": sorted(list(all_locations)),
+                    "props_needed": sorted(list(all_props)),
+                    "sound_requirements": sorted(list(all_sounds)) if all_sounds else ["Cinematic atmospheric track"],
+                    "vfx_requirements": sorted(list(all_vfx))
+                }
+            }
+            yield breakdown_accumulated
+
+        # Final audit step to extract consistency warnings!
+        try:
+            logger.info("Running consistency audit over generated scenes breakdown...")
+            audit_prompt = f"""
+            Perform a production consistency audit across the following generated scene specs.
+            Check for inconsistencies in character wardrobe, locations, times of day, lighting, or props.
+            
+            Script:
+            {script}
+            
+            Detailed Scenes:
+            {json.dumps(scenes, indent=2)}
+            
+            Return a JSON list of consistency warnings (e.g., ["Scene 2 has daylight but Scene 1 was night"]).
+            If no warnings are found, return exactly [].
+            Return ONLY the raw JSON list (no introduction, no markdown).
+            """
+            audit_resp = qwen_service.generate_text(audit_prompt).strip()
+            if audit_resp.startswith("```"):
+                audit_resp = re.sub(r"^```[a-zA-Z]*\n", "", audit_resp)
+                audit_resp = re.sub(r"\n```$", "", audit_resp)
+                audit_resp = audit_resp.strip()
+            warnings = json.loads(audit_resp)
+            if isinstance(warnings, list):
+                breakdown_accumulated["consistency_warnings"] = warnings
+        except Exception as e:
+            logger.warning(f"Failed to generate consistency warnings audit: {e}")
+
+        yield breakdown_accumulated
+
 scene_breakdown_agent = SceneBreakdownAgent()

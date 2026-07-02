@@ -150,7 +150,7 @@ class ShowrunnerService:
             Guidelines:
             {format_guidelines}
 
-            Return 5 to 7 detailed scenes or sections. Use standard dialogue blocks starting with '>'.
+            Return 5 to 7 detailed scenes or sections (UNLESS the user concept/prompt explicitly requests a specific number of scenes, in which case strictly respect the requested number of scenes). Use standard dialogue blocks starting with '>'.
             """
             
             script_accumulated = ""
@@ -260,51 +260,82 @@ class ShowrunnerService:
                         "vfx_requirements": []
                     }
                 }
-            else:
-                sb_text = storyboard_text_accumulated if production_type != "Audio Story" else "N/A (Audio Production - No Storyboard)"
-                breakdown = scene_breakdown_agent.generate_breakdown(
-                    full_prompt,
-                    script_accumulated,
-                    sb_text,
-                    None
-                )
-            
-            project_state.scene_breakdown = breakdown
-            project_state.set_agent_status("scene_breakdown", "completed", "just now")
-            yield {
-                "type": "agent_status_change",
-                "agent": "scene_breakdown",
-                "status": "completed"
-            }
-
-            # Progressive scene_breakdown stream in Studio mode
-            scenes = breakdown.get("scenes", []) if breakdown else []
-            if not scenes:
+                project_state.scene_breakdown = breakdown
+                project_state.set_agent_status("scene_breakdown", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "scene_breakdown",
+                    "status": "completed"
+                }
                 yield {
                     "type": "scene_breakdown",
                     "data": breakdown
                 }
             else:
-                for i in range(1, len(scenes) + 1):
-                    partial = dict(breakdown)
-                    partial["scenes"] = scenes[:i]
-                    is_last = (i == len(scenes))
+                storyboard_scenes = storyboard_parsed if 'storyboard_parsed' in locals() else []
+                if not storyboard_scenes:
+                    storyboard_scenes = storyboard_parser.parse(storyboard_text_accumulated)
+                
+                breakdown = None
+                for partial in scene_breakdown_agent.generate_breakdown_progressive(
+                    full_prompt,
+                    script_accumulated,
+                    storyboard_scenes
+                ):
+                    breakdown = partial
                     yield {
-                        "type": "scene_breakdown" if is_last else "scene_breakdown_chunk",
+                        "type": "scene_breakdown_chunk",
                         "data": partial
                     }
-                    time.sleep(0.4)
+                
+                project_state.scene_breakdown = breakdown
+                project_state.set_agent_status("scene_breakdown", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "scene_breakdown",
+                    "status": "completed"
+                }
+                yield {
+                    "type": "scene_breakdown",
+                    "data": breakdown
+                }
+
+            time.sleep(0.3)
 
             # Stage 4: Production Planner Agent generates phase-wise actions
             project_state.set_agent_status("planner", "active")
-            plan = planner_agent.generate_plan(title, script_accumulated, storyboard_text_accumulated, production_type)
-            
-            project_state.production_plan = plan
-            project_state.set_agent_status("planner", "completed", "just now")
-
             yield {
-                "type": "production_plan",
-                "data": plan
+                "type": "agent_status_change",
+                "agent": "planner",
+                "status": "active"
+            }
+            
+            plan = planner_agent.generate_plan(title, script_accumulated, storyboard_text_accumulated, production_type)
+            project_state.production_plan = plan
+            
+            # Stream the plan phases progressively item-by-item
+            phases = plan.get("phases", []) if plan else []
+            partial_phases = []
+            for p in phases:
+                p_copy = dict(p)
+                p_items = p.get("items", [])
+                p_copy["items"] = []
+                partial_phases.append(p_copy)
+                for idx in range(1, len(p_items) + 1):
+                    p_copy["items"] = p_items[:idx]
+                    partial_plan = dict(plan)
+                    partial_plan["phases"] = list(partial_phases)
+                    yield {
+                        "type": "production_plan",
+                        "data": partial_plan
+                    }
+                    time.sleep(0.3)
+                
+            project_state.set_agent_status("planner", "completed", "just now")
+            yield {
+                "type": "agent_status_change",
+                "agent": "planner",
+                "status": "completed"
             }
 
             # Stage 5: Critic Agent generates structured review
@@ -322,7 +353,6 @@ class ShowrunnerService:
                 critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated) or {}
                 project_state.critic_review = critic_review
                 project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
-                project_state.set_agent_status("critic", "completed", "just now")
                 
                 # Progressive stream in Studio mode
                 partial_critic = {}
@@ -350,6 +380,13 @@ class ShowrunnerService:
                     partial_critic["suggestions"] = suggestions[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
+
+                project_state.set_agent_status("critic", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "critic",
+                    "status": "completed"
+                }
 
                 yield {
                     "type": "critic_review",
@@ -482,55 +519,75 @@ class ShowrunnerService:
                         "vfx_requirements": []
                     }
                 }
+                project_state.scene_breakdown = breakdown
+                project_state.set_agent_status("scene_breakdown", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "scene_breakdown",
+                    "status": "completed"
+                }
+                yield {
+                    "type": "scene_breakdown",
+                    "data": breakdown
+                }
             else:
-                breakdown = scene_breakdown_agent.generate_breakdown(
+                storyboard_scenes = result.get("storyboard", [])
+                breakdown = None
+                for partial in scene_breakdown_agent.generate_breakdown_progressive(
                     full_prompt,
                     result["script"],
-                    storyboard_text,
-                    result.get("production_plan")
-                )
+                    storyboard_scenes
+                ):
+                    breakdown = partial
+                    yield {
+                        "type": "scene_breakdown_chunk",
+                        "data": partial
+                    }
+                
+                project_state.scene_breakdown = breakdown
+                project_state.set_agent_status("scene_breakdown", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "scene_breakdown",
+                    "status": "completed"
+                }
+                yield {
+                    "type": "scene_breakdown",
+                    "data": breakdown
+                }
             
-            project_state.scene_breakdown = breakdown
-            project_state.set_agent_status("scene_breakdown", "completed", "just now")
-            yield {
-                "type": "agent_status_change",
-                "agent": "scene_breakdown",
-                "status": "completed"
-            }
-            
+            time.sleep(0.3)
+
+            # 5. Production Plan
             project_state.set_agent_status("planner", "active")
             yield {
                 "type": "agent_status_change",
                 "agent": "planner",
                 "status": "active"
             }
-            
-            # Progressive scene_breakdown: stream scenes one-by-one so the UI
-            # can display them as they arrive (like storyboard).
-            scenes = breakdown.get("scenes", []) if breakdown else []
-            if not scenes:
-                # For audio / empty breakdowns, emit one shot with full breakdown
-                yield {
-                    "type": "scene_breakdown",
-                    "data": breakdown
-                }
-            else:
-                for i in range(1, len(scenes) + 1):
-                    partial = dict(breakdown)
-                    partial["scenes"] = scenes[:i]
-                    is_last = (i == len(scenes))
-                    yield {
-                        "type": "scene_breakdown" if is_last else "scene_breakdown_chunk",
-                        "data": partial
-                    }
-                    time.sleep(0.4)
-            
             time.sleep(0.3)
 
-            # 5. Production Plan
             plan = result["production_plan"]
-            
             project_state.production_plan = plan
+            
+            # Stream the plan phases progressively item-by-item
+            phases = plan.get("phases", []) if plan else []
+            partial_phases = []
+            for p in phases:
+                p_copy = dict(p)
+                p_items = p.get("items", [])
+                p_copy["items"] = []
+                partial_phases.append(p_copy)
+                for idx in range(1, len(p_items) + 1):
+                    p_copy["items"] = p_items[:idx]
+                    partial_plan = dict(plan)
+                    partial_plan["phases"] = list(partial_phases)
+                    yield {
+                        "type": "production_plan",
+                        "data": partial_plan
+                    }
+                    time.sleep(0.3)
+
             project_state.set_agent_status("planner", "completed", "just now")
             yield {
                 "type": "agent_status_change",
@@ -538,16 +595,14 @@ class ShowrunnerService:
                 "status": "completed"
             }
             
+            time.sleep(0.3)
+
+            # 6. Critic Review
             project_state.set_agent_status("critic", "active")
             yield {
                 "type": "agent_status_change",
                 "agent": "critic",
                 "status": "active"
-            }
-            
-            yield {
-                "type": "production_plan",
-                "data": plan
             }
             
             time.sleep(0.5)
@@ -571,12 +626,6 @@ class ShowrunnerService:
                 critic_review = result.get("critic_review") or {}
                 project_state.critic_review = critic_review
                 project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
-                project_state.set_agent_status("critic", "completed", "just now")
-                yield {
-                    "type": "agent_status_change",
-                    "agent": "critic",
-                    "status": "completed"
-                }
                 
                 # Build up partial critic_review progressively:
                 # First emit the header fields (score, overall_rating)
@@ -608,6 +657,13 @@ class ShowrunnerService:
                     partial_critic["suggestions"] = suggestions[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
+
+                project_state.set_agent_status("critic", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "critic",
+                    "status": "completed"
+                }
 
                 # Final complete critic_review
                 yield {
