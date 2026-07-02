@@ -188,6 +188,7 @@ export function ProjectDataProvider({ children }) {
     setLoading(true)
     setError(null)
     setHasProject(true)
+    let currentProductionType = prodType
     setActiveProjectId(null)
     setTitle("Analyzing Creative Concept...")
     setScript("")
@@ -232,15 +233,27 @@ export function ProjectDataProvider({ children }) {
       let buffer = ''
 
       const processEvent = (event) => {
-        if (event.type === 'title') {
+        if (event.type === 'agent_status_change') {
+          setAgents((prev) => prev.map((agent) => {
+            if (agent.id === event.agent) {
+              const updated = { ...agent, status: event.status }
+              if (event.status === 'completed') {
+                updated.completedAt = 'just now'
+              }
+              return updated
+            }
+            return agent
+          }))
+        } else if (event.type === 'title') {
           setTitle(event.data)
         } else if (event.type === 'production_type') {
           setProductionType(event.data)
+          currentProductionType = event.data
         } else if (event.type === 'script_chunk') {
           setScript((prev) => prev + event.data)
         } else if (event.type === 'storyboard') {
           setStoryboard(event.data)
-          const isAudio = event.data.length === 0
+          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
           setAgents([
             { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
             { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: isAudio ? "completed" : "active", completedAt: isAudio ? "N/A" : null },
@@ -250,7 +263,7 @@ export function ProjectDataProvider({ children }) {
           ])
         } else if (event.type === 'production_plan') {
           setProductionPlan(event.data)
-          const isAudio = storyboard && storyboard.length === 0;
+          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
           setAgents([
             { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
             { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: isAudio ? "N/A" : "just now" },
@@ -258,9 +271,41 @@ export function ProjectDataProvider({ children }) {
             { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
             { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "active" }
           ])
+        } else if (event.type === 'critic_review_chunk') {
+          setCriticReview((prev) => {
+            if (!prev) return event.data
+            const merged = { ...prev, ...event.data }
+            ;['strengths', 'weaknesses', 'suggestions'].forEach((key) => {
+              if (Array.isArray(event.data[key]) && Array.isArray(prev[key])) {
+                merged[key] = event.data[key].length >= prev[key].length ? event.data[key] : prev[key]
+              } else if (Array.isArray(event.data[key])) {
+                merged[key] = event.data[key]
+              }
+            })
+            return merged
+          })
+          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
+          setAgents([
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: isAudio ? "completed" : "completed", completedAt: isAudio ? "N/A" : "just now" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: isAudio ? "completed" : "just now" },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "active" }
+          ])
         } else if (event.type === 'critic_review') {
-          setCriticReview(event.data)
-          const isAudio = storyboard && storyboard.length === 0;
+          setCriticReview((prev) => {
+            if (!prev) return event.data
+            const merged = { ...prev, ...event.data }
+            ;['strengths', 'weaknesses', 'suggestions'].forEach((key) => {
+              if (Array.isArray(event.data[key]) && Array.isArray(prev[key])) {
+                merged[key] = event.data[key].length >= prev[key].length ? event.data[key] : prev[key]
+              } else if (Array.isArray(event.data[key])) {
+                merged[key] = event.data[key]
+              }
+            })
+            return merged
+          })
+          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
           setAgents([
             { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
             { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: isAudio ? "N/A" : "just now" },
@@ -268,18 +313,44 @@ export function ProjectDataProvider({ children }) {
             { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
             { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "completed", completedAt: "just now" }
           ])
-        } else if (event.type === 'scene_breakdown') {
-          setSceneBreakdown(event.data)
-          const isAudio = !event.data || !event.data.scenes || event.data.scenes.length === 0;
+        } else if (event.type === 'scene_breakdown_chunk') {
+          setSceneBreakdown((prev) => {
+            if (!prev) return event.data
+            const incoming = event.data
+            if (!incoming) return prev
+            const prevScenes = prev.scenes || []
+            const nextScenes = incoming.scenes || []
+            const mergedScenes = nextScenes.length >= prevScenes.length ? nextScenes : prevScenes
+            return { ...prev, ...incoming, scenes: mergedScenes }
+          })
+          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
           setAgents([
             { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: storyboard && storyboard.length === 0 ? "N/A" : "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: isAudio ? "completed" : "completed", completedAt: isAudio ? "N/A" : "just now" },
+            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "active" },
+            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "waiting" },
+            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" }
+          ])
+        } else if (event.type === 'scene_breakdown') {
+          setSceneBreakdown((prev) => {
+            if (!prev) return event.data
+            const incoming = event.data
+            if (!incoming) return prev
+            const prevScenes = prev.scenes || []
+            const nextScenes = incoming.scenes || []
+            const mergedScenes = nextScenes.length >= prevScenes.length ? nextScenes : prevScenes
+            return { ...prev, ...incoming, scenes: mergedScenes }
+          })
+          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
+          setAgents([
+            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
+            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: isAudio ? "N/A" : "just now" },
             { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "completed", completedAt: isAudio ? "N/A" : "just now" },
             { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "active" },
             { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" }
           ])
         } else if (event.type === 'complete') {
-          const isAudio = storyboard && storyboard.length === 0;
+          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
           setAgents([
             { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
             { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: isAudio ? "N/A" : "just now" },
@@ -520,8 +591,35 @@ export function ProjectDataProvider({ children }) {
             }
             return agent
           }))
+        } else if (event.type === 'scene_breakdown_chunk') {
+          setSceneBreakdown((prev) => {
+            if (!prev) return event.data
+            const incoming = event.data
+            if (!incoming) return prev
+            const prevScenes = prev.scenes || []
+            const nextScenes = incoming.scenes || []
+            const mergedScenes = nextScenes.length >= prevScenes.length ? nextScenes : prevScenes
+            return { ...prev, ...incoming, scenes: mergedScenes }
+          })
+          setAgents((prev) => prev.map((agent) => {
+            if (agent.id === 'scene_breakdown') {
+              return { ...agent, status: 'active' }
+            }
+            if (agent.id === 'planner') {
+              return { ...agent, status: 'waiting' }
+            }
+            return agent
+          }))
         } else if (event.type === 'scene_breakdown') {
-          setSceneBreakdown(event.data)
+          setSceneBreakdown((prev) => {
+            if (!prev) return event.data
+            const incoming = event.data
+            if (!incoming) return prev
+            const prevScenes = prev.scenes || []
+            const nextScenes = incoming.scenes || []
+            const mergedScenes = nextScenes.length >= prevScenes.length ? nextScenes : prevScenes
+            return { ...prev, ...incoming, scenes: mergedScenes }
+          })
           setAgents((prev) => prev.map((agent) => {
             if (agent.id === 'scene_breakdown') {
               return { ...agent, status: 'completed', completedAt: 'just now' }
@@ -542,8 +640,38 @@ export function ProjectDataProvider({ children }) {
             }
             return agent
           }))
+        } else if (event.type === 'critic_review_chunk') {
+          setCriticReview((prev) => {
+            if (!prev) return event.data
+            const merged = { ...prev, ...event.data }
+            ;['strengths', 'weaknesses', 'suggestions'].forEach((key) => {
+              if (Array.isArray(event.data[key]) && Array.isArray(prev[key])) {
+                merged[key] = event.data[key].length >= prev[key].length ? event.data[key] : prev[key]
+              } else if (Array.isArray(event.data[key])) {
+                merged[key] = event.data[key]
+              }
+            })
+            return merged
+          })
+          setAgents((prev) => prev.map((agent) => {
+            if (agent.id === 'critic') {
+              return { ...agent, status: 'active' }
+            }
+            return agent
+          }))
         } else if (event.type === 'critic_review') {
-          setCriticReview(event.data)
+          setCriticReview((prev) => {
+            if (!prev) return event.data
+            const merged = { ...prev, ...event.data }
+            ;['strengths', 'weaknesses', 'suggestions'].forEach((key) => {
+              if (Array.isArray(event.data[key]) && Array.isArray(prev[key])) {
+                merged[key] = event.data[key].length >= prev[key].length ? event.data[key] : prev[key]
+              } else if (Array.isArray(event.data[key])) {
+                merged[key] = event.data[key]
+              }
+            })
+            return merged
+          })
           setAgents((prev) => prev.map((agent) => {
             if (agent.id === 'critic') {
               return { ...agent, status: 'completed', completedAt: 'just now' }

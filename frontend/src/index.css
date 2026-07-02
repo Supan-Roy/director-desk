@@ -49,9 +49,14 @@
     background: rgba(255, 255, 255, 0.14);
   }
 
-  /* Selection */
+  /* Selection — blue highlight instead of purple */
   ::selection {
-    background: rgba(139, 92, 246, 0.25);
+    background: rgba(59, 130, 246, 0.35);
+    color: inherit;
+  }
+  ::-moz-selection {
+    background: rgba(59, 130, 246, 0.35);
+    color: inherit;
   }
 
   /* Custom HTML Select Dropdowns */

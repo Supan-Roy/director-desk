@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import { 
   FiFileText, FiImage, FiClipboard, FiEdit3, FiCheck,
@@ -6,7 +6,6 @@ import {
 } from 'react-icons/fi';
 import { PiSparkle } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
-import { useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { encodeId } from '../utils/hashids';
@@ -243,7 +242,7 @@ function ScriptTab({ script }) {
 
 function StoryboardTab({ storyboard, productionType }) {
   const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
-  if (!storyboard || storyboard.length === 0) {
+  if (!Array.isArray(storyboard) || storyboard.length === 0) {
     return (
       <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
         <p className="text-sm text-surface-600">
@@ -257,39 +256,72 @@ function StoryboardTab({ storyboard, productionType }) {
 
   return (
     <div className="space-y-3">
-      {storyboard.map((scene) => (
-        <div key={scene.scene} className="scene-card flex gap-4">
-          {/* Scene number + thumbnail placeholder */}
-          <div className="flex shrink-0 flex-col items-center gap-2">
-            <div className="flex h-14 w-20 items-center justify-center rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06]">
-              <FiImage size={16} className="text-surface-600" />
-            </div>
-            <span className="text-[10px] font-semibold text-accent/60">
-              #{scene.scene}
-            </span>
-          </div>
+      {Array.isArray(storyboard) && storyboard.map((s, idx) => {
+        if (!s) return null;
 
-          {/* Scene details */}
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <h4 className="text-sm font-medium text-surface-200">{scene.shot}</h4>
+        let sceneNum = idx + 1;
+        if (s.scene !== undefined && s.scene !== null) {
+          sceneNum = typeof s.scene === 'object' ? (s.scene.scene ?? s.scene.number ?? idx + 1) : s.scene;
+        } else if (s.scene_number !== undefined && s.scene_number !== null) {
+          sceneNum = typeof s.scene_number === 'object' ? (s.scene_number.scene ?? s.scene_number.number ?? idx + 1) : s.scene_number;
+        }
+
+        let shotVal = "Untitled Shot";
+        if (s.shot !== undefined && s.shot !== null) {
+          shotVal = typeof s.shot === 'object' ? (s.shot.shot ?? s.shot.title ?? "Untitled Shot") : s.shot;
+        } else if (s.camera_shot !== undefined && s.camera_shot !== null) {
+          shotVal = typeof s.camera_shot === 'object' ? (s.camera_shot.shot ?? s.camera_shot.title ?? "Untitled Shot") : s.camera_shot;
+        }
+
+        let descVal = "";
+        if (s.description !== undefined && s.description !== null) {
+          descVal = typeof s.description === 'object' ? (s.description.description ?? s.description.text ?? "") : s.description;
+        }
+
+        let envVal = "";
+        if (s.environment !== undefined && s.environment !== null) {
+          envVal = typeof s.environment === 'object' ? (s.environment.environment ?? s.environment.name ?? "") : s.environment;
+        }
+
+        let moodVal = "Mood";
+        if (s.mood !== undefined && s.mood !== null) {
+          moodVal = typeof s.mood === 'object' ? (s.mood.mood ?? s.mood.name ?? "Mood") : s.mood;
+        }
+
+        return (
+          <div key={idx} className="scene-card flex gap-4">
+            {/* Scene number + thumbnail placeholder */}
+            <div className="flex shrink-0 flex-col items-center gap-2">
+              <div className="flex h-14 w-20 items-center justify-center rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06]">
+                <FiImage size={16} className="text-surface-600" />
+              </div>
+              <span className="text-[10px] font-semibold text-accent/60">
+                #{String(sceneNum)}
+              </span>
             </div>
-            <p className="text-[12px] leading-relaxed text-surface-400">{scene.description}</p>
-            <div className="flex flex-wrap gap-1.5">
-              <span className="badge-shot">{scene.shot}</span>
-              <span className="badge-mood">{scene.mood}</span>
+
+            {/* Scene details */}
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="text-sm font-medium text-surface-200">{String(shotVal)}</h4>
+              </div>
+              <p className="text-[12px] leading-relaxed text-surface-400">{String(descVal)}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="badge-shot">{String(shotVal)}</span>
+                <span className="badge-mood">{String(moodVal)}</span>
+              </div>
+              <p className="text-[11px] text-surface-500">
+                <span className="text-surface-600">Env:</span> {String(envVal)}
+              </p>
             </div>
-            <p className="text-[11px] text-surface-500">
-              <span className="text-surface-600">Env:</span> {scene.environment}
-            </p>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function SceneBreakdownTab({ breakdown, productionType }) {
+function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
   const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
   const { isDayMode: d } = useTheme();
   const [copiedPrompt, setCopiedPrompt] = useState(null);
@@ -314,7 +346,67 @@ function SceneBreakdownTab({ breakdown, productionType }) {
     );
   }
 
-  if (!breakdown || !breakdown.scenes || breakdown.scenes.length === 0) {
+  // Build display breakdown by overlaying generated details onto storyboard scenes structure
+  let displayBreakdown = breakdown;
+  let hasPlaceholders = false;
+
+  if (storyboard && storyboard.length > 0 && loading) {
+    const generatedScenes = breakdown?.scenes || [];
+    const scenesList = storyboard.map((s, idx) => {
+      if (!s) return null;
+      if (generatedScenes[idx]) {
+        return { ...generatedScenes[idx], isPlaceholder: false };
+      }
+      if (idx > generatedScenes.length) {
+        return null;
+      }
+      hasPlaceholders = true;
+      
+      const sScene = typeof s === 'object' ? (s.scene ?? s.scene_number) : null;
+      const sShot = typeof s === 'object' ? (s.shot ?? s.camera_shot) : null;
+      const sEnv = typeof s === 'object' ? s.environment : null;
+      const sMood = typeof s === 'object' ? s.mood : null;
+      const sDesc = typeof s === 'object' ? (s.description ?? s.description_prompt) : null;
+
+      return {
+        scene_number: `SCENE ${String(sScene ?? idx + 1).padStart(2, '0')}`,
+        title: sShot || "Scene Specifications",
+        duration: "10 seconds",
+        location: sEnv || "Set",
+        environment: sEnv || "Set",
+        time_of_day: "Analyzing...",
+        weather: "Analyzing...",
+        characters: [],
+        character_descriptions: "Analyzing details...",
+        wardrobe: "Analyzing details...",
+        props: [],
+        visual_style: "Cinematic",
+        mood: sMood || "Atmospheric",
+        camera_setup: "Analyzing Setup...",
+        camera_movement: "Analyzing...",
+        shot_type: sShot || "Standard Shot",
+        lighting_design: "Analyzing...",
+        audio_notes: "Analyzing audio cue details...",
+        ai_generation_prompt: sDesc || sShot || "Generating visual description prompt...",
+        isPlaceholder: true
+      };
+    }).filter(Boolean);
+
+    displayBreakdown = {
+      total_runtime: breakdown?.total_runtime || `${storyboard.length * 10}s (Estimating...)`,
+      consistency_warnings: breakdown?.consistency_warnings || [],
+      scenes: scenesList,
+      asset_requirements: breakdown?.asset_requirements || {
+        characters_needed: [],
+        locations_needed: [],
+        props_needed: [],
+        sound_requirements: [],
+        vfx_requirements: []
+      }
+    };
+  }
+
+  if (!displayBreakdown || !displayBreakdown.scenes || displayBreakdown.scenes.length === 0) {
     return (
       <div className={`flex min-h-[260px] flex-col items-center justify-center text-sm gap-2 ${
         d ? 'text-neutral-400' : 'text-surface-550'
@@ -326,7 +418,7 @@ function SceneBreakdownTab({ breakdown, productionType }) {
   }
 
   return (
-    <div className="space-y-8 text-left">
+    <div className="space-y-8 text-left select-text">
       {/* Overview Block */}
       <div className={`rounded-xl border p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
         d ? 'bg-neutral-50/50 border-neutral-200' : 'bg-[#111111] border-white/[0.04]'
@@ -345,21 +437,21 @@ function SceneBreakdownTab({ breakdown, productionType }) {
               ESTIMATED RUNTIME
             </span>
             <span className="text-sm font-black text-accent">
-              {breakdown.total_runtime || "Calculating..."}
+              {displayBreakdown.total_runtime || "Calculating..."}
             </span>
           </div>
         </div>
       </div>
 
       {/* Warnings Block */}
-      {breakdown.consistency_warnings && breakdown.consistency_warnings.length > 0 && (
+      {Array.isArray(displayBreakdown.consistency_warnings) && displayBreakdown.consistency_warnings.length > 0 && (
         <div className="rounded-xl border border-amber-500/10 bg-amber-500/[0.02] p-4">
           <div className="flex items-center gap-2 text-amber-500 text-xs font-bold uppercase tracking-wider mb-2">
             <FiAlertCircle size={14} />
             <span>Consistency Audit Warnings</span>
           </div>
           <ul className="list-disc pl-4 space-y-1">
-            {breakdown.consistency_warnings.map((warn, i) => (
+            {displayBreakdown.consistency_warnings.map((warn, i) => (
               <li key={i} className={`text-[11px] font-mono leading-relaxed ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
                 {warn}
               </li>
@@ -370,199 +462,232 @@ function SceneBreakdownTab({ breakdown, productionType }) {
 
       {/* Scenes List */}
       <div className="space-y-6">
-        {breakdown.scenes.map((scene, idx) => (
-          <div 
-            key={idx} 
-            className={`rounded-xl border transition-all duration-300 ${
-              d 
-                ? 'bg-white border-neutral-200 shadow-sm hover:border-neutral-300' 
-                : 'bg-[#0B0B0B] border-white/[0.05] hover:border-white/[0.08]'
-            }`}
-          >
-            {/* Scene Header */}
-            <div className={`px-5 py-4 border-b flex flex-wrap justify-between items-center gap-3 ${
-              d ? 'border-neutral-100 bg-neutral-50/30' : 'border-white/[0.04] bg-[#111111]/30'
-            }`}>
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-bold font-mono text-accent">
-                  {scene.scene_number || `SCENE ${idx + 1}`}
-                </span>
-                <h3 className={`text-sm font-bold tracking-wide truncate ${d ? 'text-neutral-900' : 'text-white'}`}>
-                  {scene.title || "Untitled Scene"}
-                </h3>
-              </div>
-              <span className={`text-[10px] font-bold font-mono px-2.5 py-1 rounded-full border ${
-                d ? 'bg-neutral-50 border-neutral-200 text-neutral-600' : 'bg-white/[0.03] border-white/[0.08] text-surface-400'
+        {Array.isArray(displayBreakdown.scenes) && displayBreakdown.scenes.map((scene, idx) => {
+          if (!scene) return null;
+          const placeholderClass = scene.isPlaceholder 
+            ? `animate-pulse rounded text-transparent select-none pointer-events-none ${d ? 'bg-neutral-100' : 'bg-white/[0.04]'}` 
+            : '';
+          
+          return (
+            <div 
+              key={idx} 
+              className={`rounded-xl border transition-all duration-300 animate-fade-in ${
+                d 
+                  ? 'bg-white border-neutral-200 shadow-sm hover:border-neutral-300' 
+                  : 'bg-[#0B0B0B] border-white/[0.05] hover:border-white/[0.08]'
+              }`}
+            >
+              {/* Scene Header */}
+              <div className={`px-5 py-4 border-b flex flex-wrap justify-between items-center gap-3 ${
+                d ? 'border-neutral-100 bg-neutral-50/30' : 'border-white/[0.04] bg-[#111111]/30'
               }`}>
-                ⏱️ {scene.duration || "8s"}
-              </span>
-            </div>
-
-            {/* Scene Specs Grid */}
-            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6 text-[12px] leading-relaxed">
-              {/* Col 1: Environment & Location */}
-              <div className="space-y-3.5">
-                <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
-                  <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                    Location & Space
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-bold font-mono text-accent">
+                    {scene.scene_number || `SCENE ${idx + 1}`}
                   </span>
+                  <h3 className={`text-sm font-bold tracking-wide truncate ${d ? 'text-neutral-900' : 'text-white'} ${placeholderClass}`}>
+                    {scene.title || "Untitled Scene"}
+                  </h3>
                 </div>
-                <div>
-                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Location</span>
-                  <span className={`font-mono block mt-0.5 ${d ? 'text-neutral-955' : 'text-neutral-200'}`}>{scene.location || "N/A"}</span>
-                </div>
-                <div>
-                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Environment</span>
-                  <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.environment || "N/A"}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Time of Day</span>
-                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'}`}>{scene.time_of_day || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Weather</span>
-                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'}`}>{scene.weather || "N/A"}</span>
-                  </div>
-                </div>
+                <span className={`text-[10px] font-bold font-mono px-2.5 py-1 rounded-full border ${
+                  d ? 'bg-neutral-50 border-neutral-200 text-neutral-600' : 'bg-white/[0.03] border-white/[0.08] text-surface-400'
+                } ${placeholderClass}`}>
+                  ⏱️ {scene.duration || "8s"}
+                </span>
               </div>
 
-              {/* Col 2: Casting & Props */}
-              <div className="space-y-3.5">
-                <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
-                  <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                    Casting & Props
-                  </span>
+              {/* Scene Specs Grid */}
+              <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6 text-[12px] leading-relaxed">
+                {/* Col 1: Location & Space */}
+                <div className="space-y-3.5">
+                  <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                      Location & Space
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Location</span>
+                    <span className={`font-mono block mt-0.5 ${d ? 'text-neutral-955' : 'text-neutral-200'} ${placeholderClass}`}>
+                      {scene.location || "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Environment</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'} ${placeholderClass}`}>
+                      {scene.environment || "N/A"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Time of Day</span>
+                      <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'} ${placeholderClass}`}>
+                        {scene.time_of_day || "N/A"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Weather</span>
+                      <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'} ${placeholderClass}`}>
+                        {scene.weather || "N/A"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Characters</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {Array.isArray(scene.characters) ? (
-                      scene.characters.map((char, i) => (
-                        <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border ${
-                          d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-white/[0.02] border-white/[0.06] text-neutral-200'
-                        }`}>
-                          {char}
+
+                {/* Col 2: Casting & Props */}
+                <div className="space-y-3.5">
+                  <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                      Casting & Props
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Characters</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {Array.isArray(scene.characters) && scene.characters.length > 0 ? (
+                        scene.characters.map((char, i) => (
+                          <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border ${
+                            d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-white/[0.02] border-white/[0.06] text-neutral-200'
+                          }`}>
+                            {char}
+                          </span>
+                        ))
+                      ) : (
+                        <span className={`text-neutral-350 ${placeholderClass}`}>
+                          {scene.isPlaceholder ? "Analyzing characters..." : (scene.characters || "None")}
                         </span>
-                      ))
-                    ) : (
-                      <span className={`text-neutral-350`}>{scene.characters || "None"}</span>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Visual Profile & Wardrobe</span>
-                  <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'}`}>{scene.character_descriptions || scene.wardrobe || "N/A"}</span>
-                </div>
-                <div>
-                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Key Props</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {Array.isArray(scene.props) ? (
-                      scene.props.map((prop, i) => (
-                        <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] font-medium border ${
-                          d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-white/[0.02] border-white/[0.06] text-neutral-300'
-                        }`}>
-                          {prop}
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Visual Profile & Wardrobe</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'} ${placeholderClass}`}>
+                      {scene.character_descriptions || scene.wardrobe || "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Key Props</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {Array.isArray(scene.props) && scene.props.length > 0 ? (
+                        scene.props.map((prop, i) => (
+                          <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] font-medium border ${
+                            d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-white/[0.02] border-white/[0.06] text-neutral-300'
+                          }`}>
+                            {prop}
+                          </span>
+                        ))
+                      ) : (
+                        <span className={`text-neutral-350 ${placeholderClass}`}>
+                          {scene.isPlaceholder ? "Analyzing props..." : (scene.props || "None")}
                         </span>
-                      ))
-                    ) : (
-                      <span className={`text-neutral-350`}>{scene.props || "None"}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Col 3: Cinematography & Audio */}
+                <div className="space-y-3.5">
+                  <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                      Cinematography & Audio
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Camera Setup</span>
+                      <span className={`block mt-0.5 font-mono text-[10px] ${d ? 'text-neutral-905' : 'text-neutral-200'} ${placeholderClass}`}>
+                        {scene.camera_setup || "N/A"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Movement</span>
+                      <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'} ${placeholderClass}`}>
+                        {scene.camera_movement || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Shot Type</span>
+                      <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'} ${placeholderClass}`}>
+                        {scene.shot_type || "N/A"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Lighting</span>
+                      <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'} ${placeholderClass}`}>
+                        {scene.lighting_design || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Audio Design & SFX</span>
+                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'} ${placeholderClass}`}>
+                      {scene.audio_notes || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prompt Generation Section */}
+              <div className={`px-5 py-4 border-t flex flex-col gap-3 rounded-b-xl ${
+                d ? 'border-neutral-100 bg-neutral-50/20' : 'border-white/[0.04] bg-white/[0.005]'
+              }`}>
+                {/* AI Visual Prompt */}
+                <div>
+                  <div className="flex items-center justify-between gap-3 mb-1.5">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-accent">
+                      AI Visual Description Prompt
+                    </span>
+                    {!scene.isPlaceholder && (
+                      <button
+                        onClick={() => handleCopyPrompt(scene.ai_generation_prompt, idx)}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase transition-all duration-150 cursor-pointer ${
+                          copiedPrompt === idx 
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-accent/10 text-accent hover:bg-accent/20'
+                        }`}
+                      >
+                        {copiedPrompt === idx ? (
+                          <>
+                            <FiCheck size={10} />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>📋 Copy Prompt</span>
+                          </>
+                        )}
+                      </button>
                     )}
                   </div>
-                </div>
-              </div>
-
-              {/* Col 3: Cinematography & Audio */}
-              <div className="space-y-3.5">
-                <div className={`border-b pb-2 ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
-                  <span className={`text-[9px] font-bold uppercase tracking-wider ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                    Cinematography & Audio
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Camera Setup</span>
-                    <span className={`block mt-0.5 font-mono text-[10px] ${d ? 'text-neutral-905' : 'text-neutral-200'}`}>{scene.camera_setup || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Movement</span>
-                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.camera_movement || "N/A"}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Shot Type</span>
-                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.shot_type || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Lighting</span>
-                    <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-300'}`}>{scene.lighting_design || "N/A"}</span>
-                  </div>
-                </div>
-                <div>
-                  <span className={`font-semibold block ${d ? 'text-neutral-500' : 'text-surface-400'}`}>Audio Design & SFX</span>
-                  <span className={`block mt-0.5 ${d ? 'text-neutral-800' : 'text-neutral-355'}`}>{scene.audio_notes || "N/A"}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Prompt Generation Section */}
-            <div className={`px-5 py-4 border-t flex flex-col gap-3 rounded-b-xl ${
-              d ? 'border-neutral-100 bg-neutral-50/20' : 'border-white/[0.04] bg-white/[0.005]'
-            }`}>
-              {/* AI Visual Prompt */}
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-1.5">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-accent">
-                    AI Generation Prompt (Wan/Veo/Luma Optimized)
-                  </span>
-                  <button
-                    onClick={() => handleCopyPrompt(scene.ai_generation_prompt, idx)}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase transition-all duration-150 cursor-pointer ${
-                      copiedPrompt === idx 
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-accent/10 text-accent hover:bg-accent/20'
-                    }`}
-                  >
-                    {copiedPrompt === idx ? (
-                      <>
-                        <FiCheck size={10} />
-                        <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>📋 Copy Prompt</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <p className={`font-mono text-[11px] leading-relaxed p-3 rounded-lg border whitespace-pre-wrap select-all ${
-                  d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-black/40 border-white/[0.04] text-neutral-200'
-                }`}>
-                  {scene.ai_generation_prompt || "N/A"}
-                </p>
-              </div>
-
-              {/* Negative Prompt */}
-              {scene.negative_prompt && (
-                <div>
-                  <span className={`text-[9px] font-bold uppercase tracking-wider block mb-1 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                    Negative Prompt
-                  </span>
-                  <p className={`font-mono text-[10px] p-2.5 rounded-lg border ${
-                    d ? 'bg-neutral-50/50 border-neutral-150 text-neutral-500' : 'bg-black/20 border-white/[0.03] text-surface-400'
-                  }`}>
-                    {scene.negative_prompt}
+                  <p className={`font-mono text-[11px] leading-relaxed p-3 rounded-lg border whitespace-pre-wrap select-all ${
+                    d ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-black/40 border-white/[0.04] text-neutral-200'
+                  } ${placeholderClass}`}>
+                    {scene.ai_generation_prompt || "N/A"}
                   </p>
                 </div>
-              )}
+
+                {/* Negative Prompt */}
+                {scene.negative_prompt && (
+                  <div>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider block mb-1 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                      Negative Prompt
+                    </span>
+                    <p className={`font-mono text-[10px] p-2.5 rounded-lg border ${
+                      d ? 'bg-neutral-50/50 border-neutral-150 text-neutral-500' : 'bg-black/20 border-white/[0.03] text-surface-400'
+                    } ${placeholderClass}`}>
+                      {scene.negative_prompt}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Consolidated Asset Requirements */}
-      {breakdown.asset_requirements && (
+      {displayBreakdown.asset_requirements && (
         <div className={`rounded-xl border p-5 ${
           d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
         }`}>
@@ -585,9 +710,9 @@ function SceneBreakdownTab({ breakdown, productionType }) {
                 Characters Needed
               </span>
               <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(breakdown.asset_requirements.characters_needed) && breakdown.asset_requirements.characters_needed.length > 0 ? (
-                  breakdown.asset_requirements.characters_needed.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                {Array.isArray(displayBreakdown.asset_requirements.characters_needed) && displayBreakdown.asset_requirements.characters_needed.length > 0 ? (
+                  displayBreakdown.asset_requirements.characters_needed.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
                   ))
                 ) : (
                   <li className="text-surface-500 font-mono list-none">None</li>
@@ -601,9 +726,9 @@ function SceneBreakdownTab({ breakdown, productionType }) {
                 Locations Needed
               </span>
               <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(breakdown.asset_requirements.locations_needed) && breakdown.asset_requirements.locations_needed.length > 0 ? (
-                  breakdown.asset_requirements.locations_needed.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                {Array.isArray(displayBreakdown.asset_requirements.locations_needed) && displayBreakdown.asset_requirements.locations_needed.length > 0 ? (
+                  displayBreakdown.asset_requirements.locations_needed.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
                   ))
                 ) : (
                   <li className="text-surface-500 font-mono list-none">None</li>
@@ -617,9 +742,9 @@ function SceneBreakdownTab({ breakdown, productionType }) {
                 Props Needed
               </span>
               <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(breakdown.asset_requirements.props_needed) && breakdown.asset_requirements.props_needed.length > 0 ? (
-                  breakdown.asset_requirements.props_needed.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                {Array.isArray(displayBreakdown.asset_requirements.props_needed) && displayBreakdown.asset_requirements.props_needed.length > 0 ? (
+                  displayBreakdown.asset_requirements.props_needed.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
                   ))
                 ) : (
                   <li className="text-surface-500 font-mono list-none">None</li>
@@ -633,8 +758,8 @@ function SceneBreakdownTab({ breakdown, productionType }) {
                 Sound Design SFX
               </span>
               <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(breakdown.asset_requirements.sound_requirements) && breakdown.asset_requirements.sound_requirements.length > 0 ? (
-                  breakdown.asset_requirements.sound_requirements.map((item, i) => (
+                {Array.isArray(displayBreakdown.asset_requirements.sound_requirements) && displayBreakdown.asset_requirements.sound_requirements.length > 0 ? (
+                  displayBreakdown.asset_requirements.sound_requirements.map((item, i) => (
                     <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
                   ))
                 ) : (
@@ -649,9 +774,9 @@ function SceneBreakdownTab({ breakdown, productionType }) {
                 VFX Overlay Cues
               </span>
               <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(breakdown.asset_requirements.vfx_requirements) && breakdown.asset_requirements.vfx_requirements.length > 0 ? (
-                  breakdown.asset_requirements.vfx_requirements.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-350'}`} title={item}>{item}</li>
+                {Array.isArray(displayBreakdown.asset_requirements.vfx_requirements) && displayBreakdown.asset_requirements.vfx_requirements.length > 0 ? (
+                  displayBreakdown.asset_requirements.vfx_requirements.map((item, i) => (
+                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
                   ))
                 ) : (
                   <li className="text-surface-500 font-mono list-none">None</li>
@@ -677,7 +802,7 @@ function ProductionPlanTab({ plan }) {
   return (
     <div className="space-y-4">
       <h4 className="text-sm font-medium text-surface-200">{plan.title}</h4>
-      {plan.phases.map((phase) => (
+      {Array.isArray(plan.phases) && plan.phases.map((phase) => (
         <div key={phase.name} className="glass-panel rounded-xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <h5 className="text-[13px] font-medium text-surface-200">{phase.name}</h5>
@@ -692,7 +817,7 @@ function ProductionPlanTab({ plan }) {
             </span>
           </div>
           <ul className="space-y-2">
-            {phase.items.map((item, i) => (
+            {Array.isArray(phase.items) && phase.items.map((item, i) => (
               <li key={i} className="flex items-start gap-2.5 text-[12px] text-surface-400">
                 <span
                   className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${
@@ -723,7 +848,7 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
   const { score, strengths = [], weaknesses = [], suggestions = [] } = criticReview;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-text">
       {/* Score and Header Card */}
       <div className="glass-panel rounded-2xl p-6 bg-surface-950/45 border border-white/[0.04] flex items-center justify-between gap-6 flex-wrap">
         <div className="space-y-1">
@@ -733,7 +858,7 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
         <div className="flex items-center gap-3">
           <div className="text-[10px] uppercase font-bold tracking-widest text-surface-500">Overall Score</div>
           <div className="flex items-center justify-center w-14 h-14 rounded-full border border-accent/25 bg-accent/5 text-xl font-extrabold text-accent shadow-[0_0_15px_rgba(139,92,246,0.15)] select-none">
-            {score}/10
+            {score || "N/A"}/10
           </div>
         </div>
       </div>
@@ -747,13 +872,13 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
             <h5 className="text-[11px] font-bold uppercase tracking-wider">Strengths</h5>
           </div>
           <ul className="space-y-2.5">
-            {strengths.map((str, i) => (
-              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed">
+            {Array.isArray(strengths) && strengths.map((str, i) => (
+              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed animate-fade-in">
                 <span className="text-emerald-400 mt-1 shrink-0 select-none">•</span>
                 <span>{str}</span>
               </li>
             ))}
-            {strengths.length === 0 && (
+            {(!Array.isArray(strengths) || strengths.length === 0) && (
               <li className="text-[12px] text-surface-500 italic">No strengths listed.</li>
             )}
           </ul>
@@ -766,13 +891,13 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
             <h5 className="text-[11px] font-bold uppercase tracking-wider">Weaknesses</h5>
           </div>
           <ul className="space-y-2.5">
-            {weaknesses.map((wk, i) => (
-              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed">
+            {Array.isArray(weaknesses) && weaknesses.map((wk, i) => (
+              <li key={i} className="flex items-start gap-2 text-[12px] text-surface-300 leading-relaxed animate-fade-in">
                 <span className="text-rose-400 mt-1 shrink-0 select-none">•</span>
                 <span>{wk}</span>
               </li>
             ))}
-            {weaknesses.length === 0 && (
+            {(!Array.isArray(weaknesses) || weaknesses.length === 0) && (
               <li className="text-[12px] text-surface-500 italic">No weaknesses listed.</li>
             )}
           </ul>
@@ -786,13 +911,13 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
           <h5 className="text-[11px] font-bold uppercase tracking-wider">Refinement Suggestions</h5>
         </div>
         <ul className="space-y-3">
-          {suggestions.map((sug, i) => (
-            <li key={i} className="flex items-start gap-2.5 text-[12px] text-surface-300 leading-relaxed">
+          {Array.isArray(suggestions) && suggestions.map((sug, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-[12px] text-surface-300 leading-relaxed animate-fade-in">
               <span className="text-accent font-mono font-bold mt-0.5 shrink-0 select-none">{i+1}.</span>
               <span>{sug}</span>
             </li>
           ))}
-          {suggestions.length === 0 && (
+          {(!Array.isArray(suggestions) || suggestions.length === 0) && (
             <li className="text-[12px] text-surface-500 italic">No suggestions listed.</li>
           )}
         </ul>
@@ -850,10 +975,67 @@ export default function TabbedContent() {
     approved,
     approveProject,
     refineProject,
-    loading,
+    loading, // represents contextLoading (active streaming status)
     sceneBreakdown,
-    activeProjectId
+    activeProjectId,
+    agents
   } = useProjectData();
+
+  const tabScrollContainerRef = useRef(null);
+
+  // Auto-switch tabs to follow the active agent during generation
+  useEffect(() => {
+    if (!loading || !agents) return;
+    const activeAgent = agents.find(a => a.status === 'active');
+    if (!activeAgent) return;
+
+    const agentToTabMap = {
+      writer: 'script',
+      storyboard: 'storyboard',
+      scene_breakdown: 'breakdown',
+      planner: 'plan',
+      critic: 'review'
+    };
+
+    const targetTab = agentToTabMap[activeAgent.id];
+    if (targetTab && targetTab !== activeTab) {
+      let isAllowed = true;
+      if (productionType === 'Podcast') {
+        isAllowed = targetTab === 'script' || targetTab === 'plan';
+      } else if (productionType === 'Audio Story') {
+        isAllowed = targetTab !== 'storyboard';
+      }
+      
+      if (isAllowed) {
+        setActiveTab(targetTab);
+      }
+    }
+  }, [agents, loading, productionType, activeTab]);
+
+  // Auto-scroll to the bottom of the tab content container during streaming
+  useEffect(() => {
+    if (!loading) return;
+    const container = tabScrollContainerRef.current;
+    if (container) {
+      const scroll = () => {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      };
+      scroll();
+      const t = setTimeout(scroll, 50);
+      return () => clearTimeout(t);
+    }
+  }, [
+    loading,
+    script,
+    storyboard,
+    sceneBreakdown,
+    productionPlan,
+    criticReview,
+    activeTab
+  ]);
 
   return (
     <section>
@@ -867,7 +1049,15 @@ export default function TabbedContent() {
 
       {/* Tab headers */}
       <div className="mb-4 flex gap-1 rounded-xl bg-white/[0.02] p-1 ring-1 ring-white/[0.04]">
-        {tabs.map((tab) => (
+        {tabs.filter(tab => {
+          if (productionType === 'Podcast') {
+            return tab.id === 'script' || tab.id === 'plan';
+          }
+          if (productionType === 'Audio Story') {
+            return tab.id !== 'storyboard';
+          }
+          return true;
+        }).map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -884,10 +1074,10 @@ export default function TabbedContent() {
       </div>
 
       {/* Tab content */}
-      <div className="max-h-[520px] overflow-y-auto pr-1">
+      <div ref={tabScrollContainerRef} className="max-h-[520px] overflow-y-auto pr-1">
         {activeTab === 'script' && <ScriptTab script={script} />}
         {activeTab === 'storyboard' && <StoryboardTab storyboard={storyboard} productionType={productionType} />}
-        {activeTab === 'breakdown' && <SceneBreakdownTab breakdown={sceneBreakdown} productionType={productionType} />}
+        {activeTab === 'breakdown' && <SceneBreakdownTab breakdown={sceneBreakdown} storyboard={storyboard} productionType={productionType} loading={loading} />}
         {activeTab === 'plan' && <ProductionPlanTab plan={productionPlan} />}
         {activeTab === 'review' && (
           <ReviewTab 

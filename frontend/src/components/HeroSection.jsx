@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle, FiAlertTriangle, FiX } from 'react-icons/fi';
+import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle, FiAlertTriangle, FiX, FiPlus } from 'react-icons/fi';
 import { PiSparkle, PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
@@ -815,10 +815,12 @@ export default function HeroSection({
   const getCoreClass = () => {
     if (loading) return "absolute w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(52,211,153,0.5)] transition-all duration-300";
     if (focused) {
-      if (orbAnimating) return "absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/30 via-purple-600/20 to-pink-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(139,92,246,0.4)] scale-105 transition-all duration-300";
-      return "absolute w-4 h-4 rounded-full bg-gradient-to-tr from-accent/15 to-purple-800/20 flex items-center justify-center shadow-[0_0_8px_rgba(139,92,246,0.2)] scale-105 transition-all duration-300";
+      if (orbAnimating) return `absolute w-6 h-6 rounded-full flex items-center justify-center scale-105 transition-all duration-300 ${isDayMode ? 'bg-black text-white' : 'bg-white text-black'}`;
+      return `absolute w-6 h-6 rounded-full flex items-center justify-center scale-105 transition-all duration-300 ${isDayMode ? 'bg-black text-white' : 'bg-white text-black'}`;
     }
-    return "absolute w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center shadow-[0_0_8px_rgba(139,92,246,0.3)] transition-all duration-300";
+    return `absolute w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
+      isDayMode ? 'bg-black text-white hover:scale-105' : 'bg-white text-black hover:scale-105'
+    }`;
   };
 
   return (
@@ -950,10 +952,12 @@ export default function HeroSection({
                 {loading ? (
                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
                 ) : (
-                  <div className={`w-1.5 h-1.5 relative ${focused && orbAnimating ? 'animate-pulse' : ''}`}>
-                    <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-accent/80" />
-                    <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-accent/80" />
-                  </div>
+                  <FiPlus 
+                    size={12} 
+                    className={`transition-colors duration-200 ${
+                      isDayMode ? 'text-white' : 'text-black'
+                    }`} 
+                  />
                 )}
               </div>
             </div>
