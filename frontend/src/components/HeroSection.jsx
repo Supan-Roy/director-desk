@@ -973,7 +973,54 @@ export default function HeroSection({
               }}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              placeholder="Describe your creative concept or project idea, or drop context files..."
+              onPaste={(e) => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                
+                const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'));
+                if (imageItems.length === 0) return;
+                
+                e.preventDefault();
+                
+                const currentFiles = attachedFiles;
+                const currentCount = currentFiles.length;
+                const maxNewImages = Math.max(0, 5 - currentCount);
+                
+                if (maxNewImages === 0) {
+                  setToastMsg('Maximum 5 files allowed. Remove some files first.');
+                  return;
+                }
+                
+                const filesToProcess = imageItems.slice(0, maxNewImages);
+                const existingNames = new Set(currentFiles.map(f => f.name));
+                
+                filesToProcess.forEach((item, idx) => {
+                  const file = item.getAsFile();
+                  if (!file) return;
+                  
+                  const name = file.name || `pasted-image-${Date.now()}-${idx}.png`;
+                  if (existingNames.has(name)) return;
+                  existingNames.add(name);
+                  
+                  const reader = new FileReader();
+                  reader.readAsDataURL(file);
+                  reader.onload = () => {
+                    setAttachedFiles(prev => {
+                      if (prev.some(f => f.name === name)) return prev;
+                      return [...prev, {
+                        name,
+                        type: file.type,
+                        content: reader.result
+                      }];
+                    });
+                  };
+                });
+                
+                if (imageItems.length > maxNewImages) {
+                  setToastMsg(`Only ${maxNewImages} image(s) added. Maximum 5 files allowed.`);
+                }
+              }}
+              placeholder="Describe your creative concept or project idea, paste an image, or drop context files..."
               className={`flex-1 bg-transparent border-0 outline-none text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono transition-colors duration-200 ${
                 isDayMode ? 'placeholder-neutral-400 text-neutral-900' : 'placeholder-surface-500 text-white'
               }`}
