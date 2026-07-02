@@ -658,6 +658,76 @@ export default function ProductionPage() {
   
   // ── Tab Management ──────────────────────────────────────────────────────
   const [activeStudioTab, setActiveStudioTab] = useState('dashboard'); // dashboard, characters, environments, voices, filmgen
+  const [highlightTarget, setHighlightTarget] = useState(null);
+
+  const handleGoToAsset = useCallback((msg) => {
+    if (!msg) return;
+    
+    const normalize = (text) => {
+      if (!text) return '';
+      return text.toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+
+    let target = null;
+    const match = msg.match(/for ['"`‘“]([^'"`’”]+)['"`’”]/) || msg.match(/for ([^' ]+)/);
+    const parsedName = match ? match[1] : '';
+
+    if (msg.includes("Character asset for")) {
+      if (parsedName) {
+        const normalized = normalize(parsedName);
+        const chars = project?.characters || [];
+        const matchedChar = chars.find(c => normalize(c.name) === normalized);
+        const finalName = matchedChar ? matchedChar.name : parsedName;
+        target = { type: 'character', name: finalName };
+        setActiveStudioTab('characters');
+      }
+    } else if (msg.includes("Voice profile for")) {
+      if (parsedName) {
+        const normalized = normalize(parsedName);
+        const voices = project?.voices || [];
+        const matchedVoice = voices.find(v => normalize(v.character) === normalized);
+        const finalName = matchedVoice ? matchedVoice.character : parsedName;
+        target = { type: 'voice', name: finalName };
+        setActiveStudioTab('voices');
+      }
+    } else if (msg.includes("Environment asset for")) {
+      if (parsedName) {
+        const normalized = normalize(parsedName);
+        const envs = project?.environments || [];
+        const matchedEnv = envs.find(e => {
+          const eNorm = normalize(e.name);
+          return normalized.includes(eNorm) || eNorm.includes(normalized);
+        });
+        const finalName = matchedEnv ? matchedEnv.name : parsedName;
+        target = { type: 'environment', name: finalName };
+        setActiveStudioTab('environments');
+      }
+    }
+    
+    if (target) {
+      setHighlightTarget(target);
+      
+      let attempts = 0;
+      const findAndScroll = () => {
+        const btnId = `gen-btn-${target.type}-${target.name}`;
+        const element = document.getElementById(btnId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (attempts < 15) {
+          attempts++;
+          setTimeout(findAndScroll, 80);
+        }
+      };
+      
+      setTimeout(findAndScroll, 200);
+
+      setTimeout(() => {
+        setHighlightTarget(current => 
+          (current?.type === target.type && current?.name === target.name) ? null : current
+        );
+      }, 4000);
+    }
+  }, [project]);
   
   useEffect(() => {
     const isAudio = project?.production_type === 'Podcast' || project?.production_type === 'Audio Story';
@@ -1524,8 +1594,11 @@ export default function ProductionPage() {
                                     </div>
                                     
                                     <button
+                                      id={`gen-btn-character-${char.name}`}
                                       onClick={() => handleGenerateCharacter(char.name)}
-                                      className="btn-accent relative z-20 px-5 py-2.5 font-bold text-[11px] uppercase tracking-wider rounded transition-all duration-300 transform active:scale-[0.98] cursor-pointer shadow-none"
+                                      className={`btn-accent relative z-20 px-5 py-2.5 font-bold text-[11px] uppercase tracking-wider rounded transition-all duration-300 transform active:scale-[0.98] cursor-pointer shadow-none ${
+                                        highlightTarget?.type === 'character' && highlightTarget?.name === char.name ? 'animate-highlight-glow' : ''
+                                      }`}
                                     >
                                       Generate Cast Asset
                                     </button>
@@ -1559,8 +1632,11 @@ export default function ProductionPage() {
                                     </div>
                                     
                                     <button
+                                      id={`gen-btn-character-${char.name}`}
                                       onClick={() => handleGenerateCharacter(char.name)}
-                                      className="btn-accent absolute bottom-3 right-3 px-2.5 py-1 text-[9px] flex items-center gap-1 shadow-none z-20"
+                                      className={`btn-accent absolute bottom-3 right-3 px-2.5 py-1 text-[9px] flex items-center gap-1 shadow-none z-20 ${
+                                        highlightTarget?.type === 'character' && highlightTarget?.name === char.name ? 'animate-highlight-glow' : ''
+                                      }`}
                                       title="Generate a new version of this character portrait"
                                     >
                                       <span>Regenerate</span>
@@ -1770,8 +1846,11 @@ export default function ProductionPage() {
                                       </div>
                                       
                                       <button
+                                        id={`gen-btn-environment-${env.name}`}
                                         onClick={() => handleGenerateEnvironment(env.name)}
-                                        className="btn-accent relative z-20 px-4 py-2 font-bold text-[10px] uppercase tracking-wider rounded transition-all duration-300 transform active:scale-[0.98] cursor-pointer shadow-none"
+                                        className={`btn-accent relative z-20 px-4 py-2 font-bold text-[10px] uppercase tracking-wider rounded transition-all duration-300 transform active:scale-[0.98] cursor-pointer shadow-none ${
+                                          highlightTarget?.type === 'environment' && highlightTarget?.name === env.name ? 'animate-highlight-glow' : ''
+                                        }`}
                                       >
                                         Generate Environment
                                       </button>
@@ -1801,8 +1880,11 @@ export default function ProductionPage() {
                                       </div>
                                       
                                       <button
+                                        id={`gen-btn-environment-${env.name}`}
                                         onClick={() => handleGenerateEnvironment(env.name)}
-                                        className="btn-accent absolute bottom-3 right-3 px-2.5 py-1 text-[9px] flex items-center gap-1 shadow-none z-20"
+                                        className={`btn-accent absolute bottom-3 right-3 px-2.5 py-1 text-[9px] flex items-center gap-1 shadow-none z-20 ${
+                                          highlightTarget?.type === 'environment' && highlightTarget?.name === env.name ? 'animate-highlight-glow' : ''
+                                        }`}
                                         title="Generate a new version of this environment portrait"
                                       >
                                         <span>Regenerate</span>
@@ -2120,9 +2202,12 @@ export default function ProductionPage() {
                                       </select>
                                     </div>
                                     <button
+                                      id={`gen-btn-voice-${v.character}`}
                                       onClick={() => handleGenerateVoice(v.character)}
                                       disabled={isCompiling}
-                                      className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] hover:border-cyan-500/30 whitespace-nowrap"
+                                      className={`px-3 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] hover:border-cyan-500/30 whitespace-nowrap ${
+                                        highlightTarget?.type === 'voice' && highlightTarget?.name === v.character ? 'animate-highlight-glow' : ''
+                                      }`}
                                     >
                                       Regenerate
                                     </button>
@@ -2130,9 +2215,12 @@ export default function ProductionPage() {
                                 ) : (
                                   <div className="mt-5 border-t border-white/[0.04] pt-4">
                                     <button
+                                      id={`gen-btn-voice-${v.character}`}
                                       onClick={() => handleGenerateVoice(v.character)}
                                       disabled={isCompiling}
-                                      className="btn-accent w-full py-2.5 shadow-none"
+                                      className={`btn-accent w-full py-2.5 shadow-none ${
+                                        highlightTarget?.type === 'voice' && highlightTarget?.name === v.character ? 'animate-highlight-glow' : ''
+                                      }`}
                                     >
                                       Generate Voice Profile
                                     </button>
@@ -2485,12 +2573,22 @@ export default function ProductionPage() {
 
                                   {/* Dependency diagnostic logs */}
                                   {isUnlocked && !scene.package_ready && (
-                                    <div className="p-3 bg-red-950/20 border border-red-500/20 text-red-200 rounded-lg text-[10px] font-mono space-y-1">
+                                    <div className="p-3 bg-red-950/20 border border-red-500/20 text-red-200 rounded-lg text-[10px] font-mono space-y-1.5">
                                       <span className="font-bold uppercase tracking-wider block text-red-400 mb-1">✕ Missing Production Assets</span>
                                       {scene.missing_assets.map((msg, mIdx) => (
-                                        <div key={mIdx} className="flex items-center gap-1.5">
-                                          <span className="text-red-400">•</span>
-                                          <span>{msg}</span>
+                                        <div key={mIdx} className="flex items-center justify-between gap-2.5 py-0.5 border-b border-white/[0.02] last:border-b-0">
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="text-red-400 shrink-0">•</span>
+                                            <span className="truncate" title={msg}>{msg}</span>
+                                          </div>
+                                          <button
+                                            onClick={() => handleGoToAsset(msg)}
+                                            className="shrink-0 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-[8px] text-red-300 font-bold uppercase tracking-wider hover:bg-red-500/25 transition-all flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-none"
+                                            title="Go directly to compile page"
+                                          >
+                                            <span>Go</span>
+                                            <FiArrowRight size={8} />
+                                          </button>
                                         </div>
                                       ))}
                                     </div>

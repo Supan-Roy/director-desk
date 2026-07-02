@@ -263,14 +263,6 @@ export function ProjectDataProvider({ children }) {
           ])
         } else if (event.type === 'production_plan') {
           setProductionPlan(event.data)
-          const isAudio = currentProductionType === 'Podcast' || currentProductionType === 'Audio Story'
-          setAgents([
-            { id: "writer",          name: "Writer Agent",          role: "Script & Narrative", icon: "✍️", status: "completed", completedAt: "just now" },
-            { id: "storyboard",      name: "Storyboard Agent",      role: "Visual Planning",    icon: "🎨", status: "completed", completedAt: isAudio ? "N/A" : "just now" },
-            { id: "scene_breakdown", name: "Scene Breakdown Agent", role: "AI Video Specs & Prompts", icon: "🎬", status: "completed", completedAt: isAudio ? "N/A" : "just now" },
-            { id: "planner",         name: "Production Planner",    role: "Execution Strategy", icon: "📋", status: "completed", completedAt: "just now" },
-            { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "active" }
-          ])
         } else if (event.type === 'critic_review_chunk') {
           setCriticReview((prev) => {
             if (!prev) return event.data
@@ -631,15 +623,6 @@ export function ProjectDataProvider({ children }) {
           }))
         } else if (event.type === 'production_plan') {
           setProductionPlan(event.data)
-          setAgents((prev) => prev.map((agent) => {
-            if (agent.id === 'planner') {
-              return { ...agent, status: 'completed', completedAt: 'just now' }
-            }
-            if (agent.id === 'critic') {
-              return { ...agent, status: 'active' }
-            }
-            return agent
-          }))
         } else if (event.type === 'critic_review_chunk') {
           setCriticReview((prev) => {
             if (!prev) return event.data

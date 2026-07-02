@@ -68,9 +68,18 @@ class ProjectService:
                 detail=f"Project {project_id} not found.",
             )
         
-        # Auto-extract environments and voices if they are null in database
+        # Auto-extract environments and voices if they are null or have legacy mismatched formats
         updated = False
-        if project.environments is None:
+        
+        has_legacy_envs = False
+        if project.environments:
+            for env in project.environments:
+                e_name = env.get("name", "")
+                if len(e_name) > 60 or ";" in e_name:
+                    has_legacy_envs = True
+                    break
+
+        if project.environments is None or has_legacy_envs:
             project.environments = self.extract_default_environments(project)
             updated = True
         if project.voices is None:
@@ -96,7 +105,7 @@ class ProjectService:
             elif isinstance(scene_num, str) and not scene_num.upper().startswith("SCENE"):
                 scene_num = f"Scene {scene_num}"
                 
-            env_name = scene.get("environment") or scene.get("location") or scene.get("title")
+            env_name = scene.get("location") or scene.get("environment") or scene.get("title")
             if not env_name:
                 continue
             
@@ -323,6 +332,14 @@ class ProjectService:
 
     def update_project(self, db: Session, project_id: int, **kwargs) -> ProjectDetail:
         """Update a project's fields dynamically. Raises 404 if not found."""
+        # Auto-extract environments and voices if scene_breakdown is updated
+        if "scene_breakdown" in kwargs and kwargs["scene_breakdown"] is not None:
+            project_model = self.get_project_model(db, project_id)
+            if project_model:
+                project_model.scene_breakdown = kwargs["scene_breakdown"]
+                kwargs["environments"] = self.extract_default_environments(project_model)
+                kwargs["voices"] = self.extract_default_voices(project_model)
+
         project = project_repository.update(db, project_id, **kwargs)
         if not project:
             raise HTTPException(
