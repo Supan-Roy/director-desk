@@ -1,66 +1,82 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none">
   <defs>
-
-    <!-- Dark cinematic background gradient -->
-    <linearGradient id="dd-bg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-      <stop offset="0%"   stop-color="#1c0d3a"/>
-      <stop offset="100%" stop-color="#080213"/>
+    <!-- Deep cinematic background -->
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1a1033"/>
+      <stop offset="50%" stop-color="#0d0820"/>
+      <stop offset="100%" stop-color="#05030f"/>
     </linearGradient>
 
-    <!-- Unified diagonal fill across both D shapes -->
-    <linearGradient id="dd-fill" x1="20" y1="26" x2="80" y2="74" gradientUnits="userSpaceOnUse">
-      <stop offset="0%"   stop-color="#ede9ff"/>
-      <stop offset="35%"  stop-color="#b89cfd"/>
-      <stop offset="65%"  stop-color="#8b5cf6"/>
+    <!-- Premium gold/accent gradient for main shape -->
+    <linearGradient id="gold-grad" x1="20" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f5f0ff"/>
+      <stop offset="30%" stop-color="#c4b5fd"/>
+      <stop offset="60%" stop-color="#8b5cf6"/>
       <stop offset="100%" stop-color="#5b21b6"/>
     </linearGradient>
 
-    <!-- Soft inner glow -->
-    <radialGradient id="dd-glow" cx="50" cy="50" r="36" gradientUnits="userSpaceOnUse">
-      <stop offset="0%"   stop-color="rgba(167,139,250,0.14)"/>
+    <!-- Subtle inner glow -->
+    <radialGradient id="inner-glow" cx="50" cy="45" r="35" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="rgba(139,92,246,0.15)"/>
       <stop offset="100%" stop-color="rgba(91,33,182,0)"/>
     </radialGradient>
 
-    <!-- Edge highlight on left bar top -->
-    <linearGradient id="dd-hi" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="rgba(255,255,255,0.55)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
-    </linearGradient>
+    <!-- Drop shadow for depth -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
 
+    <!-- Frame lines gradient -->
+    <linearGradient id="frame-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="rgba(139,92,246,0.6)"/>
+      <stop offset="50%" stop-color="rgba(139,92,246,0.2)"/>
+      <stop offset="100%" stop-color="rgba(139,92,246,0.6)"/>
+    </linearGradient>
   </defs>
 
-  <!-- ── Rounded square background ─────────────────── -->
-  <rect width="100" height="100" rx="22" fill="url(#dd-bg)"/>
+  <!-- Rounded background -->
+  <rect width="100" height="100" rx="24" fill="url(#bg-grad)"/>
 
-  <!-- Subtle inner ambient light -->
-  <ellipse cx="50" cy="48" rx="44" ry="38" fill="url(#dd-glow)"/>
+  <!-- Subtle vignette -->
+  <rect width="100" height="100" rx="24" fill="url(#inner-glow)"/>
 
-  <!-- ── LEFT D ──────────────────────────────────────
-       Vertical bar (x 20–27) + right-facing bowl
-       Arc center: (27, 50), radius 24
-       Top: (27, 26)  →  CW arc  →  Bottom: (27, 74)
-       Rightmost: (51, 50) — just past center           -->
-  <path d="M20 26 H27 A24 24 0 0 1 27 74 H20 Z"
-        fill="url(#dd-fill)"/>
+  <!-- Film frame corners (viewfinder aesthetic) -->
+  <g stroke="url(#frame-grad)" stroke-width="1.5" fill="none" opacity="0.5">
+    <!-- Top-left corner -->
+    <path d="M18 32 L18 18 L32 18"/>
+    <!-- Top-right corner -->
+    <path d="M68 18 L82 18 L82 32"/>
+    <!-- Bottom-left corner -->
+    <path d="M18 68 L18 82 L32 82"/>
+    <!-- Bottom-right corner -->
+    <path d="M68 82 L82 82 L82 68"/>
+  </g>
 
-  <!-- ── RIGHT D (mirrored) ─────────────────────────
-       Vertical bar (x 73–80) + left-facing bowl
-       Arc center: (73, 50), radius 24
-       Top: (73, 26)  →  CCW arc  →  Bottom: (73, 74)
-       Leftmost: (49, 50) — just before center          -->
-  <path d="M80 26 H73 A24 24 0 0 0 73 74 H80 Z"
-        fill="url(#dd-fill)"/>
+  <!-- Central crosshair (subtle director's viewfinder) -->
+  <g stroke="rgba(139,92,246,0.15)" stroke-width="0.8">
+    <line x1="50" y1="24" x2="50" y2="28"/>
+    <line x1="50" y1="72" x2="50" y2="76"/>
+    <line x1="24" y1="50" x2="28" y2="50"/>
+    <line x1="72" y1="50" x2="76" y2="50"/>
+  </g>
 
-  <!-- ── Micro highlight on left bar leading edge ─── -->
-  <rect x="20" y="26" width="2.5" height="48" rx="1"
-        fill="rgba(255,255,255,0.18)"/>
+  <!-- Main DD Monogram with depth -->
+  <g filter="url(#shadow)">
+    <!-- Left D -->
+    <path d="M22 28 H28 A22 22 0 0 1 28 72 H22 Z" fill="url(#gold-grad)"/>
+    <!-- Right D (mirrored) -->
+    <path d="M78 28 H72 A22 22 0 0 0 72 72 H78 Z" fill="url(#gold-grad)"/>
+  </g>
 
-  <!-- ── Micro highlight on right bar trailing edge ─ -->
-  <rect x="77.5" y="26" width="2.5" height="48" rx="1"
-        fill="rgba(255,255,255,0.06)"/>
+  <!-- Highlight accents on D bars -->
+  <rect x="22" y="28" width="2" height="44" rx="0.5" fill="rgba(255,255,255,0.25)"/>
+  <rect x="76" y="28" width="2" height="44" rx="0.5" fill="rgba(255,255,255,0.12)"/>
 
-  <!-- ── Outer ring: very subtle border ────────────── -->
-  <rect width="100" height="100" rx="22"
-        stroke="rgba(167,139,250,0.22)" stroke-width="1"/>
+  <!-- Subtle border ring -->
+  <rect width="100" height="100" rx="24"
+        stroke="url(#gold-grad)" stroke-width="1.5" opacity="0.3"/>
 
+  <!-- Inner highlight ring -->
+  <rect x="4" y="4" width="92" height="92" rx="20"
+        stroke="rgba(255,255,255,0.05)" stroke-width="1" fill="none"/>
 </svg>

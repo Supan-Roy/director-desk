@@ -51,12 +51,12 @@
 
   /* Selection — blue highlight instead of purple */
   ::selection {
-    background: rgba(59, 130, 246, 0.35);
-    color: inherit;
+    background: #ffffff;
+    color: #000000;
   }
   ::-moz-selection {
-    background: rgba(59, 130, 246, 0.35);
-    color: inherit;
+    background: #ffffff;
+    color: #000000;
   }
 
   /* Custom HTML Select Dropdowns */
@@ -1062,6 +1062,12 @@ aside nav button.bg-accent\/10 .blur-sm {
   transform: scale(0.98);
 }
 
-
-
-
+/* Light mode selection - black bg, white text */
+[data-theme="day"] ::selection {
+  background: #000000;
+  color: #ffffff;
+}
+[data-theme="day"] ::-moz-selection {
+  background: #000000;
+  color: #ffffff;
+}
