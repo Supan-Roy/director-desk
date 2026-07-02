@@ -590,6 +590,7 @@ export default function HeroSection({
 
   // Multimodal file states
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleEnhance = () => {
@@ -760,6 +761,17 @@ export default function HeroSection({
     }, 5000);
     return () => clearTimeout(timer);
   }, [toastMsg]);
+
+  // Close image preview on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && previewFile) {
+        setPreviewFile(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewFile]);
 
   const handleSubmit = async () => {
     if (!prompt.trim() || loading) return;
@@ -1054,23 +1066,25 @@ export default function HeroSection({
                 return (
                   <div 
                     key={idx} 
+                    onClick={isImage ? () => setPreviewFile(file) : undefined}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono transition-all ${
                       isDayMode 
                         ? 'bg-neutral-50 border-neutral-200 text-neutral-800' 
                         : 'bg-white/[0.03] border-white/[0.08] text-neutral-300'
-                    }`}
+                    } ${isImage ? 'cursor-pointer hover:opacity-80' : ''}`}
                   >
                     {isImage ? (
-                      <div className="w-4 h-4 rounded overflow-hidden shrink-0 border border-white/10">
+                      <div className="w-4 h-4 rounded overflow-hidden shrink-0 border border-white/10 pointer-events-none">
                         <img src={file.content} alt={file.name} className="w-full h-full object-cover" />
                       </div>
                     ) : (
                       <span className="text-[10px] opacity-60">📄</span>
                     )}
-                    <span className="truncate max-w-[150px] font-medium" title={file.name}>{file.name}</span>
+                    <span className="truncate max-w-[150px] font-medium pointer-events-none" title={file.name}>{file.name}</span>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
                       }}
                       className={`hover:text-red-500 font-bold ml-1 transition-colors focus:outline-none cursor-pointer ${
@@ -1205,6 +1219,58 @@ export default function HeroSection({
             <FiX size={14} />
           </button>
         </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewFile && createPortal(
+        <div 
+          className="fixed inset-0 z-[100001] flex items-center justify-center p-4"
+          onClick={() => setPreviewFile(null)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          
+          {/* Modal Content */}
+          <div 
+            className={`relative z-10 max-w-4xl max-h-[90vh] rounded-xl border shadow-2xl overflow-hidden ${
+              isDayMode 
+                ? 'bg-white border-neutral-200' 
+                : 'bg-[#0b0b14] border-white/[0.08]'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className={`flex items-center justify-between px-4 py-3 border-b ${
+              isDayMode ? 'border-neutral-200' : 'border-white/[0.06]'
+            }`}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider truncate max-w-[300px] ${
+                isDayMode ? 'text-neutral-800' : 'text-surface-300'
+              }`}>
+                {previewFile.name}
+              </span>
+              <button
+                onClick={() => setPreviewFile(null)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isDayMode 
+                    ? 'hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600' 
+                    : 'hover:bg-white/[0.06] text-surface-500 hover:text-white'
+                }`}
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+            
+            {/* Image */}
+            <div className="p-4 flex items-center justify-center bg-black/50">
+              <img 
+                src={previewFile.content} 
+                alt={previewFile.name}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Toast Notification */}
