@@ -118,6 +118,11 @@ class ShowrunnerService:
         if mode == "studio":
             # Stage 1: Writer Agent generates script
             project_state.set_agent_status("writer", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "writer",
+                "status": "active"
+            }
             
             title = showrunner_agent.generate_short_title(prompt)
             project_state.title = title
@@ -159,9 +164,19 @@ class ShowrunnerService:
             project_state.script = script_accumulated
             project_state.original_script = script_accumulated
             project_state.set_agent_status("writer", "completed", "just now")
+            yield {
+                "type": "agent_status_change",
+                "agent": "writer",
+                "status": "completed"
+            }
 
             # Stage 2: Storyboard Agent generates storyboard text, and parser parses it
             project_state.set_agent_status("storyboard", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "storyboard",
+                "status": "active"
+            }
             
             storyboard_text_accumulated = ""
             if is_audio:
@@ -170,6 +185,11 @@ class ShowrunnerService:
                 yield {
                     "type": "storyboard",
                     "data": []
+                }
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "storyboard",
+                    "status": "completed"
                 }
             else:
                 storyboard_prompt = f"""
@@ -213,9 +233,20 @@ class ShowrunnerService:
                     }
                     
                 project_state.set_agent_status("storyboard", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "storyboard",
+                    "status": "completed"
+                }
 
             # Stage 3: Scene Breakdown Agent generates scene breakdown
             project_state.set_agent_status("scene_breakdown", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "scene_breakdown",
+                "status": "active"
+            }
+            
             if production_type == "Podcast":
                 breakdown = {
                     "total_runtime": "N/A",
@@ -240,11 +271,29 @@ class ShowrunnerService:
             
             project_state.scene_breakdown = breakdown
             project_state.set_agent_status("scene_breakdown", "completed", "just now")
-
             yield {
-                "type": "scene_breakdown",
-                "data": breakdown
+                "type": "agent_status_change",
+                "agent": "scene_breakdown",
+                "status": "completed"
             }
+
+            # Progressive scene_breakdown stream in Studio mode
+            scenes = breakdown.get("scenes", []) if breakdown else []
+            if not scenes:
+                yield {
+                    "type": "scene_breakdown",
+                    "data": breakdown
+                }
+            else:
+                for i in range(1, len(scenes) + 1):
+                    partial = dict(breakdown)
+                    partial["scenes"] = scenes[:i]
+                    is_last = (i == len(scenes))
+                    yield {
+                        "type": "scene_breakdown" if is_last else "scene_breakdown_chunk",
+                        "data": partial
+                    }
+                    time.sleep(0.4)
 
             # Stage 4: Production Planner Agent generates phase-wise actions
             project_state.set_agent_status("planner", "active")
@@ -265,16 +314,47 @@ class ShowrunnerService:
                 project_state.critic_review = critic_review
                 project_state.critic_notes = []
                 project_state.set_agent_status("critic", "completed", "N/A")
+                yield {
+                    "type": "critic_review",
+                    "data": critic_review
+                }
             else:
-                critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
+                critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated) or {}
                 project_state.critic_review = critic_review
                 project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
                 project_state.set_agent_status("critic", "completed", "just now")
+                
+                # Progressive stream in Studio mode
+                partial_critic = {}
+                for key in ("overall_rating", "score"):
+                    if key in critic_review:
+                        partial_critic[key] = critic_review[key]
+                if partial_critic:
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.3)
 
-            yield {
-                "type": "critic_review",
-                "data": critic_review
-            }
+                strengths = critic_review.get("strengths", [])
+                for i in range(1, len(strengths) + 1):
+                    partial_critic["strengths"] = strengths[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.25)
+
+                weaknesses = critic_review.get("weaknesses", [])
+                for i in range(1, len(weaknesses) + 1):
+                    partial_critic["weaknesses"] = weaknesses[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.25)
+
+                suggestions = critic_review.get("suggestions", [])
+                for i in range(1, len(suggestions) + 1):
+                    partial_critic["suggestions"] = suggestions[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.25)
+
+                yield {
+                    "type": "critic_review",
+                    "data": critic_review
+                }
 
             yield {
                 "type": "complete"
@@ -283,6 +363,12 @@ class ShowrunnerService:
         else:
             # FAST mode: Single AI call, then stream with progressive pacing
             project_state.set_agent_status("writer", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "writer",
+                "status": "active"
+            }
+            
             result = showrunner_agent.generate_all(full_prompt, production_type)
             
             production_type = result.get("production_type", production_type)
@@ -311,7 +397,18 @@ class ShowrunnerService:
                 time.sleep(0.03)
                 
             project_state.set_agent_status("writer", "completed", "just now")
+            yield {
+                "type": "agent_status_change",
+                "agent": "writer",
+                "status": "completed"
+            }
+            
             project_state.set_agent_status("storyboard", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "storyboard",
+                "status": "active"
+            }
             time.sleep(0.3)
 
             # 3. Storyboard
@@ -335,6 +432,11 @@ class ShowrunnerService:
                     "type": "storyboard",
                     "data": []
                 }
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "storyboard",
+                    "status": "completed"
+                }
             else:
                 for i in range(1, len(mapped_storyboard) + 1):
                     yield {
@@ -343,9 +445,19 @@ class ShowrunnerService:
                     }
                     time.sleep(0.5)
                 project_state.set_agent_status("storyboard", "completed", "just now")
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "storyboard",
+                    "status": "completed"
+                }
                 
             # 4. Scene Breakdown
             project_state.set_agent_status("scene_breakdown", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "scene_breakdown",
+                "status": "active"
+            }
             time.sleep(0.3)
             
             storyboard_list = result.get("storyboard", [])
@@ -380,21 +492,58 @@ class ShowrunnerService:
             
             project_state.scene_breakdown = breakdown
             project_state.set_agent_status("scene_breakdown", "completed", "just now")
-            project_state.set_agent_status("planner", "active")
-            
             yield {
-                "type": "scene_breakdown",
-                "data": breakdown
+                "type": "agent_status_change",
+                "agent": "scene_breakdown",
+                "status": "completed"
             }
             
-            time.sleep(0.5)
+            project_state.set_agent_status("planner", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "planner",
+                "status": "active"
+            }
+            
+            # Progressive scene_breakdown: stream scenes one-by-one so the UI
+            # can display them as they arrive (like storyboard).
+            scenes = breakdown.get("scenes", []) if breakdown else []
+            if not scenes:
+                # For audio / empty breakdowns, emit one shot with full breakdown
+                yield {
+                    "type": "scene_breakdown",
+                    "data": breakdown
+                }
+            else:
+                for i in range(1, len(scenes) + 1):
+                    partial = dict(breakdown)
+                    partial["scenes"] = scenes[:i]
+                    is_last = (i == len(scenes))
+                    yield {
+                        "type": "scene_breakdown" if is_last else "scene_breakdown_chunk",
+                        "data": partial
+                    }
+                    time.sleep(0.4)
+            
+            time.sleep(0.3)
 
             # 5. Production Plan
             plan = result["production_plan"]
             
             project_state.production_plan = plan
             project_state.set_agent_status("planner", "completed", "just now")
+            yield {
+                "type": "agent_status_change",
+                "agent": "planner",
+                "status": "completed"
+            }
+            
             project_state.set_agent_status("critic", "active")
+            yield {
+                "type": "agent_status_change",
+                "agent": "critic",
+                "status": "active"
+            }
             
             yield {
                 "type": "production_plan",
@@ -403,22 +552,68 @@ class ShowrunnerService:
             
             time.sleep(0.5)
 
-            # 6. Critic review
+            # 6. Critic review — stream progressively section-by-section
             if production_type == "Podcast":
                 critic_review = {"overall_rating": "N/A", "suggestions": []}
                 project_state.critic_review = critic_review
                 project_state.critic_notes = []
                 project_state.set_agent_status("critic", "completed", "N/A")
+                yield {
+                    "type": "critic_review",
+                    "data": critic_review
+                }
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "critic",
+                    "status": "completed"
+                }
             else:
-                critic_review = result.get("critic_review")
+                critic_review = result.get("critic_review") or {}
                 project_state.critic_review = critic_review
                 project_state.critic_notes = critic_review.get("suggestions", []) if critic_review else []
                 project_state.set_agent_status("critic", "completed", "just now")
-            
-            yield {
-                "type": "critic_review",
-                "data": critic_review
-            }
+                yield {
+                    "type": "agent_status_change",
+                    "agent": "critic",
+                    "status": "completed"
+                }
+                
+                # Build up partial critic_review progressively:
+                # First emit the header fields (score, overall_rating)
+                partial_critic: dict = {}
+                for key in ("overall_rating", "score"):
+                    if key in critic_review:
+                        partial_critic[key] = critic_review[key]
+                if partial_critic:
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.3)
+
+                # Then stream strengths one by one
+                strengths = critic_review.get("strengths", [])
+                for i in range(1, len(strengths) + 1):
+                    partial_critic["strengths"] = strengths[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.25)
+
+                # Then stream weaknesses one by one
+                weaknesses = critic_review.get("weaknesses", [])
+                for i in range(1, len(weaknesses) + 1):
+                    partial_critic["weaknesses"] = weaknesses[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.25)
+
+                # Then stream suggestions one by one
+                suggestions = critic_review.get("suggestions", [])
+                for i in range(1, len(suggestions) + 1):
+                    partial_critic["suggestions"] = suggestions[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.25)
+
+                # Final complete critic_review
+                yield {
+                    "type": "critic_review",
+                    "data": critic_review
+                }
 
             yield {
                 "type": "complete"
@@ -538,17 +733,45 @@ class ShowrunnerService:
                     )
                 project_state.scene_breakdown = breakdown
                 project_state.set_agent_status("scene_breakdown", "completed", "just now")
-                yield {
-                    "type": "scene_breakdown",
-                    "data": breakdown
-                }
+                
+                # Progressive stream
+                scenes = breakdown.get("scenes", []) if breakdown else []
+                if not scenes:
+                    yield {
+                        "type": "scene_breakdown",
+                        "data": breakdown
+                    }
+                else:
+                    for i in range(1, len(scenes) + 1):
+                        partial = dict(breakdown)
+                        partial["scenes"] = scenes[:i]
+                        is_last = (i == len(scenes))
+                        yield {
+                            "type": "scene_breakdown" if is_last else "scene_breakdown_chunk",
+                            "data": partial
+                        }
+                        time.sleep(0.4)
             else:
                 project_state.scene_breakdown = project.scene_breakdown
                 project_state.set_agent_status("scene_breakdown", "completed", "just now")
-                yield {
-                    "type": "scene_breakdown",
-                    "data": project.scene_breakdown
-                }
+                
+                # Progressive stream
+                scenes = project.scene_breakdown.get("scenes", []) if project.scene_breakdown else []
+                if not scenes:
+                    yield {
+                        "type": "scene_breakdown",
+                        "data": project.scene_breakdown
+                    }
+                else:
+                    for i in range(1, len(scenes) + 1):
+                        partial = dict(project.scene_breakdown)
+                        partial["scenes"] = scenes[:i]
+                        is_last = (i == len(scenes))
+                        yield {
+                            "type": "scene_breakdown" if is_last else "scene_breakdown_chunk",
+                            "data": partial
+                        }
+                        time.sleep(0.2)
 
             # ── Check Stage 4: Plan ──
             if not project.production_plan:
@@ -586,19 +809,80 @@ class ShowrunnerService:
                     project_state.critic_review = critic_review
                     project_state.critic_notes = []
                     project_state.set_agent_status("critic", "completed", "N/A")
+                    yield {
+                        "type": "critic_review",
+                        "data": critic_review
+                    }
                 else:
-                    critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated)
+                    critic_review = critic_agent.generate_review(script_accumulated, storyboard_text_accumulated) or {}
                     project_state.critic_review = critic_review
                     project_state.critic_notes = critic_review.get("suggestions", [])
                     project_state.set_agent_status("critic", "completed", "just now")
-                yield {
-                    "type": "critic_review",
-                    "data": critic_review
-                }
+                    
+                    # Progressive stream
+                    partial_critic = {}
+                    for key in ("overall_rating", "score"):
+                        if key in critic_review:
+                            partial_critic[key] = critic_review[key]
+                    if partial_critic:
+                        yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                        time.sleep(0.3)
+
+                    strengths = critic_review.get("strengths", [])
+                    for i in range(1, len(strengths) + 1):
+                        partial_critic["strengths"] = strengths[:i]
+                        yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                        time.sleep(0.25)
+
+                    weaknesses = critic_review.get("weaknesses", [])
+                    for i in range(1, len(weaknesses) + 1):
+                        partial_critic["weaknesses"] = weaknesses[:i]
+                        yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                        time.sleep(0.25)
+
+                    suggestions = critic_review.get("suggestions", [])
+                    for i in range(1, len(suggestions) + 1):
+                        partial_critic["suggestions"] = suggestions[:i]
+                        yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                        time.sleep(0.25)
+
+                    yield {
+                        "type": "critic_review",
+                        "data": critic_review
+                    }
             else:
                 project_state.critic_review = project.critic_review
                 project_state.critic_notes = project.critic_review.get("suggestions", [])
                 project_state.set_agent_status("critic", "completed", "just now")
+                
+                # Progressive stream
+                critic_review = project.critic_review or {}
+                partial_critic = {}
+                for key in ("overall_rating", "score"):
+                    if key in critic_review:
+                        partial_critic[key] = critic_review[key]
+                if partial_critic:
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.2)
+
+                strengths = critic_review.get("strengths", [])
+                for i in range(1, len(strengths) + 1):
+                    partial_critic["strengths"] = strengths[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.15)
+
+                weaknesses = critic_review.get("weaknesses", [])
+                for i in range(1, len(weaknesses) + 1):
+                    partial_critic["weaknesses"] = weaknesses[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.15)
+
+                suggestions = critic_review.get("suggestions", [])
+                for i in range(1, len(suggestions) + 1):
+                    partial_critic["suggestions"] = suggestions[:i]
+                    yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
+                    time.sleep(0.15)
+
                 yield {
                     "type": "critic_review",
                     "data": project.critic_review
