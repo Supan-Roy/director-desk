@@ -30,7 +30,7 @@ export const creativeTemplates: CreativeTemplate[] = [
   {
     id: 'cyberpunk',
     icon: FiCpu,
-    title: 'Neon Syndicate',
+    title: 'Mechatronic Transformer',
     productionType: 'Full CGI Sci-Fi',
     description: 'Neon, rain, future cityscapes',
     prompts: [
