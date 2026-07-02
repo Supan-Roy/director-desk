@@ -63,6 +63,17 @@ class Project(Base):
         nullable=False,
     )
 
+    @property
+    def aspect_ratio(self) -> str:
+        """Dynamically extract aspect ratio from prompt tag fallback to 16:9."""
+        if not self.prompt:
+            return "16:9"
+        import re
+        match = re.search(r'\[Aspect:\s*([^,\]]+)', self.prompt)
+        if match:
+            return match.group(1).strip()
+        return "16:9"
+
 
 class CharacterAsset(Base):
     __tablename__ = "character_assets"
