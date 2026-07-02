@@ -33,6 +33,7 @@ import { useProjectData } from '../hooks/useProjectData';
 import { decodeProjectRouteId } from '../utils/hashids';
 import { useEditor } from '../context/EditorContext';
 import Footer from '../components/Footer';
+import CustomVideoPlayer from '../components/CustomVideoPlayer';
 
 // ── Blueprint Vector Grid ──────────────────────────────────────────────────
 function BlueprintSVG({ type }) {
@@ -627,6 +628,24 @@ export default function ProductionPage() {
         delete updated[sceneNumberStr];
         return updated;
       });
+    }
+  };
+
+  const handleDownloadFile = async (url, filename) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Failed to download file:", err);
+      window.open(url, '_blank');
     }
   };
 
@@ -2441,17 +2460,16 @@ export default function ProductionPage() {
                                         <div className="flex flex-col items-center justify-center w-full h-[180px] p-4 bg-gradient-to-br from-neutral-900 to-neutral-950">
                                           <FiVolume2 className="text-accent animate-pulse mb-3" size={32} />
                                           <audio 
-                                            controls 
-                                            src={apiBaseUrl + activeVideo.video_url} 
+                                             controls 
+                                             src={apiBaseUrl + activeVideo.video_url} 
                                             className="w-full max-w-md" 
                                           />
                                           <span className="text-[10px] text-surface-500 font-mono mt-3 select-none">AUDIO SPEECH TRACK ACTIVE</span>
                                         </div>
                                       ) : (
-                                        <video 
-                                          controls 
+                                        <CustomVideoPlayer 
                                           src={apiBaseUrl + activeVideo.video_url} 
-                                          className="w-full aspect-[21/9] md:aspect-[2.39/1] object-cover" 
+                                          className="w-full aspect-[21/9] md:aspect-[2.39/1]" 
                                           poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
                                         />
                                       )
@@ -2632,16 +2650,16 @@ export default function ProductionPage() {
                                       
                                       <div className="flex gap-2">
                                         {activeVideo.status === 'completed' && (
-                                          <a
-                                            href={apiBaseUrl + activeVideo.video_url}
-                                            download={project?.production_type === 'Podcast' ? `podcast_v${activeVideo.version}.mp3` : `scene_${scene.scene_number}_v${activeVideo.version}.mp4`}
-                                            target="_blank"
-                                            rel="noreferrer"
+                                          <button
+                                            onClick={() => handleDownloadFile(
+                                              apiBaseUrl + activeVideo.video_url,
+                                              project?.production_type === 'Podcast' ? `podcast_v${activeVideo.version}.mp3` : `scene_${scene.scene_number}_v${activeVideo.version}.mp4`
+                                            )}
                                             className="flex-1 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] inline-flex items-center justify-center whitespace-nowrap active:scale-[0.98]"
                                             title="Download generated asset"
                                           >
                                             Download
-                                          </a>
+                                          </button>
                                         )}
                                         <button
                                           onClick={() => handleGenerateScene(scene.scene_number_str)}

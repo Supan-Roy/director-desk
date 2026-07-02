@@ -2432,9 +2432,10 @@ export default function EditorPage() {
                     <div className="flex items-center gap-2.5">
                       <button
                          onClick={() => setIsPlaying(!isPlaying)}
-                         className="btn-accent w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all shadow-none"
+                         className="text-white hover:text-accent transition-colors p-1.5 flex items-center justify-center cursor-pointer"
+                         title={isPlaying ? "Pause" : "Play"}
                       >
-                        {isPlaying ? <FiPause size={10} /> : <FiPlay size={10} className="ml-0.5" />}
+                        {isPlaying ? <FiPause size={15} /> : <FiPlay size={15} className="fill-white hover:fill-accent" />}
                       </button>
                       <button
                         onClick={() => setCurrentTime(0.0)}
