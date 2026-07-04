@@ -29,7 +29,8 @@ import {
   FiCornerUpLeft,
   FiCornerUpRight,
   FiChevronLeft,
-  FiChevronRight
+  FiChevronRight,
+  FiChevronDown
 } from 'react-icons/fi'
 import { apiBaseUrl } from '../services/apiClient'
 import { useEditor } from '../context/EditorContext'
@@ -553,6 +554,81 @@ const resolveUrl = (url) => {
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   if (url.startsWith('/static/')) return `${apiBaseUrl}${url}`
   return url
+}
+
+// ─── NLE Dropdown ──────────────────────────────────────────────────────────────
+// A custom, fully themed dropdown that replaces native <select> elements.
+// Matches the dark NLE studio aesthetic with gradient keys, inset shadow, and
+// a floating panel with keyboard-accessible options.
+function NLEDropdown({ value, onChange, options, disabled = false, className = '', fullWidth = false }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [open])
+
+  const selected = options.find(o => o.value === value) || options[0]
+
+  return (
+    <div ref={ref} className={`relative ${fullWidth ? 'w-full' : 'inline-block'} ${className}`}>
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen(v => !v)}
+        disabled={disabled}
+        className={`
+          flex items-center gap-2 px-2.5 py-1 rounded-sm border
+          bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e]
+          text-neutral-200 text-[9.5px] font-extrabold uppercase tracking-wider
+          shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)]
+          hover:from-[#2c2c36] hover:to-[#202028]
+          transition-all cursor-pointer select-none
+          disabled:opacity-30 disabled:pointer-events-none
+          ${fullWidth ? 'w-full justify-between' : ''}
+          ${open ? 'border-[#e57e25]/60 from-[#2c2c36] to-[#202028]' : ''}
+        `}
+      >
+        <span className="truncate">{selected?.label ?? value}</span>
+        <FiChevronDown
+          size={10}
+          className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div className={`
+          absolute z-[200] mt-1 py-0.5 min-w-full
+          bg-[#1a1a22] border border-[#31313e] rounded-sm
+          shadow-[0_8px_32px_rgba(0,0,0,0.6),0_2px_8px_rgba(0,0,0,0.4)]
+          ${fullWidth ? 'left-0 right-0' : 'left-0'}
+        `}>
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`
+                w-full text-left px-3 py-1.5 text-[9.5px] font-extrabold uppercase tracking-wider
+                transition-colors cursor-pointer
+                ${opt.value === value
+                  ? 'bg-[#e57e25]/15 text-[#e57e25]'
+                  : 'text-neutral-300 hover:bg-white/[0.05] hover:text-white'
+                }
+              `}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function EditorPage() {
@@ -1526,49 +1602,49 @@ export default function EditorPage() {
             {/* Aspect Ratio Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Aspect Ratio</span>
-              <select
+              <NLEDropdown
                 value={aspectRatio}
-                onChange={(e) => setAspectRatio(e.target.value)}
-                className="text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
-              >
-                <option value="16:9">16:9 (Widescreen)</option>
-                <option value="9:16">9:16 (Portrait)</option>
-                <option value="4:3">4:3 (Academy)</option>
-                <option value="1.85:1">1.85:1 (Cinema Flat)</option>
-                <option value="2.39:1">2.39:1 (Cinemascope)</option>
-                <option value="1.43:1">1.43:1 (IMAX Film)</option>
-                <option value="1.90:1">1.90:1 (IMAX Digital)</option>
-              </select>
+                onChange={setAspectRatio}
+                options={[
+                  { value: '16:9',   label: '16:9 (Widescreen)' },
+                  { value: '9:16',   label: '9:16 (Portrait)' },
+                  { value: '4:3',    label: '4:3 (Academy)' },
+                  { value: '1.85:1', label: '1.85:1 (Cinema Flat)' },
+                  { value: '2.39:1', label: '2.39:1 (Cinemascope)' },
+                  { value: '1.43:1', label: '1.43:1 (IMAX Film)' },
+                  { value: '1.90:1', label: '1.90:1 (IMAX Digital)' },
+                ]}
+              />
             </div>
 
             {/* Resolution Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Resolution</span>
-              <select
+              <NLEDropdown
                 value={resolution}
-                onChange={(e) => setResolution(e.target.value)}
-                className="text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
-              >
-                <option value="1080p">1080p (FHD)</option>
-                <option value="720p">720p (HD)</option>
-                <option value="480p">480p (SD)</option>
-                <option value="360p">360p (Low)</option>
-              </select>
+                onChange={setResolution}
+                options={[
+                  { value: '1080p', label: '1080p (FHD)' },
+                  { value: '720p',  label: '720p (HD)' },
+                  { value: '480p',  label: '480p (SD)' },
+                  { value: '360p',  label: '360p (Low)' },
+                ]}
+              />
             </div>
 
             {/* Format Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Format</span>
-              <select
+              <NLEDropdown
                 value={exportFormat}
-                onChange={(e) => setExportFormat(e.target.value)}
-                className="text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
-              >
-                <option value="mp4">MP4</option>
-                <option value="mkv">MKV</option>
-                <option value="mov">MOV</option>
-                <option value="avi">AVI</option>
-              </select>
+                onChange={setExportFormat}
+                options={[
+                  { value: 'mp4', label: 'MP4' },
+                  { value: 'mkv', label: 'MKV' },
+                  { value: 'mov', label: 'MOV' },
+                  { value: 'avi', label: 'AVI' },
+                ]}
+              />
             </div>
 
             {/* Export Trigger */}
@@ -1860,17 +1936,18 @@ export default function EditorPage() {
                       {/* Logo Position */}
                       <div className="space-y-1">
                         <div className="text-[10px] font-semibold text-surface-500 uppercase select-none">Position Corner</div>
-                        <select
+                        <NLEDropdown
                           value={logo.position}
-                          onChange={(e) => setLogo((prev) => ({ ...prev, position: e.target.value }))}
-                          className="w-full text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1.5 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
+                          onChange={(val) => setLogo((prev) => ({ ...prev, position: val }))}
                           disabled={!logo.enabled}
-                        >
-                          <option value="top-left">Top Left</option>
-                          <option value="top-right">Top Right</option>
-                          <option value="bottom-left">Bottom Left</option>
-                          <option value="bottom-right">Bottom Right</option>
-                        </select>
+                          fullWidth
+                          options={[
+                            { value: 'top-left',     label: 'Top Left' },
+                            { value: 'top-right',    label: 'Top Right' },
+                            { value: 'bottom-left',  label: 'Bottom Left' },
+                            { value: 'bottom-right', label: 'Bottom Right' },
+                          ]}
+                        />
                       </div>
                     </div>
                   </div>
@@ -3429,22 +3506,19 @@ export default function EditorPage() {
 
                           {/* Blend Mode Selection */}
                           <div className="space-y-1">
-                            <span className="text-[9.5px] font-semibold text-surface-400 uppercase">Blend Mode</span>
-                            <select
+                            <span className="text-[9.5px] font-semibold text-surface-400 uppercase select-none">Blend Mode</span>
+                            <NLEDropdown
                               value={selectedClip.blendMode || 'screen'}
-                              onChange={(e) => updateClipProperties(selectedClip.id, 'vfx', { blendMode: e.target.value })}
-                              className={`w-full text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
-                                isDayMode 
-                                  ? 'bg-white border-black/10 text-neutral-800' 
-                                  : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                              }`}
-                            >
-                              <option value="normal">Normal (Overlay)</option>
-                              <option value="screen">Screen (Light overlays)</option>
-                              <option value="add">Add (Bright Glows)</option>
-                              <option value="lighten">Lighten (Light parts)</option>
-                              <option value="multiply">Multiply (Darken overlays)</option>
-                            </select>
+                              onChange={(val) => updateClipProperties(selectedClip.id, 'vfx', { blendMode: val })}
+                              fullWidth
+                              options={[
+                                { value: 'normal',   label: 'Normal (Overlay)' },
+                                { value: 'screen',   label: 'Screen (Light overlays)' },
+                                { value: 'add',      label: 'Add (Bright Glows)' },
+                                { value: 'lighten',  label: 'Lighten (Light parts)' },
+                                { value: 'multiply', label: 'Multiply (Darken overlays)' },
+                              ]}
+                            />
                           </div>
                         </>
                       ) : (
