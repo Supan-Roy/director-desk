@@ -12,6 +12,122 @@ logger = logging.getLogger(__name__)
 
 class ScenePackageCompiler:
     @staticmethod
+    def _resolve_character_name(raw_name: str, char_assets: list) -> CharacterAsset | None:
+        trimmed = raw_name.strip().lower()
+        if not trimmed:
+            return None
+            
+        # Tier 1: Exact / Case-insensitive match
+        for asset in char_assets:
+            if asset.character_name.lower().strip() == trimmed:
+                return asset
+                
+        # Tier 2: Heuristics
+        # Remove common prefixes/honorifics
+        titles = ["dr.", "dr", "mr.", "mr", "mrs.", "mrs", "ms.", "ms", "agent", "officer", "captain", "professor", "the"]
+        def clean_name(name_str):
+            n = name_str.lower().strip()
+            for t in titles:
+                if n.startswith(t + " "):
+                    n = n[len(t) + 1:].strip()
+                elif n.startswith(t):
+                    n = n[len(t):].strip()
+            return n
+            
+        cleaned_raw = clean_name(raw_name)
+        for asset in char_assets:
+            cleaned_asset = clean_name(asset.character_name)
+            if cleaned_raw == cleaned_asset or (len(cleaned_raw) > 2 and cleaned_raw in cleaned_asset) or (len(cleaned_asset) > 2 and cleaned_asset in cleaned_raw):
+                return asset
+                
+        return None
+
+    @staticmethod
+    def _resolve_all_scene_characters(project_id: int, db, scene_text: str, scene_chars: list[str]) -> dict[str, CharacterAsset]:
+        char_assets = db.query(CharacterAsset).filter(CharacterAsset.project_id == project_id).all()
+        resolved_map = {}
+        unresolved_names = []
+        
+        # Run Tier 1 and Tier 2
+        for raw_name in scene_chars:
+            if not raw_name or not raw_name.strip():
+                continue
+            asset = ScenePackageCompiler._resolve_character_name(raw_name, char_assets)
+            if asset:
+                resolved_map[raw_name] = asset
+            else:
+                unresolved_names.append(raw_name)
+                
+        # Tier 3: Contextual Pronoun / Reference Resolver
+        if unresolved_names and scene_text and char_assets:
+            try:
+                from app.services.qwen_service import qwen_service
+                official_names = [c.character_name for c in char_assets]
+                prompt = f"""
+                You are a Continuity Supervisor for an AI Film Production Orchestrator.
+                We have the following list of official character names for this project: {json.dumps(official_names)}.
+                
+                In the scene description below, the director refers to characters using these names, pronouns, or descriptions: {json.dumps(unresolved_names)}.
+                
+                Scene description:
+                "{scene_text}"
+                
+                Map each mentioned name/pronoun to the correct official character name from the database.
+                Determine whom pronouns (like "he", "she") or descriptions (like "the inventor", "the scientist") refer to.
+                If a mention does not refer to any official character, map it to null.
+                
+                Respond ONLY with a valid JSON object mapping each raw mention to its official character name. No explanations, no markdown blocks.
+                Example:
+                {{
+                  "He": "Leo",
+                  "the inventor": "Leo"
+                }}
+                """
+                response_text = qwen_service.generate_text(prompt)
+                cleaned_response = response_text.replace("```json", "").replace("```", "").strip()
+                resolved_json = json.loads(cleaned_response)
+                
+                for raw_name, official_name in resolved_json.items():
+                    if official_name:
+                        # Find the asset for the resolved official name
+                        for asset in char_assets:
+                            if asset.character_name.lower().strip() == official_name.lower().strip():
+                                resolved_map[raw_name] = asset
+                                break
+            except Exception as e:
+                logger.error(f"Error in Tier 3 LLM character alias resolution: {e}")
+                
+        return resolved_map
+
+    @staticmethod
+    def _enrich_prompt_with_spatial_layout(raw_prompt: str, character_appearances: list, environment_description: dict) -> str:
+        try:
+            from app.services.qwen_service import qwen_service
+            char_info = []
+            for c in character_appearances:
+                char_info.append(f"{c['name']} ({c['appearance']})")
+            
+            env_info = environment_description.get("name", "Unknown Location")
+            if environment_description.get("architecture") and environment_description["architecture"] != "Unknown":
+                env_info += f" with {environment_description['architecture']} architecture"
+                
+            prompt = f"""
+            You are a Director of Photography and Layout Director.
+            Rewrite the raw cinematic prompt to define a spatial composition, camera layout, and character positioning (e.g., who is on the left/right/center, foreground/background, camera angle, and orientation).
+            
+            Raw Prompt: "{raw_prompt}"
+            Characters present: {", ".join(char_info)}
+            Environment: {env_info}
+            
+            Output ONLY the enriched, spatially detailed scene description. Keep it concise, high-contrast, visually rich, and under 60 words. No introductory text or extra commentary.
+            """
+            enriched = qwen_service.generate_text(prompt)
+            return enriched.strip()
+        except Exception as e:
+            logger.error(f"Failed to enrich prompt spatially: {e}")
+            return raw_prompt
+
+    @staticmethod
     def compile_scene_package(project_id: int, scene_number: int, scene_dict: dict) -> dict:
         """
         Compiles the Scene Package containing all production blueprints.
@@ -23,23 +139,22 @@ class ScenePackageCompiler:
             if not project:
                 raise ValueError(f"Project with ID {project_id} not found.")
 
-            # 1. Resolve character assets & appearances
+            # Resolve character references using 3-tier resolver
             scene_chars = scene_dict.get("characters", [])
             if isinstance(scene_chars, str):
                 scene_chars = [scene_chars]
 
+            raw_prompt = scene_dict.get("ai_generation_prompt") or scene_dict.get("summary") or "A cinematic film scene"
+            
+            # 1. Character Alias Resolution (Tier 1, 2 & 3)
+            resolved_chars_map = ScenePackageCompiler._resolve_all_scene_characters(
+                project_id, db, raw_prompt, scene_chars
+            )
+
             character_references = []
             character_appearances = []
 
-            for char in scene_chars:
-                trimmed = char.lower().strip()
-                if not trimmed:
-                    continue
-                char_asset = db.query(CharacterAsset).filter(
-                    CharacterAsset.project_id == project_id,
-                    func.lower(CharacterAsset.character_name) == trimmed
-                ).first()
-                
+            for raw_name, char_asset in resolved_chars_map.items():
                 if char_asset:
                     if char_asset.image_url:
                         character_references.append(char_asset.image_url)
@@ -83,7 +198,6 @@ class ScenePackageCompiler:
                         break
 
             # 3. Dynamic character prompt enrichment (substitution)
-            raw_prompt = scene_dict.get("ai_generation_prompt") or scene_dict.get("summary") or "A cinematic film scene"
             enriched_prompt = raw_prompt
             
             for char_app in character_appearances:
@@ -127,7 +241,12 @@ class ScenePackageCompiler:
                 if env_str:
                     enriched_prompt += f". Environment: {location_name} ({env_str})"
 
-            # 5. Resolve specs & parameters
+            # 5. Spatial Prompt Enrichment with LLM
+            final_spatial_prompt = ScenePackageCompiler._enrich_prompt_with_spatial_layout(
+                enriched_prompt, character_appearances, environment_description
+            )
+
+            # 6. Resolve specs & parameters
             camera_movement = scene_dict.get("camera_movement") or scene_dict.get("camera_setup") or "Static"
             lighting_design = scene_dict.get("lighting_design") or (environment_description.get("lighting") if environment_description else "Ambient")
             negative_prompt = scene_dict.get("negative_prompt") or "cartoon, 3d render, low quality, shaky cam, text"
@@ -176,7 +295,7 @@ class ScenePackageCompiler:
                 composed_reference = environment_reference
             else:
                 # Automatic: Composite Character(s) & Environment
-                if local_char_paths and local_env_path and os.path.exists(local_env_path):
+                if local_char_paths or local_env_path:
                     try:
                         composed_reference = ScenePackageCompiler._compose_reference_board(
                             project_id, scene_number, local_char_paths, local_env_path, {
@@ -186,7 +305,7 @@ class ScenePackageCompiler:
                             }
                         )
                     except Exception as e:
-                        logger.error(f"Fails to generate reference board composition: {e}")
+                        logger.error(f"Failed to generate reference board composition: {e}")
                         composed_reference = environment_reference or (character_references[0] if character_references else None)
                 else:
                     composed_reference = environment_reference or (character_references[0] if character_references else None)
@@ -209,10 +328,10 @@ class ScenePackageCompiler:
                 "aspect_ratio": aspect_ratio,
                 "reference_strategy": strategy,
                 "composed_reference": composed_reference,
-                "enriched_prompt": enriched_prompt
+                "enriched_prompt": final_spatial_prompt
             }
 
-            # 6. Save Scene Manifest JSON file
+            # 7. Save Scene Manifest JSON file
             try:
                 os.makedirs("static/uploads/manifests", exist_ok=True)
                 manifest_filename = f"manifest_{project_id}_{scene_number}.json"
@@ -234,25 +353,49 @@ class ScenePackageCompiler:
         canvas_w = 1280
         canvas_h = 720
         board = Image.new("RGB", (canvas_w, canvas_h), (12, 12, 16))
-
-        # Paste Character references on Top Half (Y: 0 to 360)
-        if char_paths:
-            num_chars = len(char_paths)
-            char_box_w = canvas_w // num_chars
-            char_box_h = 360
+        
+        # Prepare drawing context
+        draw = ImageDraw.Draw(board)
+        
+        # Divide Top Row horizontally for characters & props
+        total_top_items = len(char_paths)
+        if total_top_items > 0:
+            col_w = canvas_w // total_top_items
             for i, c_path in enumerate(char_paths):
                 try:
                     if os.path.exists(c_path):
                         c_img = Image.open(c_path)
-                        # Resize preserving aspect ratio
-                        c_img.thumbnail((char_box_w - 40, char_box_h - 40))
+                        # Resize preserving aspect ratio to fit inside slot (with padding)
+                        slot_padding = 20
+                        max_w = col_w - slot_padding * 2
+                        max_h = 360 - slot_padding * 2
+                        c_img.thumbnail((max_w, max_h))
+                        
                         # Center inside slot
-                        slot_x = i * char_box_w + (char_box_w - c_img.width) // 2
-                        slot_y = (char_box_h - c_img.height) // 2
+                        slot_x = i * col_w + (col_w - c_img.width) // 2
+                        slot_y = (360 - c_img.height) // 2
                         board.paste(c_img, (slot_x, slot_y))
+                        
+                        # Draw label
+                        char_label = f"CHARACTER {i+1}"
+                        if i < len(metadata.get("characters", [])):
+                            char_label = f"CHAR: {metadata['characters'][i].upper()}"
+                        draw.text((i * col_w + 10, 10), char_label, fill=(156, 163, 175))
+                        
                 except Exception as e:
                     logger.error(f"Failed pasting character reference image {c_path}: {e}")
-
+                
+                # Draw vertical separator line
+                if i > 0:
+                    draw.line([(i * col_w, 0), (i * col_w, 360)], fill=(33, 33, 40), width=2)
+                    
+        else:
+            # Placeholder if no characters are present
+            draw.text((20, 160), "NO CHARACTER REFERENCES ASSIGNED", fill=(100, 100, 110))
+            
+        # Draw horizontal split line
+        draw.line([(0, 360), (canvas_w, 360)], fill=(33, 33, 40), width=2)
+        
         # Paste Environment reference on Bottom Half (Y: 360 to 720)
         if env_path and os.path.exists(env_path):
             try:
@@ -261,17 +404,22 @@ class ScenePackageCompiler:
                 slot_x = (canvas_w - e_img.width) // 2
                 slot_y = 360 + (360 - e_img.height) // 2
                 board.paste(e_img, (slot_x, slot_y))
+                
+                # Draw label
+                env_label = f"ENVIRONMENT: {metadata.get('environment', 'Unknown').upper()}"
+                draw.text((20, 370), env_label, fill=(156, 163, 175))
             except Exception as e:
                 logger.error(f"Failed pasting environment reference image {env_path}: {e}")
-
-        # Draw metadata text labels
+        else:
+            draw.text((20, 520), "NO ENVIRONMENT REFERENCE ASSIGNED", fill=(100, 100, 110))
+            
+        # Draw metadata text labels at the very bottom
         try:
-            draw = ImageDraw.Draw(board)
             text = f"SCENE: {metadata.get('scene_number_str', 'N/A')} | CHARS: {', '.join(metadata.get('characters', []))} | ENV: {metadata.get('environment', 'N/A')}"
-            draw.text((20, canvas_h - 25), text, fill=(156, 163, 175))
+            draw.text((20, canvas_h - 25), text, fill=(229, 126, 37))  # Orange-accented label
         except Exception as e:
             logger.error(f"Failed to draw text overlay: {e}")
-
+            
         # Save output
         out_filename = f"composed_ref_{project_id}_{scene_number}_{uuid.uuid4().hex[:8]}.png"
         os.makedirs("static/uploads", exist_ok=True)
