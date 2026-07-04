@@ -1495,11 +1495,8 @@ export default function EditorPage() {
 
   return (
     <div className={`flex h-screen overflow-hidden select-none font-display relative transition-colors duration-500 ${
-      isDayMode ? 'bg-white' : 'bg-[#06060b]'
+      isDayMode ? 'bg-white' : 'bg-[#09090d]'
     }`}>
-      {/* Background radial lens flares */}
-      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
-      <div className="absolute inset-0 z-0 pointer-events-none bg-cinematic lens-flare-radial opacity-95" />
 
       {/* Viewport Sidebar */}
       <div className="relative z-30 shrink-0 h-screen">
@@ -1510,7 +1507,7 @@ export default function EditorPage() {
       <div className="flex-1 flex flex-col min-w-0 h-screen relative z-20">
         
         {/* Editor Top Control Bar */}
-        <header className="h-14 border-b flex items-center justify-between px-6 shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-black/10 backdrop-blur-md">
+        <header className="h-14 border-b flex items-center justify-between px-6 shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216]">
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-extrabold tracking-[0.25em] uppercase text-surface-500">
               Studio Post-Production
@@ -1528,15 +1525,11 @@ export default function EditorPage() {
           <div className="flex items-center gap-4">
             {/* Aspect Ratio Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Aspect Ratio</span>
+              <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Aspect Ratio</span>
               <select
                 value={aspectRatio}
                 onChange={(e) => setAspectRatio(e.target.value)}
-                className={`text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
-                  isDayMode 
-                    ? 'bg-white border-black/10 text-neutral-800' 
-                    : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                }`}
+                className="text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
               >
                 <option value="16:9">16:9 (Widescreen)</option>
                 <option value="9:16">9:16 (Portrait)</option>
@@ -1550,15 +1543,11 @@ export default function EditorPage() {
 
             {/* Resolution Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Resolution</span>
+              <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Resolution</span>
               <select
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
-                className={`text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
-                  isDayMode 
-                    ? 'bg-white border-black/10 text-neutral-800' 
-                    : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                }`}
+                className="text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
               >
                 <option value="1080p">1080p (FHD)</option>
                 <option value="720p">720p (HD)</option>
@@ -1569,15 +1558,11 @@ export default function EditorPage() {
 
             {/* Format Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-surface-500">Format</span>
+              <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Format</span>
               <select
                 value={exportFormat}
                 onChange={(e) => setExportFormat(e.target.value)}
-                className={`text-[11px] font-semibold border rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer ${
-                  isDayMode 
-                    ? 'bg-white border-black/10 text-neutral-800' 
-                    : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                }`}
+                className="text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
               >
                 <option value="mp4">MP4</option>
                 <option value="mkv">MKV</option>
@@ -1590,7 +1575,7 @@ export default function EditorPage() {
             <button
               onClick={triggerExport}
               disabled={isExporting || videoTrack.length === 0}
-              className="btn-accent px-4 py-2 text-[11px] disabled:opacity-40 flex items-center gap-2 cursor-pointer transition-all shadow-none"
+              className="bg-gradient-to-b from-[#ffffff] to-[#d6d6db] text-black font-extrabold uppercase text-[9.5px] tracking-wider rounded-sm px-4 py-1.5 disabled:opacity-30 flex items-center gap-2 cursor-pointer transition-all border border-[#ffffff] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(0,0,0,0.4)] active:translate-y-[0.5px]"
             >
               {isExporting ? (
                 <>
@@ -1611,45 +1596,45 @@ export default function EditorPage() {
         <div className="flex-1 flex overflow-hidden min-h-0">
           
           {/* Left Panel: Media Library & Context Loader */}
-          <div className="w-80 border-r flex flex-col shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-black/[0.15]">
+          <div className="w-80 border-r flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216]">
             {/* Tabs selector */}
-            <div className="flex border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] p-2 gap-1">
+            <div className="flex border-b border-[#212128] bg-[#16161c] select-none">
               <button
                 onClick={() => setActiveTab('media')}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
+                className={`flex-1 py-2.5 rounded-none border-b-2 text-[9.5px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer ${
                   activeTab === 'media' 
-                    ? 'bg-white/5 text-white-force' 
-                    : 'text-surface-500 hover:text-surface-300'
+                    ? 'border-[#e57e25] bg-gradient-to-b from-[#1c1c24] to-[#121216] text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]' 
+                    : 'border-b border-[#212128] text-neutral-500 hover:text-neutral-300 bg-gradient-to-b from-[#22222a] to-[#1a1a22]'
                 }`}
               >
                 Media
               </button>
               <button
                 onClick={() => setActiveTab('overlays')}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
+                className={`flex-1 py-2.5 rounded-none border-b-2 text-[9.5px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer ${
                   activeTab === 'overlays' 
-                    ? 'bg-white/5 text-white-force' 
-                    : 'text-surface-555 hover:text-surface-300'
+                    ? 'border-[#e57e25] bg-gradient-to-b from-[#1c1c24] to-[#121216] text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]' 
+                    : 'border-b border-[#212128] text-neutral-500 hover:text-neutral-300 bg-gradient-to-b from-[#22222a] to-[#1a1a22]'
                 }`}
               >
                 Logo & Text
               </button>
               <button
                 onClick={() => setActiveTab('subtitles')}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
+                className={`flex-1 py-2.5 rounded-none border-b-2 text-[9.5px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer ${
                   activeTab === 'subtitles' 
-                    ? 'bg-white/5 text-white-force' 
-                    : 'text-surface-500 hover:text-surface-300'
+                    ? 'border-[#e57e25] bg-gradient-to-b from-[#1c1c24] to-[#121216] text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]' 
+                    : 'border-b border-[#212128] text-neutral-500 hover:text-neutral-300 bg-gradient-to-b from-[#22222a] to-[#1a1a22]'
                 }`}
               >
                 Subtitles
               </button>
               <button
                 onClick={() => setActiveTab('vfx')}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
+                className={`flex-1 py-2.5 rounded-none border-b-2 text-[9.5px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer ${
                   activeTab === 'vfx' 
-                    ? 'bg-white/5 text-white-force' 
-                    : 'text-surface-500 hover:text-surface-300'
+                    ? 'border-[#e57e25] bg-gradient-to-b from-[#1c1c24] to-[#121216] text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]' 
+                    : 'border-b border-[#212128] text-neutral-500 hover:text-neutral-300 bg-gradient-to-b from-[#22222a] to-[#1a1a22]'
                 }`}
               >
                 VFX
@@ -1661,14 +1646,14 @@ export default function EditorPage() {
                 <>
                   {/* Showrunner Connector (Import Storyboard) */}
                   {hasProject && (
-                    <div className="glass-panel p-3.5 rounded-xl border border-accent/20 bg-accent/[0.02] space-y-2">
-                      <p className="text-[11.5px] font-bold text-accent uppercase tracking-wider">Showrunner Link</p>
-                      <p className="text-[10px] text-surface-400 leading-relaxed">
+                    <div className="bg-[#17171f] p-3.5 rounded-sm border border-[#212128] space-y-2">
+                      <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Showrunner Link</p>
+                      <p className="text-[9.5px] text-surface-400 leading-relaxed">
                         Load the active storyboard slides, scripts, and media items directly into the multi-track editor timeline.
                       </p>
                       <button
                         onClick={() => loadDirectorDeskAssets(storyboard, script)}
-                        className="w-full py-2 rounded-lg bg-accent/20 hover:bg-accent/30 text-[10px] font-bold uppercase tracking-widest text-accent border border-accent/30 transition-all cursor-pointer"
+                        className="w-full py-2 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-accent hover:from-[#323240] hover:to-[#252530] text-[9.5px] font-extrabold uppercase tracking-wider shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] transition-all cursor-pointer active:translate-y-[0.5px]"
                       >
                         Load Storyboard Track
                       </button>
@@ -1678,7 +1663,7 @@ export default function EditorPage() {
                   {/* Upload Block */}
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border border-dashed border-white/[0.1] hover:border-accent/40 rounded-xl p-6 text-center cursor-pointer transition-colors bg-white/[0.01] hover:bg-white/[0.02]"
+                    className="border border-dashed border-[#252530] hover:border-accent/40 rounded-sm p-5 text-center cursor-pointer transition-colors bg-[#15151b] hover:bg-[#1a1a22]"
                   >
                     <input
                       type="file"
@@ -1688,9 +1673,9 @@ export default function EditorPage() {
                       accept="video/*,audio/*,image/*"
                       className="hidden"
                     />
-                    <FiUploadCloud size={28} className="mx-auto mb-2 text-surface-500" />
-                    <p className="text-[11px] font-bold text-surface-300">Import Media Assets</p>
-                    <p className="text-[9px] text-surface-500 mt-1">Video, audio, images, or branding assets</p>
+                    <FiUploadCloud size={22} className="mx-auto mb-1.5 text-surface-500" />
+                    <p className="text-[10px] font-bold text-surface-300">Import Media Assets</p>
+                    <p className="text-[8.5px] text-surface-500 mt-0.5">Video, audio, images, or branding assets</p>
                   </div>
 
                   {/* Assets Grid */}
@@ -1707,13 +1692,13 @@ export default function EditorPage() {
                                   setAssets([])
                                   setConfirmClearAllAssets(false)
                                 }}
-                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                                className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-sm bg-gradient-to-b from-[#b91c1c] to-[#991b1b] border border-[#dc2626] text-white hover:from-[#dc2626] hover:to-[#b91c1c] shadow-sm transition-all active:translate-y-[0.5px] cursor-pointer"
                               >
                                 Yes
                               </button>
                               <button
                                 onClick={() => setConfirmClearAllAssets(false)}
-                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white/10 text-neutral-200 hover:bg-white/20 transition-colors cursor-pointer"
+                                className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] shadow-sm transition-all active:translate-y-[0.5px] cursor-pointer"
                               >
                                 No
                               </button>
@@ -1734,19 +1719,19 @@ export default function EditorPage() {
                       {assets.map((asset) => (
                         <div
                           key={asset.id}
-                          className={`flex items-center justify-between p-2.5 rounded-lg border text-[11px] transition-colors relative group ${
+                          className={`flex items-center justify-between p-2 rounded-sm border text-[10.5px] transition-colors relative group ${
                             isDayMode
                               ? 'bg-white border-black/5 hover:bg-neutral-50'
-                              : 'bg-[#0a0a12]/80 border-white/[0.04] hover:bg-white/[0.02]'
+                              : 'bg-[#15151b] border-[#212128] hover:bg-[#1c1c24]'
                           }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="text-lg shrink-0">
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className="text-base shrink-0 select-none bg-black/30 w-7 h-7 flex items-center justify-center rounded-sm border border-[#2c2c36]">
                               {asset.type === 'video' ? '🎬' : asset.type === 'audio' ? '🎵' : '🖼️'}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold truncate text-surface-300" title={asset.name}>{asset.name}</p>
-                              <p className="text-[9px] font-mono text-surface-555 mt-0.5">{asset.duration.toFixed(1)}s</p>
+                              <p className="font-semibold truncate text-neutral-300 group-hover:text-white" title={asset.name}>{asset.name}</p>
+                              <p className="text-[8.5px] font-mono text-neutral-500 mt-0.5">{asset.duration.toFixed(1)}s</p>
                             </div>
                           </div>
 
@@ -1754,16 +1739,16 @@ export default function EditorPage() {
                             <button
                               onClick={() => addAssetToTimeline(asset, asset.type === 'audio' ? 'audio' : 'video', currentTime)}
                               title="Add to Timeline"
-                              className="p-1 rounded bg-accent/20 text-accent hover:bg-accent/30 cursor-pointer"
+                              className="w-7 h-7 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-[#e57e25] hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all active:translate-y-[0.5px]"
                             >
-                              <FiPlus size={11} />
+                              <FiPlus size={12} />
                             </button>
                             <button
                               onClick={() => deleteAsset(asset.id)}
                               title="Delete Asset"
-                              className="p-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 cursor-pointer"
+                              className="w-7 h-7 rounded-sm bg-gradient-to-b from-[#5c1e1e] to-[#401313] border border-[#7a2828] text-red-200 hover:from-[#6b2323] hover:to-[#4d1616] flex items-center justify-center cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition-all active:translate-y-[0.5px]"
                             >
-                              <FiTrash2 size={11} />
+                              <FiTrash2 size={12} />
                             </button>
                           </div>
                         </div>
@@ -1874,15 +1859,11 @@ export default function EditorPage() {
 
                       {/* Logo Position */}
                       <div className="space-y-1">
-                        <div className="text-[10px] font-semibold text-surface-500 uppercase">Position Corner</div>
+                        <div className="text-[10px] font-semibold text-surface-500 uppercase select-none">Position Corner</div>
                         <select
                           value={logo.position}
                           onChange={(e) => setLogo((prev) => ({ ...prev, position: e.target.value }))}
-                          className={`w-full text-[11px] font-semibold border rounded-lg px-2.5 py-2 focus:outline-none cursor-pointer ${
-                            isDayMode 
-                              ? 'bg-white border-black/10 text-neutral-800' 
-                              : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                          }`}
+                          className="w-full text-[9.5px] font-extrabold uppercase tracking-wider border rounded-sm px-2.5 py-1.5 focus:outline-none cursor-pointer bg-gradient-to-b from-[#25252e] to-[#1b1b22] border-[#31313e] text-neutral-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.3)] hover:from-[#2c2c36] hover:to-[#202028] transition-all"
                           disabled={!logo.enabled}
                         >
                           <option value="top-left">Top Left</option>
@@ -1898,18 +1879,14 @@ export default function EditorPage() {
 
                   {/* Custom Text Adder Section */}
                   <div className="space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Custom Text Overlay</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500 select-none">Custom Text Overlay</p>
                     
                     <div className="space-y-1.5">
                       <textarea
                         value={customText}
                         onChange={(e) => setCustomText(e.target.value)}
                         placeholder="Enter custom subtitle or text overlay..."
-                        className={`w-full text-[11px] font-semibold border rounded-lg p-2.5 focus:outline-none h-16 resize-none ${
-                          isDayMode 
-                            ? 'bg-white border-black/10 text-neutral-800' 
-                            : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                        }`}
+                        className="w-full text-[10px] font-bold border rounded-sm p-2.5 focus:outline-none h-16 resize-none bg-[#15151b] border-[#212128] text-neutral-200 placeholder-neutral-600 focus:border-accent/40 transition-colors"
                       />
                       <button
                         onClick={() => {
@@ -1918,7 +1895,7 @@ export default function EditorPage() {
                           setCustomText('')
                         }}
                         disabled={!customText.trim()}
-                        className="btn-accent w-full py-2.5 disabled:opacity-40 flex items-center justify-center gap-1.5 shadow-none"
+                        className="w-full py-2 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-[#e57e25] hover:from-[#323240] hover:to-[#252530] text-[9.5px] font-extrabold uppercase tracking-wider shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-20 disabled:pointer-events-none transition-all active:translate-y-[0.5px] cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <FiType size={11} />
                         <span>Add Text Overlay</span>
@@ -1949,13 +1926,13 @@ export default function EditorPage() {
                                   setTextTrack([])
                                   setConfirmClearAll(false)
                                 }}
-                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                                className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-sm bg-gradient-to-b from-[#b91c1c] to-[#991b1b] border border-[#dc2626] text-white hover:from-[#dc2626] hover:to-[#b91c1c] shadow-sm transition-all active:translate-y-[0.5px] cursor-pointer"
                               >
                                 Yes
                               </button>
                               <button
                                 onClick={() => setConfirmClearAll(false)}
-                                className="text-[8.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white/10 text-neutral-200 hover:bg-white/20 transition-colors cursor-pointer"
+                                className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] shadow-sm transition-all active:translate-y-[0.5px] cursor-pointer"
                               >
                                 No
                               </button>
@@ -1963,7 +1940,7 @@ export default function EditorPage() {
                           ) : (
                             <button
                               onClick={() => setConfirmClearAll(true)}
-                              className="text-[9px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors cursor-pointer"
+                              className="text-[9px] font-extrabold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors cursor-pointer active:translate-y-[0.5px]"
                               title="Clear all subtitles"
                             >
                               <FiTrash2 size={10} />
@@ -1976,7 +1953,7 @@ export default function EditorPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => subtitleInputRef.current?.click()}
-                        className="flex-1 py-2 px-3 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent font-bold uppercase tracking-wider text-[10px] cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-2 px-3 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-[#e57e25] hover:from-[#323240] hover:to-[#252530] font-extrabold uppercase tracking-wider text-[9.5px] cursor-pointer flex items-center justify-center gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] transition-all active:translate-y-[0.5px]"
                       >
                         <FiUploadCloud size={12} />
                         <span>Import SRT/VTT</span>
@@ -1992,7 +1969,7 @@ export default function EditorPage() {
                       <button
                         onClick={handleExportSRT}
                         disabled={textTrack.length === 0}
-                        className="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 disabled:opacity-40 disabled:cursor-not-allowed font-bold uppercase tracking-wider text-[10px] cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                        className="py-2 px-3 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] disabled:opacity-20 disabled:pointer-events-none font-extrabold uppercase tracking-wider text-[9.5px] cursor-pointer flex items-center justify-center gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] transition-all active:translate-y-[0.5px]"
                         title="Export timeline subtitles to SRT file"
                       >
                         <FiDownload size={12} />
@@ -2002,7 +1979,7 @@ export default function EditorPage() {
                     
                     <button
                       onClick={handleAddSubtitleAtPlayhead}
-                      className="btn-accent w-full py-2 px-4 flex items-center justify-center gap-1.5 transition-colors shadow-none"
+                      className="w-full py-2 px-4 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-[#e57e25] hover:from-[#323240] hover:to-[#252530] font-extrabold uppercase tracking-wider text-[9.5px] cursor-pointer flex items-center justify-center gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] transition-all active:translate-y-[0.5px]"
                     >
                       <FiPlus size={11} />
                       <span>Add Subtitle at Playhead</span>
@@ -2013,17 +1990,13 @@ export default function EditorPage() {
                   
                   {/* Search and Interactive editor list */}
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Subtitle Track Editor</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500 select-none">Subtitle Track Editor</p>
                     <input
                       type="text"
                       placeholder="Search subtitle text..."
                       value={subSearchQuery}
                       onChange={(e) => setSubSearchQuery(e.target.value)}
-                      className={`w-full text-[11px] font-semibold border rounded-lg p-2 focus:outline-none ${
-                        isDayMode 
-                          ? 'bg-white border-black/10 text-neutral-800' 
-                          : 'bg-[#0c0c16] border-white/10 text-neutral-200'
-                      }`}
+                      className="w-full text-[10px] font-bold border rounded-sm p-2 focus:outline-none bg-[#15151b] border-[#212128] text-neutral-200 placeholder-neutral-600 focus:border-accent/40 transition-colors"
                     />
                   </div>
 
@@ -2042,12 +2015,10 @@ export default function EditorPage() {
                               setSelectedClipId(sub.id);
                               setSelectedTrackType('text');
                             }}
-                            className={`p-3 rounded-xl border text-[11px] space-y-2 transition-colors relative group cursor-pointer ${
+                            className={`p-3 rounded-sm border text-[10px] space-y-2 transition-colors relative group cursor-pointer ${
                               isSelected
-                                ? 'bg-accent/10 border-accent shadow-[0_0_8px_rgba(139,92,246,0.15)]'
-                                : isDayMode
-                                  ? 'bg-white border-black/5 hover:bg-neutral-50'
-                                  : 'bg-[#0a0a12]/80 border-white/[0.04] hover:bg-white/[0.02]'
+                                ? 'bg-[#1e1a14] border-[#e57e25]'
+                                : 'bg-[#17171f] border-[#212128] hover:bg-[#1c1c27]'
                             }`}
                           >
                             <div className="flex justify-between items-center text-[9px] font-mono text-surface-500">
@@ -2056,7 +2027,7 @@ export default function EditorPage() {
                                   e.stopPropagation();
                                   setCurrentTime(sub.start);
                                 }}
-                                className="hover:text-accent font-bold cursor-pointer transition-colors"
+                                className="hover:text-accent font-extrabold cursor-pointer transition-colors"
                                 title="Seek playhead to start time"
                               >
                                 ⏱️ {formatTime(sub.start)} ➔ {formatTime(sub.end)}
@@ -2068,10 +2039,10 @@ export default function EditorPage() {
                                     e.stopPropagation();
                                     deleteClip(sub.id, 'text');
                                   }}
-                                  className="p-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/25 cursor-pointer"
+                                  className="w-7 h-7 rounded-sm bg-gradient-to-b from-[#5c1e1e] to-[#401313] border border-[#7a2828] text-red-200 hover:from-[#6b2323] hover:to-[#4d1616] flex items-center justify-center cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition-all active:translate-y-[0.5px]"
                                   title="Delete subtitle"
                                 >
-                                  <FiTrash2 size={10} />
+                                  <FiTrash2 size={12} />
                                 </button>
                               </div>
                             </div>
@@ -2080,11 +2051,7 @@ export default function EditorPage() {
                               value={sub.text}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => updateClipProperties(sub.id, 'text', { text: e.target.value })}
-                              className={`w-full text-[10.5px] font-semibold border rounded-lg p-2 focus:outline-none h-14 resize-none ${
-                                isDayMode 
-                                  ? 'bg-neutral-50 border-black/10 text-neutral-800 focus:bg-white' 
-                                  : 'bg-black/30 border-white/5 text-neutral-200 focus:bg-black/55'
-                              }`}
+                              className="w-full text-[10px] font-bold border rounded-sm p-2 focus:outline-none h-14 resize-none bg-[#101014] border-[#212128] text-neutral-200 placeholder-neutral-600 focus:border-accent/40 transition-colors"
                               placeholder="Enter subtitle text..."
                             />
                           </div>
@@ -2488,30 +2455,30 @@ export default function EditorPage() {
           </div>
 
           {/* Right Panel: Properties & Effects controls */}
-          <div className="w-80 border-l flex flex-col shrink-0 border-white/[0.03] [data-theme='day']_&:border-black/[0.06] bg-black/[0.15]">
-            <div className="p-4 border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] flex items-center gap-2 text-accent shrink-0">
-              <FiSliders size={13} />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-surface-300">Property inspector</span>
+          <div className="w-80 border-l flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216]">
+            <div className="p-4 border-b border-[#212128] [data-theme='day']_&:border-black/[0.05] flex items-center gap-2 text-neutral-300 bg-[#16161c] shrink-0">
+              <FiSliders size={13} className="text-accent" />
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">Property inspector</span>
             </div>
 
             {selectedClip && selectedTrackType === 'video' && (
-              <div className="flex border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] p-2 gap-1 bg-black/5 shrink-0">
+              <div className="flex border-b border-[#212128] bg-[#16161c] shrink-0 select-none">
                 <button
                   onClick={() => setActiveInspectorTab('properties')}
-                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                  className={`flex-1 py-2.5 rounded-none border-b-2 text-[9.5px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer ${
                     activeInspectorTab === 'properties'
-                      ? 'bg-white/5 text-white-force'
-                      : 'text-surface-500 hover:text-surface-300'
+                      ? 'border-[#e57e25] bg-gradient-to-b from-[#1c1c24] to-[#121216] text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]'
+                      : 'border-b border-[#212128] text-neutral-500 hover:text-neutral-300 bg-gradient-to-b from-[#22222a] to-[#1a1a22]'
                   }`}
                 >
                   Properties
                 </button>
                 <button
                   onClick={() => setActiveInspectorTab('effects')}
-                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                  className={`flex-1 py-2.5 rounded-none border-b-2 text-[9.5px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer ${
                     activeInspectorTab === 'effects'
-                      ? 'bg-white/5 text-white-force'
-                      : 'text-surface-500 hover:text-surface-300'
+                      ? 'border-[#e57e25] bg-gradient-to-b from-[#1c1c24] to-[#121216] text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]'
+                      : 'border-b border-[#212128] text-neutral-500 hover:text-neutral-300 bg-gradient-to-b from-[#22222a] to-[#1a1a22]'
                   }`}
                 >
                   Filters & Effects
@@ -2633,19 +2600,18 @@ export default function EditorPage() {
                           })}
                         </div>
 
-                        {/* Presets Pagination Controls */}
                         <div className="flex items-center justify-between pt-1">
                           <button
                             onClick={() => setPresetPage(p => Math.max(0, p - 1))}
                             disabled={presetPage === 0}
-                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            className="px-2.5 py-1 text-[8.5px] font-extrabold uppercase rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
                           >
                             Prev
                           </button>
                           <button
                             onClick={() => setPresetPage(p => Math.min(Math.ceil(PRESETS.length / 4) - 1, p + 1))}
                             disabled={presetPage === Math.ceil(PRESETS.length / 4) - 1}
-                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            className="px-2.5 py-1 text-[8.5px] font-extrabold uppercase rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
                           >
                             Next
                           </button>
@@ -2839,19 +2805,18 @@ export default function EditorPage() {
                           })}
                         </div>
 
-                        {/* Effects Pagination Controls */}
                         <div className="flex items-center justify-between pt-1">
                           <button
                             onClick={() => setEffectsPage(p => Math.max(0, p - 1))}
                             disabled={effectsPage === 0}
-                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            className="px-2.5 py-1 text-[8.5px] font-extrabold uppercase rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
                           >
                             Prev
                           </button>
                           <button
                             onClick={() => setEffectsPage(p => Math.min(Math.ceil(CREATIVE_EFFECTS.length / 4) - 1, p + 1))}
                             disabled={effectsPage === Math.ceil(CREATIVE_EFFECTS.length / 4) - 1}
-                            className="px-2.5 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-neutral-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            className="px-2.5 py-1 text-[8.5px] font-extrabold uppercase rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
                           >
                             Next
                           </button>
@@ -3531,14 +3496,14 @@ export default function EditorPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => duplicateClip(selectedClip.id, selectedTrackType)}
-                      className="flex-1 py-2 rounded-lg border border-white/[0.06] text-[10.5px] font-bold uppercase tracking-wider hover:bg-white/5 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      className="flex-1 py-2 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] text-[9.5px] font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] active:translate-y-[0.5px]"
                     >
                       <FiCopy size={11} />
                       <span>Duplicate</span>
                     </button>
                     <button
                       onClick={() => deleteClip(selectedClip.id, selectedTrackType)}
-                      className="flex-1 py-2 rounded-lg border border-red-500/20 text-[10.5px] font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      className="flex-1 py-2 rounded-sm bg-gradient-to-b from-[#5c1e1e] to-[#401313] border border-[#7a2828] text-red-200 hover:from-[#6b2323] hover:to-[#4d1616] text-[9.5px] font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_1px_2px_rgba(0,0,0,0.4)] active:translate-y-[0.5px]"
                     >
                       <FiTrash2 size={11} />
                       <span>Delete</span>
@@ -3546,8 +3511,14 @@ export default function EditorPage() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-12 text-surface-500 font-mono text-[10.5px]">
-                  Select a clip on the timeline to configure parameters and visual/audio effects.
+                <div className="flex flex-col items-center justify-center text-center py-20 px-4 select-none">
+                  <div className="w-10 h-10 rounded-sm bg-[#16161c] border border-[#212128] flex items-center justify-center mb-3">
+                    <FiSliders size={15} className="text-neutral-500" />
+                  </div>
+                  <p className="text-[9.5px] font-bold text-neutral-300 uppercase tracking-wider">No Selection</p>
+                  <p className="text-[8.5px] text-neutral-600 max-w-[180px] mt-1.5 leading-relaxed">
+                    Select any timeline clip to configure parameters and visual/audio effects.
+                  </p>
                 </div>
               )}
             </div>
@@ -3567,49 +3538,49 @@ export default function EditorPage() {
           />
           
           {/* Timeline Toolbar */}
-          <div className="h-10 border-b border-white/[0.04] [data-theme='day']_&:border-black/[0.05] flex items-center justify-between px-6 shrink-0 bg-black/10">
+          <div className="h-10 border-b border-[#212128] [data-theme='day']_&:border-black/[0.05] flex items-center justify-between px-6 shrink-0 bg-[#16161c]">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => addTextOverlay("New Text overlay", currentTime, currentTime + 4.0)}
                 title="Add Text Overlay"
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-surface-200 cursor-pointer flex items-center justify-center border border-white/[0.05]"
+                className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
               >
-                <FiType size={11} />
+                <FiType size={14} />
               </button>
 
-              <div className="h-4 w-px bg-white/[0.08]" />
+              <div className="h-4 w-px bg-[#252530]" />
 
               {/* Undo / Redo Controls */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={undo}
                   disabled={!canUndo}
                   title="Undo"
-                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-surface-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer flex items-center justify-center border border-white/[0.05]"
+                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
                 >
-                  <FiCornerUpLeft size={11} />
+                  <FiCornerUpLeft size={14} />
                 </button>
                 <button
                   onClick={redo}
                   disabled={!canRedo}
                   title="Redo"
-                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-surface-200 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer flex items-center justify-center border border-white/[0.05]"
+                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
                 >
-                  <FiCornerUpRight size={11} />
+                  <FiCornerUpRight size={14} />
                 </button>
               </div>
 
-              <div className="h-4 w-px bg-white/[0.08]" />
+              <div className="h-4 w-px bg-[#252530]" />
 
               {/* Clip Actions (Split Left, Split, Split Right, Delete) */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={splitLeft}
                   disabled={!selectedClipId || selectedTrackType === 'text'}
                   title="Split Left (Trim start to playhead)"
-                  className="p-1.5 rounded-lg border border-white/[0.08] text-surface-200 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-white/5"
+                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
                 >
-                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="3" x2="12" y2="21" />
                     <path d="M 7 5 H 4 V 19 H 7" strokeDasharray="3 2" opacity="0.35" />
                     <path d="M 17 5 H 20 V 19 H 17" />
@@ -3620,37 +3591,37 @@ export default function EditorPage() {
                   onClick={splitClipAtPlayhead}
                   disabled={!selectedClipId || selectedTrackType === 'text'}
                   title="Split Clip at Playhead"
-                  className="p-1.5 rounded-lg border border-white/[0.08] text-surface-200 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-white/5"
+                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
                 >
-                  <FiScissors size={11} />
+                  <FiScissors size={14} />
                 </button>
 
                 <button
                   onClick={splitRight}
                   disabled={!selectedClipId || selectedTrackType === 'text'}
                   title="Split Right (Trim playhead to end)"
-                  className="p-1.5 rounded-lg border border-white/[0.08] text-surface-200 hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-white/5"
+                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
                 >
-                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="3" x2="12" y2="21" />
                     <path d="M 7 5 H 4 V 19 H 7" />
                     <path d="M 17 5 H 20 V 19 H 17" strokeDasharray="3 2" opacity="0.35" />
                   </svg>
                 </button>
 
-                <div className="h-4 w-px bg-white/[0.08] mx-1" />
+                <div className="h-4 w-px bg-[#252530] mx-1" />
 
                 <button
                   onClick={() => deleteClip(selectedClipId, selectedTrackType)}
                   disabled={!selectedClipId}
                   title="Delete Selected Clip"
-                  className="p-1.5 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center cursor-pointer bg-red-500/5"
+                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#5c1e1e] to-[#401313] border border-[#7a2828] text-red-200 hover:from-[#6b2323] hover:to-[#4d1616] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
                 >
-                  <FiTrash2 size={11} />
+                  <FiTrash2 size={14} />
                 </button>
               </div>
 
-              <div className="h-4 w-px bg-white/[0.08]" />
+              <div className="h-4 w-px bg-[#252530]" />
 
               {/* Snap Settings */}
               <div className="flex items-center gap-1.5">
@@ -3671,16 +3642,16 @@ export default function EditorPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setZoom(Math.max(5, zoom - 5))}
-                className="p-1 rounded text-surface-400 hover:text-white transition-colors cursor-pointer"
+                className="p-1 rounded-sm text-neutral-400 hover:text-white hover:bg-[#252530] transition-colors cursor-pointer"
               >
-                <FiZoomOut size={13} />
+                <FiZoomOut size={12} />
               </button>
-              <span className="text-[9px] font-mono text-surface-555">Zoom: {zoom}px/s</span>
+              <span className="text-[8.5px] font-mono text-neutral-500 select-none">Zoom: {zoom}px/s</span>
               <button
                 onClick={() => setZoom(Math.min(50, zoom + 5))}
-                className="p-1 rounded text-surface-400 hover:text-white transition-colors cursor-pointer"
+                className="p-1 rounded-sm text-neutral-400 hover:text-white hover:bg-[#252530] transition-colors cursor-pointer"
               >
-                <FiZoomIn size={13} />
+                <FiZoomIn size={12} />
               </button>
             </div>
           </div>
@@ -3689,12 +3660,24 @@ export default function EditorPage() {
           <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 flex" ref={timelineScrollRef}>
             
             {/* Headers Left Column */}
-            <div className="w-24 border-r border-white/[0.04] [data-theme='day']_&:border-black/[0.05] shrink-0 bg-black/20 flex flex-col font-mono text-[9px] font-black uppercase text-surface-500 select-none">
-              <div className="h-6 border-b border-white/[0.03] flex items-center px-3 tracking-widest shrink-0">Ruler</div>
-              <div className="h-16 border-b border-white/[0.03] flex items-center px-3 tracking-widest">Video v1</div>
-              <div className="h-16 border-b border-white/[0.03] flex items-center px-3 tracking-widest">Audio a1</div>
-              <div className="h-16 border-b border-white/[0.03] flex items-center px-3 tracking-widest">Text t1</div>
-              <div className="h-16 flex items-center px-3 tracking-widest">VFX fx1</div>
+            <div className="w-24 border-r border-[#212128] [data-theme='day']_&:border-black/[0.05] shrink-0 bg-[#16161c] flex flex-col font-mono text-[8px] font-bold uppercase text-neutral-400 select-none">
+              <div className="h-6 border-b border-[#212128] flex items-center px-2.5 tracking-wider shrink-0 bg-[#1c1c24] text-[7.5px] text-neutral-500 font-extrabold">Timecode</div>
+              <div className="h-16 border-b border-[#212128] flex flex-col justify-center px-2.5 relative">
+                <span className="text-[10px] font-bold text-neutral-200">V1</span>
+                <span className="text-[7px] text-neutral-500 font-medium tracking-normal mt-0.5">Video Track</span>
+              </div>
+              <div className="h-16 border-b border-[#212128] flex flex-col justify-center px-2.5 relative">
+                <span className="text-[10px] font-bold text-neutral-200">A1</span>
+                <span className="text-[7px] text-neutral-500 font-medium tracking-normal mt-0.5">Audio Voice</span>
+              </div>
+              <div className="h-16 border-b border-[#212128] flex flex-col justify-center px-2.5 relative">
+                <span className="text-[10px] font-bold text-neutral-200">T1</span>
+                <span className="text-[7px] text-neutral-500 font-medium tracking-normal mt-0.5">Subtitles</span>
+              </div>
+              <div className="h-16 flex flex-col justify-center px-2.5 relative">
+                <span className="text-[10px] font-bold text-neutral-200">FX1</span>
+                <span className="text-[7px] text-neutral-500 font-medium tracking-normal mt-0.5">VFX Effects</span>
+              </div>
             </div>
 
             {/* Scrollable Tracks Canvas */}
@@ -3706,7 +3689,7 @@ export default function EditorPage() {
             >
               {/* Timeline Ruler */}
               <div 
-                className="h-6 border-b border-white/[0.03] relative bg-black/5 select-none shrink-0"
+                className="h-6 border-b border-[#212128] relative bg-[#18181f] select-none shrink-0"
                 style={{ width: `${Math.max(totalDuration * zoom + 300, 1200)}px` }}
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect()
@@ -3718,7 +3701,7 @@ export default function EditorPage() {
                 {Array.from({ length: totalDuration > 0 ? Math.ceil(totalDuration) + 15 : 0 }).map((_, i) => (
                   <div
                     key={i}
-                    className="absolute bottom-0 h-2 border-l border-white/10 text-[7.5px] font-mono text-surface-600 pl-1 leading-none pb-0.5"
+                    className="absolute bottom-0 h-2 border-l border-[#2e2e38] text-[7.5px] font-mono text-neutral-500 pl-1 leading-none pb-0.5"
                     style={{ left: `${i * zoom}px` }}
                   >
                     {i % 5 === 0 ? `${i}s` : ''}
@@ -3727,10 +3710,10 @@ export default function EditorPage() {
 
                 {/* Timeline Current Time Indicator Needle */}
                 <div
-                  className="absolute top-0 bottom-0 w-[1.5px] bg-[#8b5cf6] z-40 pointer-events-none"
+                  className="absolute top-0 bottom-0 w-[1.5px] bg-red-500 z-40 pointer-events-none"
                   style={{ left: `${currentTime * zoom}px` }}
                 >
-                  <div className="w-3 h-3 bg-[#8b5cf6] rotate-45 -ml-1.5 -mt-1.5 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
+                  <div className="w-3 h-3 bg-red-500 rotate-45 -ml-1.5 -mt-1.5" />
                 </div>
               </div>
 
@@ -3741,7 +3724,7 @@ export default function EditorPage() {
               >
                 
                 {/* Video Track Row */}
-                <div className="h-16 border-b border-white/[0.03] relative flex items-center bg-white/[0.005]">
+                <div className="h-16 border-b border-[#212128] relative flex items-center bg-[#131318]/40">
                   {videoTrack.map((clip) => {
                     const isSelected = selectedClipId === clip.id
                     return (
@@ -3752,10 +3735,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('video')
                         }}
-                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-accent border-accent text-[var(--accent-text)] border-[1.5px]'
-                            : 'bg-neutral-800/40 border-white/[0.04] text-neutral-400 hover:border-white/10 [data-theme="day"]_&:bg-neutral-200/40 [data-theme="day"]_&:border-black/[0.04] [data-theme="day"]_&:text-neutral-600 [data-theme="day"]_&:hover:border-black/10'
+                            ? 'bg-[#203750] border-[#3b6088] text-blue-100 shadow-[0_0_8px_rgba(59,96,136,0.2)] border-[1.5px] font-medium'
+                            : 'bg-[#1a2b3d] border-[#223952] text-neutral-400 hover:border-neutral-500'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3765,13 +3748,13 @@ export default function EditorPage() {
                       >
                         {/* Trim handlers */}
                         <div
-                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l cursor-ew-resize transition-colors"
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/85 rounded-l-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'video', 'trim-start')}
                         />
                         <span className="truncate flex-1 select-none pr-2">{clip.name}</span>
-                        <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
+                        <span className="text-[8px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
                         <div
-                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r cursor-ew-resize transition-colors"
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/85 rounded-r-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'video', 'trim-end')}
                         />
                       </div>
@@ -3780,7 +3763,7 @@ export default function EditorPage() {
                 </div>
 
                 {/* Audio Track Row */}
-                <div className="h-16 border-b border-white/[0.03] relative flex items-center bg-white/[0.005]">
+                <div className="h-16 border-b border-[#212128] relative flex items-center bg-[#131318]/40">
                   {audioTrack.map((clip) => {
                     const isSelected = selectedClipId === clip.id
                     return (
@@ -3791,10 +3774,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('audio')
                         }}
-                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-[#064e3b] border-[#34d399] text-white shadow-[0_0_12px_rgba(52,211,153,0.15)] border-[1.5px]'
-                            : 'bg-[#064e3b]/40 border-[#34d399]/20 hover:border-[#34d399]/50 text-cyan-200'
+                            ? 'bg-[#12422a] border-[#226a46] text-green-100 shadow-[0_0_8px_rgba(34,106,70,0.2)] border-[1.5px] font-medium'
+                            : 'bg-[#0e301f] border-[#16462e] text-neutral-400 hover:border-[#34d399]/40'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3804,13 +3787,13 @@ export default function EditorPage() {
                       >
                         {/* Trim handlers */}
                         <div
-                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l cursor-ew-resize transition-colors"
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-emerald-500/80 rounded-l-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'audio', 'trim-start')}
                         />
                         <span className="truncate flex-1 select-none pr-2">🔊 {clip.name}</span>
-                        <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
+                        <span className="text-[8px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
                         <div
-                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r cursor-ew-resize transition-colors"
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-emerald-500/80 rounded-r-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'audio', 'trim-end')}
                         />
                       </div>
@@ -3819,7 +3802,7 @@ export default function EditorPage() {
                 </div>
 
                 {/* Text Track Row */}
-                <div className="h-16 border-b border-white/[0.03] relative flex items-center bg-white/[0.005]">
+                <div className="h-16 border-b border-[#212128] relative flex items-center bg-[#131318]/40">
                   {textTrack.map((clip) => {
                     const isSelected = selectedClipId === clip.id
                     return (
@@ -3830,10 +3813,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('text')
                         }}
-                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-[#0c4a6e] border-[#38bdf8] text-white shadow-[0_0_12px_rgba(56,189,248,0.15)] border-[1.5px]'
-                            : 'bg-[#0c4a6e]/40 border-[#38bdf8]/20 hover:border-[#38bdf8]/50 text-amber-200'
+                            ? 'bg-[#4c1d3b] border-[#83386b] text-purple-100 shadow-[0_0_8px_rgba(131,56,107,0.2)] border-[1.5px] font-medium'
+                            : 'bg-[#37152b] border-[#522040] text-neutral-400 hover:border-[#38bdf8]/40'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3843,13 +3826,13 @@ export default function EditorPage() {
                       >
                         {/* Trim handlers */}
                         <div
-                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l cursor-ew-resize transition-colors"
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-fuchsia-500/80 rounded-l-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'text', 'trim-start')}
                         />
                         <span className="truncate flex-1 select-none pr-2">💬 {clip.text}</span>
-                        <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
+                        <span className="text-[8px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
                         <div
-                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r cursor-ew-resize transition-colors"
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-fuchsia-500/80 rounded-r-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'text', 'trim-end')}
                         />
                       </div>
@@ -3858,7 +3841,7 @@ export default function EditorPage() {
                 </div>
 
                 {/* VFX Track Row */}
-                <div className="h-16 relative flex items-center bg-white/[0.005]">
+                <div className="h-16 relative flex items-center bg-[#131318]/40 border-b border-[#212128]">
                   {vfxTrack.map((clip) => {
                     const isSelected = selectedClipId === clip.id
                     return (
@@ -3869,10 +3852,10 @@ export default function EditorPage() {
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('vfx')
                         }}
-                        className={`absolute h-12 rounded flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
+                        className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
-                            ? 'bg-[#701a75] border-[#f472b6] text-white shadow-[0_0_12px_rgba(244,114,182,0.15)] border-[1.5px]'
-                            : 'bg-[#701a75]/40 border-[#f472b6]/20 hover:border-[#f472b6]/50 text-indigo-200'
+                            ? 'bg-[#4a3418] border-[#8c6738] text-amber-100 shadow-[0_0_8px_rgba(140,103,56,0.2)] border-[1.5px] font-medium'
+                            : 'bg-[#362511] border-[#593d1b] text-neutral-400 hover:border-[#f472b6]/40'
                         }`}
                         style={{
                           left: `${clip.start * zoom}px`,
@@ -3882,15 +3865,15 @@ export default function EditorPage() {
                       >
                         {/* Trim handlers */}
                         <div
-                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-l-xl cursor-ew-resize transition-colors"
+                          className="absolute left-0 top-0 bottom-0 w-2 hover:bg-amber-500/80 rounded-l-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'vfx', 'trim-start')}
                         />
                         <span className="truncate flex-1 select-none pr-2">
                           {clip.type === 'camera_fx' ? '🎥' : '✨'} {clip.name}
                         </span>
-                        <span className="text-[8.5px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
+                        <span className="text-[8px] font-mono opacity-60">{(clip.end - clip.start).toFixed(1)}s</span>
                         <div
-                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-accent/80 rounded-r-xl cursor-ew-resize transition-colors"
+                          className="absolute right-0 top-0 bottom-0 w-2 hover:bg-amber-500/80 rounded-r-sm cursor-ew-resize transition-colors"
                           onMouseDown={(e) => handleClipMouseDown(e, clip, 'vfx', 'trim-end')}
                         />
                       </div>
@@ -3900,7 +3883,7 @@ export default function EditorPage() {
 
                 {/* Playhead indicator bar (inside tracks area) */}
                 <div
-                  className="absolute top-0 bottom-0 w-[1.5px] bg-accent/40 pointer-events-none z-30"
+                  className="absolute top-0 bottom-0 w-[1.5px] bg-red-500/40 pointer-events-none z-30"
                   style={{ left: `${currentTime * zoom}px` }}
                 />
 
