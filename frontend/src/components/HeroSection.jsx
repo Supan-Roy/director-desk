@@ -827,11 +827,11 @@ export default function HeroSection({
   const getCoreClass = () => {
     if (loading) return "absolute w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(52,211,153,0.5)] transition-all duration-300";
     if (focused) {
-      if (orbAnimating) return `absolute w-6 h-6 rounded-full flex items-center justify-center scale-105 transition-all duration-300 ${isDayMode ? 'bg-black text-white' : 'bg-white text-black'}`;
-      return `absolute w-6 h-6 rounded-full flex items-center justify-center scale-105 transition-all duration-300 ${isDayMode ? 'bg-black text-white' : 'bg-white text-black'}`;
+      if (orbAnimating) return `absolute w-6 h-6 rounded-full flex items-center justify-center scale-105 transition-all duration-300 ${isDayMode ? 'bg-[#f4f4f5] border border-neutral-300 text-neutral-800' : 'bg-white text-black'}`;
+      return `absolute w-6 h-6 rounded-full flex items-center justify-center scale-105 transition-all duration-300 ${isDayMode ? 'bg-[#f4f4f5] border border-neutral-300 text-neutral-800' : 'bg-white text-black'}`;
     }
     return `absolute w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
-      isDayMode ? 'bg-black text-white hover:scale-105' : 'bg-white text-black hover:scale-105'
+      isDayMode ? 'bg-[#f4f4f5] border border-neutral-200/80 text-neutral-600 hover:bg-[#e4e4e7] hover:text-neutral-900 hover:scale-105' : 'bg-white text-black hover:scale-105'
     }`;
   };
 
@@ -846,7 +846,7 @@ export default function HeroSection({
           <>
             {/* Cinematic background artwork (fully visible) */}
             <div
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none rounded-lg opacity-[0.85] filter contrast-[1.05] brightness-[0.95]"
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none rounded-lg opacity-[0.95] filter contrast-[1.05] brightness-[0.98]"
               style={{
                 backgroundImage: `url('/images/studio_bg.png')`
               }}
@@ -857,12 +857,12 @@ export default function HeroSection({
           <>
             {/* Cinematic background artwork */}
             <div
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.85] filter brightness-[0.8] contrast-[1.1] mix-blend-screen rounded-lg"
+              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-[0.95] filter brightness-[0.95] contrast-[1.1] mix-blend-screen rounded-lg"
               style={{ backgroundImage: `url('/images/studio_bg.png')` }}
             />
-            {/* Dark overlay (reduced opacity for better visibility) */}
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-b from-black/50 via-transparent to-black/60" />
-            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-r from-[#050505]/50 via-transparent to-[#050505]/50" />
+            {/* Dark overlay (reduced opacity for better visibility of background studio) */}
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-b from-black/30 via-transparent to-black/40" />
+            <div className="absolute inset-0 z-0 pointer-events-none rounded-lg bg-gradient-to-r from-[#050505]/30 via-transparent to-[#050505]/30" />
           </>
         )}
       </>
@@ -874,17 +874,43 @@ export default function HeroSection({
         
         {/* Cinematic Titles */}
         {!hasProject && (
-          <div className="space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">
-              Creative Production Engine
-            </span>
-            <h2 className={`text-4xl font-black tracking-tight md:text-5xl lg:text-6xl uppercase font-display transition-colors duration-300 hero-title ${
-              isDayMode ? 'text-white-force' : 'text-white'
-            }`}>
-              Director Desk
+          <div className="space-y-4 flex flex-col items-center">
+            {/* Spacer to maintain vertical banner footprint */}
+            <div className="h-5" />
+
+            {/* Premium Typography Logo Lockup */}
+            <h2 className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 uppercase font-display select-none">
+              <span className="flex items-center text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400">
+                <span>Direct</span>
+                <svg className="inline-block h-[0.8em] w-[0.8em] shrink-0 self-center align-middle mx-[0.04em] mt-[-0.04em]" viewBox="0 0 100 100">
+                  <defs>
+                    <linearGradient id="director-o-gradient-hero" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ffffff" />
+                      <stop offset="50%" stopColor="#f5f5f5" />
+                      <stop offset="100%" stopColor="#a3a3a3" />
+                    </linearGradient>
+                    <mask id="film-reel-mask-hero">
+                      <circle cx="50" cy="50" r="50" fill="white" />
+                      <circle cx="50" cy="50" r="9" fill="black" />
+                      <circle cx="50" cy="23" r="11" fill="black" />
+                      <circle cx="50" cy="77" r="11" fill="black" />
+                      <circle cx="27" cy="37" r="11" fill="black" />
+                      <circle cx="73" cy="37" r="11" fill="black" />
+                      <circle cx="27" cy="63" r="11" fill="black" />
+                      <circle cx="73" cy="63" r="11" fill="black" />
+                    </mask>
+                  </defs>
+                  <circle cx="50" cy="50" r="46" fill="url(#director-o-gradient-hero)" mask="url(#film-reel-mask-hero)" />
+                </svg>
+                <span>r</span>
+              </span>
+              <span className="text-4xl md:text-5xl lg:text-6xl font-light tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-[#a78bfa] via-[#e9d5ff] to-white ml-2">
+                Desk
+              </span>
             </h2>
+
             <p className={`mx-auto max-w-2xl text-xs font-semibold leading-relaxed font-mono transition-colors duration-300 hero-subtitle ${
-              isDayMode ? 'text-neutral-200' : 'text-surface-400'
+              isDayMode ? 'text-neutral-600' : 'text-white/85'
             }`}>
               AI Showrunner Studio. From concept to cut. Collaborative agents for writers, storyboard artists, critics and editors.
             </p>
@@ -967,7 +993,7 @@ export default function HeroSection({
                   <FiPlus 
                     size={12} 
                     className={`transition-colors duration-200 ${
-                      isDayMode ? 'text-white' : 'text-black'
+                      isDayMode ? 'text-neutral-600' : 'text-black'
                     }`} 
                   />
                 )}

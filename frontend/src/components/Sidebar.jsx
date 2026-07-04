@@ -573,10 +573,42 @@ export default function Sidebar() {
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className={`text-[12px] font-black tracking-[0.2em] leading-none transition-colors duration-500 ${
-                d ? 'text-gray-900' : 'text-white'
-              }`}>
-                DIRECTOR DESK
+              <span className="flex items-center gap-1 select-none leading-none">
+                <span className={`text-[12px] font-black tracking-tight uppercase flex items-center ${
+                  d 
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-neutral-950 to-neutral-750' 
+                    : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400'
+                }`}>
+                  <span>Direct</span>
+                  <svg className="inline-block h-[0.8em] w-[0.8em] shrink-0 self-center align-middle mx-[0.04em] mt-[-0.04em]" viewBox="0 0 100 100">
+                    <defs>
+                      <linearGradient id="director-o-gradient-sidebar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={d ? "#0a0a0a" : "#ffffff"} />
+                        <stop offset="50%" stopColor={d ? "#171717" : "#f5f5f5"} />
+                        <stop offset="100%" stopColor={d ? "#404040" : "#a3a3a3"} />
+                      </linearGradient>
+                      <mask id="film-reel-mask-sidebar">
+                        <circle cx="50" cy="50" r="50" fill="white" />
+                        <circle cx="50" cy="50" r="9" fill="black" />
+                        <circle cx="50" cy="23" r="11" fill="black" />
+                        <circle cx="50" cy="77" r="11" fill="black" />
+                        <circle cx="27" cy="37" r="11" fill="black" />
+                        <circle cx="73" cy="37" r="11" fill="black" />
+                        <circle cx="27" cy="63" r="11" fill="black" />
+                        <circle cx="73" cy="63" r="11" fill="black" />
+                      </mask>
+                    </defs>
+                    <circle cx="50" cy="50" r="46" fill="url(#director-o-gradient-sidebar)" mask="url(#film-reel-mask-sidebar)" />
+                  </svg>
+                  <span>r</span>
+                </span>
+                <span className={`text-[12px] font-light tracking-[0.1em] uppercase ${
+                  d 
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] to-[#8b5cf6]' 
+                    : 'text-transparent bg-clip-text bg-gradient-to-r from-accent via-[#a78bfa] to-white'
+                }`}>
+                  Desk
+                </span>
               </span>
               <span className={`text-[8px] font-bold tracking-widest mt-1.5 uppercase leading-none ${d ? 'text-black/60' : 'text-white/60'}`}>
                 creative studio
@@ -675,7 +707,7 @@ export default function Sidebar() {
             >
               <FiFolder size={18} />
               <span className={`absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1.25rem] h-4 px-1.5 rounded-full text-[8px] font-black ${
-                d ? 'bg-black text-white' : 'bg-white text-black'
+                d ? 'bg-neutral-200 text-neutral-800' : 'bg-white/[0.08] text-white/90'
               }`}>
                 {savedProjects.length}
               </span>
@@ -695,7 +727,7 @@ export default function Sidebar() {
                   <FiFolder size={11} />
                   <span>Projects</span>
                   <span className={`inline-flex items-center justify-center min-w-[1.25rem] h-4 px-1.5 rounded-full text-[9px] font-black ${
-                    d ? 'bg-black text-white' : 'bg-white text-black'
+                    d ? 'bg-neutral-200 text-neutral-800' : 'bg-white/[0.08] text-white/90'
                   }`}>
                     {savedProjects.length}
                   </span>

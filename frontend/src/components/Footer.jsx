@@ -24,10 +24,42 @@ export default function Footer() {
               />
             </div>
             <div className="flex flex-col select-none">
-              <span className={`text-[12px] font-black tracking-[0.2em] leading-none ${
-                d ? 'text-neutral-900' : 'text-white'
-              }`}>
-                DIRECTOR DESK
+              <span className="flex items-center gap-1 select-none leading-none">
+                <span className={`text-[12px] font-black tracking-tight uppercase flex items-center ${
+                  d 
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-neutral-950 to-neutral-750' 
+                    : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400'
+                }`}>
+                  <span>Direct</span>
+                  <svg className="inline-block h-[0.8em] w-[0.8em] shrink-0 self-center align-middle mx-[0.04em] mt-[-0.04em]" viewBox="0 0 100 100">
+                    <defs>
+                      <linearGradient id="director-o-gradient-footer" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={d ? "#0a0a0a" : "#ffffff"} />
+                        <stop offset="50%" stopColor={d ? "#171717" : "#f5f5f5"} />
+                        <stop offset="100%" stopColor={d ? "#404040" : "#a3a3a3"} />
+                      </linearGradient>
+                      <mask id="film-reel-mask-footer">
+                        <circle cx="50" cy="50" r="50" fill="white" />
+                        <circle cx="50" cy="50" r="9" fill="black" />
+                        <circle cx="50" cy="23" r="11" fill="black" />
+                        <circle cx="50" cy="77" r="11" fill="black" />
+                        <circle cx="27" cy="37" r="11" fill="black" />
+                        <circle cx="73" cy="37" r="11" fill="black" />
+                        <circle cx="27" cy="63" r="11" fill="black" />
+                        <circle cx="73" cy="63" r="11" fill="black" />
+                      </mask>
+                    </defs>
+                    <circle cx="50" cy="50" r="46" fill="url(#director-o-gradient-footer)" mask="url(#film-reel-mask-footer)" />
+                  </svg>
+                  <span>r</span>
+                </span>
+                <span className={`text-[12px] font-light tracking-[0.1em] uppercase ${
+                  d 
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] to-[#8b5cf6]' 
+                    : 'text-transparent bg-clip-text bg-gradient-to-r from-accent via-[#a78bfa] to-white'
+                }`}>
+                  Desk
+                </span>
               </span>
               <span className="text-[8px] text-accent font-bold tracking-widest mt-1.5 uppercase leading-none">
                 creative studio
