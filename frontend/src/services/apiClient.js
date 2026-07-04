@@ -9,6 +9,17 @@ export const apiClient = axios.create({
   },
 })
 
+// Extract detailed backend error messages for toast presentation
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.data && error.response.data.detail) {
+      error.message = error.response.data.detail;
+    }
+    return Promise.reject(error);
+  }
+)
+
 export async function healthCheck() {
   const response = await apiClient.get('/api/health')
   return response.data

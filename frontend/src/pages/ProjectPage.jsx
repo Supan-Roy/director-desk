@@ -806,7 +806,17 @@ The user wants to modify it. Apply their request and return ONLY the updated scr
         }),
       });
 
-      if (!response.ok) throw new Error('Modification stream failed');
+      if (!response.ok) {
+        let cleanMsg = 'Modification stream failed';
+        try {
+          const errText = await response.text();
+          const parsed = JSON.parse(errText);
+          if (parsed.detail) {
+            cleanMsg = parsed.detail;
+          }
+        } catch (e) {}
+        throw new Error(cleanMsg);
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');

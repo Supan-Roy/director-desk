@@ -6,8 +6,9 @@ import logging
 import asyncio
 import subprocess
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, Request, Query, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Request, Query, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
+from app.utils.security import RateLimiter, validate_media_magic_number
 
 logger = logging.getLogger(__name__)
 
@@ -175,12 +176,19 @@ def resolve_filepath(url_or_path: str) -> str:
     return clean_url
 
 
-@router.post("/editor/upload")
+@router.post("/editor/upload", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def upload_file(request: Request, filename: str = Query(...)):
     """Receives raw binary file payload and saves it to static/uploads."""
     body = await request.body()
     if not body:
         raise HTTPException(status_code=400, detail="Empty file payload")
+
+    # Guardrail: Validate file header (magic numbers) to prevent script injection
+    if not validate_media_magic_number(body, filename):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file content: The file headers (magic numbers) do not match a supported media/text format or filename extension."
+        )
 
     # Clean filename
     safe_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)

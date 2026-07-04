@@ -2,12 +2,13 @@ import asyncio
 import json
 import logging
 from typing import Optional
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.core.redis import redis_manager
 from app.services.redis_job_service import redis_job_service
+from app.utils.security import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -785,7 +786,7 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
 
 
 # Production Studio endpoints
-@router.post("/api/generate/character")
+@router.post("/api/generate/character", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_character(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (character_name) is required")
@@ -804,7 +805,7 @@ async def generate_character(background_tasks: BackgroundTasks, request: Generat
     return job
 
 
-@router.post("/api/generate/environment")
+@router.post("/api/generate/environment", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_environment(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (environment_name) is required")
@@ -823,7 +824,7 @@ async def generate_environment(background_tasks: BackgroundTasks, request: Gener
     return job
 
 
-@router.post("/api/generate/voice")
+@router.post("/api/generate/voice", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (character_name) is required")
@@ -843,7 +844,7 @@ async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJob
 
 
 
-@router.post("/api/generate/asset")
+@router.post("/api/generate/asset", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_asset(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="asset_generation")
     background_tasks.add_task(run_simulated_job, job["job_id"], 8)
@@ -1166,7 +1167,7 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         db.close()
 
 
-@router.post("/api/generate/scene")
+@router.post("/api/generate/scene", dependencies=[Depends(RateLimiter(limit=3, window=60))])
 async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (scene_number) is required")
@@ -1208,7 +1209,7 @@ async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJob
     return job
 
 
-@router.post("/api/generate/film")
+@router.post("/api/generate/film", dependencies=[Depends(RateLimiter(limit=3, window=60))])
 async def generate_film(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="film_generation")
     background_tasks.add_task(run_simulated_job, job["job_id"], 12)

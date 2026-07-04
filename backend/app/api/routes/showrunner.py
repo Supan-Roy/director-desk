@@ -1,11 +1,12 @@
 import logging
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 
 from app.schemas.requests import GenerateRequest
 from app.services.showrunner_service import showrunner_service
+from app.utils.security import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ def generate_story(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/generate/stream")
+@router.post("/generate/stream", dependencies=[Depends(RateLimiter(limit=3, window=60))])
 async def generate_story_stream(request: GenerateRequest):
     is_safe, error_msg = check_prompt_safety(request.prompt)
     if not is_safe:
@@ -146,7 +147,7 @@ async def generate_story_stream(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/generate/stream/resume/{project_id}")
+@router.post("/generate/stream/resume/{project_id}", dependencies=[Depends(RateLimiter(limit=3, window=60))])
 async def resume_story_stream(project_id: int):
     try:
         logger.info(f"Resuming streaming story generation for project: {project_id}")
