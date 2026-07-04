@@ -676,7 +676,21 @@ export default function ProductionPage() {
   const [selectedVersionsMap, setSelectedVersionsMap] = useState({});
   
   // ── Tab Management ──────────────────────────────────────────────────────
-  const [activeStudioTab, setActiveStudioTab] = useState('dashboard'); // dashboard, characters, environments, voices, filmgen
+  const [activeStudioTab, setActiveStudioTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`activeStudioTab_${id}`);
+      return saved || 'dashboard';
+    } catch (e) {
+      return 'dashboard';
+    }
+  });
+
+  useEffect(() => {
+    if (id && activeStudioTab) {
+      localStorage.setItem(`activeStudioTab_${id}`, activeStudioTab);
+    }
+  }, [id, activeStudioTab]);
+
   const [highlightTarget, setHighlightTarget] = useState(null);
 
   const handleGoToAsset = useCallback((msg) => {
@@ -1368,8 +1382,17 @@ export default function ProductionPage() {
                             <span className="text-3xl font-black tracking-tight text-white">{overallReadiness}%</span>
                             <span className="text-[9px] font-mono text-emerald-400 font-extrabold">READY FOR ASSEMBLY</span>
                           </div>
-                          <div className="w-full bg-white/[0.04] h-2 rounded-full overflow-hidden mt-3 border border-white/[0.05]">
-                            <div className="bg-accent h-full rounded-full transition-all duration-1000" style={{ width: `${overallReadiness}%` }} />
+                          <div className={`w-full h-2 rounded-sm overflow-hidden mt-3 border ${
+                            d ? 'bg-neutral-100 border-neutral-200' : 'bg-[#15151b] border-[#212128]'
+                          }`}>
+                            <div 
+                              className={`h-full rounded-sm transition-all duration-1000 ${
+                                overallReadiness === 100 
+                                  ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' 
+                                  : 'bg-gradient-to-r from-[#b25b15] to-[#e57e25]'
+                              }`} 
+                              style={{ width: `${overallReadiness}%` }} 
+                            />
                           </div>
                         </div>
 
@@ -1381,10 +1404,17 @@ export default function ProductionPage() {
                               <span>Cast & Characters</span>
                               <span className="font-mono text-emerald-400">{characterReadiness}%</span>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
-                              <span className="text-emerald-400">
-                                {"█".repeat(Math.round(characterReadiness / 10)) + "░".repeat(10 - Math.round(characterReadiness / 10))}
-                              </span>
+                            <div className={`w-full h-1.5 rounded-sm overflow-hidden mt-1.5 border ${
+                              d ? 'bg-neutral-100 border-neutral-200' : 'bg-[#15151b] border-[#212128]'
+                            }`}>
+                              <div 
+                                className={`h-full rounded-sm transition-all duration-1000 ${
+                                  characterReadiness === 100 
+                                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' 
+                                    : 'bg-gradient-to-r from-[#b25b15] to-[#e57e25]'
+                                }`} 
+                                style={{ width: `${characterReadiness}%` }} 
+                              />
                             </div>
                           </div>
 
@@ -1394,10 +1424,17 @@ export default function ProductionPage() {
                               <span>Cinematic Locations</span>
                               <span className={`${environmentReadiness === 100 ? 'text-emerald-400' : 'text-accent'} font-mono`}>{environmentReadiness}%</span>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
-                              <span className={environmentReadiness === 100 ? "text-emerald-400" : "text-accent"}>
-                                {"█".repeat(Math.round(environmentReadiness / 10)) + "░".repeat(10 - Math.round(environmentReadiness / 10))}
-                              </span>
+                            <div className={`w-full h-1.5 rounded-sm overflow-hidden mt-1.5 border ${
+                              d ? 'bg-neutral-100 border-neutral-200' : 'bg-[#15151b] border-[#212128]'
+                            }`}>
+                              <div 
+                                className={`h-full rounded-sm transition-all duration-1000 ${
+                                  environmentReadiness === 100 
+                                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' 
+                                    : 'bg-gradient-to-r from-[#b25b15] to-[#e57e25]'
+                                }`} 
+                                style={{ width: `${environmentReadiness}%` }} 
+                              />
                             </div>
                           </div>
 
@@ -1407,10 +1444,17 @@ export default function ProductionPage() {
                               <span>Voice Synthesis Profiles</span>
                               <span className={`${voiceReadiness === 100 ? 'text-emerald-400' : 'text-accent'} font-mono`}>{voiceReadiness}%</span>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
-                              <span className={voiceReadiness === 100 ? "text-emerald-400" : "text-accent"}>
-                                {"█".repeat(Math.round(voiceReadiness / 10)) + "░".repeat(10 - Math.round(voiceReadiness / 10))}
-                              </span>
+                            <div className={`w-full h-1.5 rounded-sm overflow-hidden mt-1.5 border ${
+                              d ? 'bg-neutral-100 border-neutral-200' : 'bg-[#15151b] border-[#212128]'
+                            }`}>
+                              <div 
+                                className={`h-full rounded-sm transition-all duration-1000 ${
+                                  voiceReadiness === 100 
+                                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' 
+                                    : 'bg-gradient-to-r from-[#b25b15] to-[#e57e25]'
+                                }`} 
+                                style={{ width: `${voiceReadiness}%` }} 
+                              />
                             </div>
                           </div>
 
@@ -1420,10 +1464,17 @@ export default function ProductionPage() {
                               <span>Approved Scenes</span>
                               <span className={`${sceneVideosReadiness === 100 ? 'text-emerald-400' : 'text-accent'} font-mono`}>{sceneVideosReadiness}%</span>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 font-mono text-xs">
-                              <span className={sceneVideosReadiness === 100 ? "text-emerald-400" : "text-accent"}>
-                                {"█".repeat(Math.round(sceneVideosReadiness / 10)) + "░".repeat(10 - Math.round(sceneVideosReadiness / 10))}
-                              </span>
+                            <div className={`w-full h-1.5 rounded-sm overflow-hidden mt-1.5 border ${
+                              d ? 'bg-neutral-100 border-neutral-200' : 'bg-[#15151b] border-[#212128]'
+                            }`}>
+                              <div 
+                                className={`h-full rounded-sm transition-all duration-1000 ${
+                                  sceneVideosReadiness === 100 
+                                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' 
+                                    : 'bg-gradient-to-r from-[#b25b15] to-[#e57e25]'
+                                }`} 
+                                style={{ width: `${sceneVideosReadiness}%` }} 
+                              />
                             </div>
                           </div>
                         </div>
