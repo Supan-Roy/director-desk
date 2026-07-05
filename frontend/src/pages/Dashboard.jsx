@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import HeroSection from '../components/HeroSection';
 import CreativeModes from '../components/CreativeModes';
@@ -9,6 +10,8 @@ import CreditUsageCard from '../components/CreditUsageCard';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
 import Footer from '../components/Footer';
+import { creativeTemplates } from '../data/presets';
+import { apiBaseUrl } from '../services/apiClient';
 
 // Canvas-based drifting dust spec particles in spotlight beams
 function DustParticles() {
@@ -76,19 +79,84 @@ export default function Dashboard() {
   const { isDayMode } = useTheme();
   const containerRef = useRef(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [prompt, setPrompt] = useState('');
   const [aspect, setAspect] = useState('16-9');
   const [style, setStyle] = useState('none');
   const [camera, setCamera] = useState('static');
 
-  // Reset prompt controls when project is cleared/exited
+  // Load and apply template preset from URL search query parameters
   useEffect(() => {
-    if (!hasProject) {
+    const presetId = searchParams.get('preset');
+    if (!presetId) return;
+
+    const loadAndApplyPreset = async () => {
+      let selectedTmpl = null;
+      
+      if (presetId.startsWith('custom_')) {
+        const customId = presetId.replace('custom_', '');
+        try {
+          const res = await fetch(`${apiBaseUrl}/api/templates/custom`);
+          if (res.ok) {
+            const data = await res.json();
+            const matched = data.find(t => String(t.id) === String(customId));
+            if (matched) {
+              selectedTmpl = {
+                id: matched.id,
+                title: matched.title,
+                aspect: matched.aspect_ratio || '16-9',
+                camera: matched.camera_style || 'pan',
+                prompts: matched.prompt_examples || [],
+                isCustom: true
+              };
+            }
+          }
+        } catch (err) {
+          console.error("Error loading custom preset in dashboard:", err);
+        }
+      } else {
+        selectedTmpl = creativeTemplates.find(t => t.id === presetId);
+      }
+
+      if (selectedTmpl) {
+        // Pick a random highly cinematic prompt matching the template
+        const promptsList = selectedTmpl.prompts || [];
+        const randomPrompt = promptsList.length > 0 
+          ? promptsList[Math.floor(Math.random() * promptsList.length)]
+          : '';
+        
+        setPrompt(randomPrompt);
+        
+        // Normalize aspect ratio representation ('2.39:1' -> '2.39-1')
+        let normAspect = selectedTmpl.aspect || '16-9';
+        if (normAspect.includes(':')) {
+          normAspect = normAspect.replace(':', '-');
+        }
+        setAspect(normAspect);
+        setStyle(selectedTmpl.id);
+        setCamera(selectedTmpl.camera || 'static');
+
+        // Clear query parameter from browser address bar
+        setSearchParams({}, { replace: true });
+        
+        // Smooth scroll up to the hero segment
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    loadAndApplyPreset();
+  }, [searchParams, setSearchParams]);
+
+  // Reset prompt controls when project is cleared/exited
+  const prevHasProjectRef = useRef(hasProject);
+  useEffect(() => {
+    if (prevHasProjectRef.current && !hasProject) {
       setPrompt('');
       setAspect('16-9');
       setStyle('none');
       setCamera('static');
     }
+    prevHasProjectRef.current = hasProject;
   }, [hasProject]);
 
   // Measure dashboard render performance

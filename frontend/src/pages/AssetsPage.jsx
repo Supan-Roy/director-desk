@@ -86,11 +86,7 @@ export default function AssetsPage() {
   }
 
   return (
-    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-500 relative ${d ? 'bg-white' : 'bg-[#06060b]'}`}>
-      
-      {/* Background ambient glows */}
-      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
-      <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[130px] pointer-events-none mix-blend-screen" />
+    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-300 relative ${d ? 'bg-white text-black' : 'bg-black text-white'}`}>
 
       {/* Sidebar Navigation */}
       <div className="relative z-30">
@@ -223,10 +219,10 @@ export default function AssetsPage() {
                   {assets.characters.map(char => (
                     <div
                       key={char.id}
-                      className={`rounded-2xl border p-4.5 flex gap-4 transition-all duration-300 relative group ${
+                      className={`rounded-xl border p-4.5 flex gap-4 transition-all duration-300 relative group hover:shadow-lg ${
                         d
-                          ? 'bg-neutral-50/65 border-neutral-200 hover:border-neutral-350'
-                          : 'bg-white/[0.02] border-white/[0.04] hover:border-purple-500/35 hover:bg-white/[0.03]'
+                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-neutral-200'
+                          : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
                       }`}
                     >
                       {/* Character avatar */}
@@ -251,7 +247,7 @@ export default function AssetsPage() {
                             {char.project_title} <FiExternalLink size={10} />
                           </button>
                         </div>
-                        <p className={`text-[10.5px] leading-relaxed mt-1 line-clamp-2 ${d ? 'text-neutral-600' : 'text-surface-450'}`}>
+                        <p className={`text-[10.5px] leading-relaxed mt-1 line-clamp-2 ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
                           {char.character_profile?.description || 'AI Cast character profile'}
                         </p>
                       </div>
@@ -271,10 +267,10 @@ export default function AssetsPage() {
                   {assets.environments.map(env => (
                     <div
                       key={env.id}
-                      className={`rounded-2xl border p-4.5 flex gap-4 transition-all duration-300 relative group ${
+                      className={`rounded-xl border p-4.5 flex gap-4 transition-all duration-300 relative group hover:shadow-lg ${
                         d
-                          ? 'bg-neutral-50/65 border-neutral-200 hover:border-neutral-350'
-                          : 'bg-white/[0.02] border-white/[0.04] hover:border-purple-500/35 hover:bg-white/[0.03]'
+                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-neutral-200'
+                          : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
                       }`}
                     >
                       {/* Environment preview */}
@@ -298,7 +294,7 @@ export default function AssetsPage() {
                             {env.project_title} <FiExternalLink size={10} />
                           </button>
                         </div>
-                        <p className={`text-[10.5px] leading-relaxed mt-1 line-clamp-2 ${d ? 'text-neutral-600' : 'text-surface-450'}`}>
+                        <p className={`text-[10.5px] leading-relaxed mt-1 line-clamp-2 ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
                           {env.environment_profile?.description || 'Generated environment visual cues'}
                         </p>
                       </div>
@@ -318,10 +314,10 @@ export default function AssetsPage() {
                   {assets.voices.map(voice => (
                     <div
                       key={voice.id}
-                      className={`rounded-2xl border p-4.5 flex flex-col justify-between gap-4.5 transition-all duration-300 relative group ${
+                      className={`rounded-xl border p-4.5 flex flex-col justify-between gap-4.5 transition-all duration-300 relative group hover:shadow-lg ${
                         d
-                          ? 'bg-neutral-50/65 border-neutral-200 hover:border-neutral-350'
-                          : 'bg-white/[0.02] border-white/[0.04] hover:border-purple-500/35 hover:bg-white/[0.03]'
+                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-neutral-200'
+                          : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
                       }`}
                     >
                       <div className="flex items-start justify-between">
@@ -329,7 +325,7 @@ export default function AssetsPage() {
                           <h4 className={`text-[13px] font-bold tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>
                             {voice.character_name}
                           </h4>
-                          <span className={`text-[9px] font-mono tracking-wide mt-1 inline-block opacity-65 ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                          <span className={`text-[9px] font-mono tracking-wide mt-1 inline-block opacity-65 ${d ? 'text-neutral-600' : 'text-neutral-450'}`}>
                             SIG: {voice.voice_signature || 'QwenTTS-Male'}
                           </span>
                         </div>
@@ -371,10 +367,10 @@ export default function AssetsPage() {
                     return (
                       <div
                         key={video.id}
-                        className={`rounded-2xl border overflow-hidden flex flex-col justify-between transition-all duration-300 relative group ${
+                        className={`rounded-xl border overflow-hidden flex flex-col justify-between transition-all duration-300 relative group hover:shadow-lg ${
                           d
-                            ? 'bg-neutral-50/65 border-neutral-200 hover:border-neutral-350 hover:shadow-xs'
-                            : 'bg-white/[0.02] border-white/[0.04] hover:border-purple-500/35 hover:bg-white/[0.03]'
+                            ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-neutral-200'
+                            : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
                         }`}
                       >
                         {/* Video thumbnail and hover-play badge */}
@@ -423,7 +419,7 @@ export default function AssetsPage() {
                                 {video.project_title} <FiExternalLink size={10} />
                               </button>
                             </div>
-                            <p className={`text-[10.5px] leading-relaxed mt-2 font-mono line-clamp-2 ${d ? 'text-neutral-700' : 'text-surface-300'}`}>
+                            <p className={`text-[10.5px] leading-relaxed mt-2 font-mono line-clamp-2 ${d ? 'text-neutral-700' : 'text-neutral-350'}`}>
                               "{video.prompt_used}"
                             </p>
                           </div>

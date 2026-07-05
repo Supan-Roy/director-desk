@@ -136,12 +136,8 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-500 relative ${d ? 'bg-white' : 'bg-[#06060b]'}`}>
+    <div className={`flex h-screen overflow-hidden font-display transition-colors duration-300 relative ${d ? 'bg-white text-black' : 'bg-black text-white'}`}>
       
-      {/* Background ambient glows */}
-      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-[#040409] via-[#06060b] to-[#080812]" />
-      <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[130px] pointer-events-none mix-blend-screen" />
-
       {/* Sidebar Navigation */}
       <div className="relative z-30">
         <Sidebar />
@@ -151,23 +147,23 @@ export default function TemplatesPage() {
       <div className="relative z-20 flex flex-1 min-w-0 flex-col overflow-hidden">
         
         {/* Header Navbar */}
-        <header className={`flex items-center justify-between px-6 py-3 border-b shrink-0 transition-colors duration-500 ${d ? 'border-black/[0.07] bg-white/60 backdrop-blur-sm' : 'border-white/[0.04] bg-black/30 backdrop-blur-sm'}`}>
+        <header className={`flex items-center justify-between px-6 py-3 border-b shrink-0 transition-colors duration-300 ${d ? 'border-neutral-200 bg-white' : 'border-neutral-900 bg-black'}`}>
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/')}
-              className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg px-2.5 py-1.5 transition-all duration-200 ${d ? 'text-gray-500 hover:text-gray-900 hover:bg-black/[0.05]' : 'text-surface-550 hover:text-white hover:bg-white/[0.05]'}`}
+              className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg px-2.5 py-1.5 transition-all duration-200 cursor-pointer ${d ? 'text-neutral-500 hover:text-neutral-950 hover:bg-neutral-100' : 'text-neutral-450 hover:text-white hover:bg-neutral-900'}`}
             >
               <FiArrowLeft size={14} /> Back
             </button>
-            <div className={`h-4 w-px ${d ? 'bg-black/10' : 'bg-white/10'}`} />
-            <h1 className={`text-sm font-bold uppercase tracking-widest flex items-center gap-2 ${d ? 'text-neutral-900' : 'text-white'}`}>
+            <div className={`h-4 w-px ${d ? 'bg-neutral-200' : 'bg-neutral-800'}`} />
+            <h1 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${d ? 'text-neutral-950' : 'text-white'}`}>
               <FiLayers className="text-purple-500" size={16} /> Production Templates
             </h1>
           </div>
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg shadow-purple-600/10 cursor-pointer transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-650 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg cursor-pointer transition-colors"
           >
             <FiPlus size={14} /> Create Custom Preset
           </button>
@@ -176,135 +172,146 @@ export default function TemplatesPage() {
         {/* Content Area */}
         <div className="flex-1 flex overflow-hidden min-h-0">
           
-          {/* Main Grid Gallery */}
+          {/* Main List Gallery */}
           <div className="flex-1 overflow-y-auto p-6">
-            <div className="mb-5">
+            <div className="mb-6">
               <h2 className={`text-[13px] font-bold uppercase tracking-widest ${d ? 'text-neutral-850' : 'text-neutral-200'}`}>Visual presets library</h2>
-              <p className={`text-[11px] mt-1 ${d ? 'text-neutral-500' : 'text-surface-450'}`}>Clone visual configurations, lens specifications, and lighting setups to instantly spawn new studio projects.</p>
+              <p className={`text-[11px] mt-1 ${d ? 'text-neutral-500' : 'text-neutral-450'}`}>Hover over the card video preview to play the template style. Spawn studio projects with pre-configured lenses and color grading.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
               {allTemplates.map((tmpl) => {
+                const getRelatedFilms = (id) => {
+                  switch (id) {
+                    case 'cyberpunk': return 'Blade Runner 2049, Ghost in the Shell, Cyberpunk'
+                    case 'noir': return 'The Maltese Falcon, Chinatown, Sin City'
+                    case 'space': return 'Interstellar, 2001: A Space Odyssey, Prometheus'
+                    case 'documentary': return 'Free Solo, Samsara, The Cove'
+                    case 'fantasy': return 'Minority Report, Altered Carbon, Akira'
+                    default: return 'User Directed Custom Style'
+                  }
+                }
+
                 return (
                   <div
                     key={tmpl.id}
-                    onClick={() => setSelectedTemplate(tmpl)}
-                    className={`rounded-2xl border transition-all duration-300 relative group overflow-hidden flex flex-col justify-between p-5 cursor-pointer hover:-translate-y-0.5 ${
+                    className={`rounded-xl border p-4 flex flex-col justify-between gap-4 transition-all duration-300 relative group ${
                       d
-                        ? 'bg-neutral-50/60 border-neutral-200 hover:border-neutral-350 hover:shadow-md'
-                        : 'bg-white/[0.02] border-white/[0.04] hover:border-purple-500/30 hover:bg-white/[0.03] hover:shadow-lg hover:shadow-black/40'
+                        ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-md'
+                        : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
                     }`}
                   >
-                    <div>
-                      {/* Badge / Type tag */}
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md ${
-                          tmpl.isCustom 
-                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
-                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        }`}>
-                          {tmpl.isCustom ? 'Custom Preset' : 'Studio Preset'}
-                        </span>
-                        
-                        {tmpl.isCustom && (
-                          <button
-                            onClick={(e) => handleDeleteTemplate(e, tmpl.id)}
-                            className="text-gray-500 hover:text-red-500 transition-colors p-1"
-                            title="Delete custom preset"
-                          >
-                            <FiTrash2 size={13} />
-                          </button>
-                        )}
-                      </div>
-
-                      <h3 className={`text-[14px] font-bold tracking-wide transition-colors ${d ? 'text-neutral-900 group-hover:text-black' : 'text-neutral-200 group-hover:text-white'}`}>
-                        {tmpl.title}
-                      </h3>
-                      <p className={`text-[11px] leading-relaxed mt-1.5 line-clamp-2 ${d ? 'text-neutral-600' : 'text-surface-450'}`}>
-                        {tmpl.description}
-                      </p>
+                    {/* Video on top */}
+                    <div className="w-full aspect-video rounded-lg overflow-hidden bg-black relative border border-neutral-800/10 flex items-center justify-center shrink-0">
+                      {tmpl.video ? (
+                        <video
+                          src={tmpl.video}
+                          poster={tmpl.image}
+                          muted
+                          loop
+                          playsInline
+                          className="w-full h-full object-cover"
+                          onMouseEnter={(e) => {
+                            e.target.play().catch(() => {});
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.pause();
+                            e.target.currentTime = 0;
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-950/80 text-neutral-600 font-mono text-[9px] uppercase">
+                          <FiVideo size={20} className="text-neutral-700 mb-1" />
+                          Custom Preset
+                        </div>
+                      )}
                     </div>
 
-                    {/* Metadata tags */}
-                    <div className="mt-4 pt-4 border-t border-dashed border-white/5 flex items-center justify-between">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-400' : 'text-surface-500'}`}>Production</span>
-                        <span className={`text-[10px] font-bold ${d ? 'text-gray-700' : 'text-neutral-350'}`}>{tmpl.productionType}</span>
+                    {/* Details below */}
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                              tmpl.isCustom 
+                                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                                : d ? 'bg-neutral-200 text-neutral-700' : 'bg-neutral-900 text-neutral-450'
+                            }`}>
+                              {tmpl.isCustom ? 'Custom' : 'Studio'}
+                            </span>
+                            <span className={`text-[8.5px] font-mono tracking-wider opacity-60 uppercase truncate`}>
+                              {tmpl.productionType}
+                            </span>
+                          </div>
+                          {tmpl.isCustom && (
+                            <button
+                              onClick={(e) => handleDeleteTemplate(e, tmpl.id)}
+                              className="text-neutral-500 hover:text-red-500 transition-colors p-1 rounded-md border border-transparent hover:border-neutral-800/10 cursor-pointer shrink-0"
+                              title="Delete custom preset"
+                            >
+                              <FiTrash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+
+                        <h3 className={`text-[13.5px] font-black tracking-wide transition-colors ${d ? 'text-neutral-900' : 'text-white'}`}>
+                          {tmpl.title}
+                        </h3>
+
+                        <p className={`text-[10.5px] leading-relaxed mt-2 line-clamp-3 ${d ? 'text-neutral-650' : 'text-neutral-400'}`}>
+                          {tmpl.description}
+                        </p>
+
+                        {/* Cinematic Film Inspirations */}
+                        <div className="mt-2.5 flex items-start gap-1">
+                          <span className={`text-[9px] font-black uppercase tracking-wider shrink-0 ${d ? 'text-neutral-500' : 'text-neutral-500'}`}>Film Inspirations:</span>
+                          <span className={`text-[9.5px] italic truncate ${d ? 'text-neutral-750' : 'text-neutral-300'}`}>
+                            {getRelatedFilms(tmpl.id)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-0.5 text-right">
-                        <span className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-400' : 'text-surface-500'}`}>Aspect Ratio</span>
-                        <span className={`text-[10px] font-mono font-bold ${d ? 'text-gray-700' : 'text-neutral-350'}`}>{tmpl.aspect}</span>
+
+                      {/* Specifications Grid */}
+                      <div className={`mt-3 pt-2.5 border-t border-dashed ${d ? 'border-neutral-200' : 'border-neutral-900'} grid grid-cols-2 gap-x-2.5 gap-y-2`}>
+                        <div className="min-w-0">
+                          <span className="text-[8px] uppercase font-bold tracking-wider text-purple-400 block">Lens</span>
+                          <span className={`text-[9.5px] font-semibold block truncate ${d ? 'text-neutral-855' : 'text-neutral-200'}`}>
+                            {tmpl.specs?.lenses || 'Cinematic Prime'}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[8px] uppercase font-bold tracking-wider text-emerald-400 block">Lighting</span>
+                          <span className={`text-[9.5px] font-semibold block truncate ${d ? 'text-neutral-855' : 'text-neutral-200'}`}>
+                            {tmpl.specs?.lighting || 'Three-Point'}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[8px] uppercase font-bold tracking-wider text-amber-400 block">Color profile</span>
+                          <span className={`text-[9.5px] font-semibold block truncate ${d ? 'text-neutral-855' : 'text-neutral-200'}`}>
+                            {tmpl.specs?.colorGrade || 'Teal & Orange'}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[8px] uppercase font-bold tracking-wider text-blue-400 block">Camera style</span>
+                          <span className={`text-[9.5px] font-semibold block truncate ${d ? 'text-neutral-855' : 'text-neutral-200'}`}>
+                            {tmpl.specs?.movement || tmpl.camera || 'Pan'}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Apply Style Button */}
+                      <button
+                        onClick={() => handleStartProject(tmpl)}
+                        className="w-full mt-3.5 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-650 text-white text-[9.5px] font-bold uppercase tracking-wider shadow-md cursor-pointer transition-colors text-center"
+                      >
+                        Apply Preset Style
+                      </button>
                     </div>
                   </div>
                 )
               })}
             </div>
           </div>
-
-          {/* Right Preview Drawer Panel */}
-          {selectedTemplate && (
-            <div className={`w-[360px] shrink-0 border-l overflow-y-auto p-6 flex flex-col justify-between transition-colors duration-500 ${
-              d ? 'border-neutral-200 bg-neutral-50/50' : 'border-white/[0.04] bg-black/20'
-            }`}>
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`text-[10px] font-bold tracking-widest uppercase ${d ? 'text-neutral-600' : 'text-surface-400'}`}>Preset specs sheet</span>
-                  <button
-                    onClick={() => setSelectedTemplate(null)}
-                    className={`p-1.5 rounded-lg border transition-colors ${d ? 'border-neutral-200 hover:bg-neutral-100' : 'border-white/10 hover:bg-white/5'}`}
-                  >
-                    <FiX size={13} />
-                  </button>
-                </div>
-
-                <h3 className={`text-base font-bold tracking-tight uppercase ${d ? 'text-neutral-900' : 'text-white'}`}>{selectedTemplate.title}</h3>
-                <p className={`text-[11.5px] leading-relaxed mt-2 ${d ? 'text-neutral-600' : 'text-surface-450'}`}>{selectedTemplate.description}</p>
-
-                {/* Spec parameters */}
-                <div className="flex flex-col gap-3.5 mt-5">
-                  <div className={`p-3 rounded-xl border ${d ? 'bg-white border-neutral-200' : 'bg-black/35 border-white/5'}`}>
-                    <span className="text-[9px] uppercase font-bold tracking-wider text-purple-400 flex items-center gap-1"><FiSliders size={11} /> Lens Specification</span>
-                    <p className={`text-[11px] font-semibold mt-1 ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{selectedTemplate.specs?.lenses || 'Anamorphic 50mm'}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl border ${d ? 'bg-white border-neutral-200' : 'bg-black/35 border-white/5'}`}>
-                    <span className="text-[9px] uppercase font-bold tracking-wider text-emerald-400 flex items-center gap-1"><FiInfo size={11} /> Lighting Setup</span>
-                    <p className={`text-[11px] font-semibold mt-1 ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{selectedTemplate.specs?.lighting || 'Three-point setup'}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl border ${d ? 'bg-white border-neutral-200' : 'bg-black/35 border-white/5'}`}>
-                    <span className="text-[9px] uppercase font-bold tracking-wider text-amber-400 flex items-center gap-1"><FiCpu size={11} /> Color Grading profile</span>
-                    <p className={`text-[11px] font-semibold mt-1 ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{selectedTemplate.specs?.colorGrade || 'Warm cinematic curve'}</p>
-                  </div>
-                </div>
-
-                {/* Example prompts */}
-                {selectedTemplate.prompts && selectedTemplate.prompts.length > 0 && (
-                  <div className="mt-5">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-neutral-600' : 'text-surface-450'}`}>Sample prompt guidelines</span>
-                    <div className="flex flex-col gap-2 mt-2">
-                      {selectedTemplate.prompts.slice(0, 3).map((prompt, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-2.5 rounded-lg border text-[10.5px] leading-relaxed font-mono ${
-                            d ? 'bg-white border-neutral-200 text-neutral-700' : 'bg-black/20 border-white/[0.04] text-surface-300'
-                          }`}
-                        >
-                          "{prompt}"
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={() => handleStartProject(selectedTemplate)}
-                className="w-full mt-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg shadow-purple-600/10 cursor-pointer text-center transition-colors"
-              >
-                Instantiate Project Style
-              </button>
-            </div>
-          )}
 
         </div>
 
