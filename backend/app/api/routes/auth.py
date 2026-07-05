@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.repository import get_db, user_repository
@@ -19,21 +19,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# Helper to validate email format
+def validate_email_format(email: str) -> str:
+    cleaned = email.strip().lower()
+    if "@" not in cleaned or "." not in cleaned or len(cleaned) < 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email format."
+        )
+    return cleaned
+
+
 # ---------------------------------------------------------------------------
 # Pydantic Schemas
 # ---------------------------------------------------------------------------
 
 class EmailCheckRequest(BaseModel):
-    email: EmailStr
+    email: str
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
 class RegisterRequest(BaseModel):
-    email: EmailStr
+    email: str
     name: str = Field(..., min_length=1)
     last_name: Optional[str] = None
     password: str = Field(..., min_length=6, max_length=32)
@@ -41,7 +52,7 @@ class RegisterRequest(BaseModel):
 
 
 class OTPVerifyRequest(BaseModel):
-    email: EmailStr
+    email: str
     otp_code: str
 
 
@@ -56,14 +67,16 @@ class GoogleLoginRequest(BaseModel):
 @router.post("/auth/check-email")
 def check_email(payload: EmailCheckRequest, db: Session = Depends(get_db)):
     """Check if an email is already registered."""
-    user = user_repository.get_by_email(db, payload.email)
+    email = validate_email_format(payload.email)
+    user = user_repository.get_by_email(db, email)
     return {"exists": user is not None}
 
 
 @router.post("/auth/login-email")
 def login_email(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     """Log in using email and password, setting session cookie."""
-    user = user_repository.get_by_email(db, payload.email)
+    email = validate_email_format(payload.email)
+    user = user_repository.get_by_email(db, email)
     if not user or user.is_google or not user.hashed_password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -101,13 +114,14 @@ def login_email(payload: LoginRequest, response: Response, db: Session = Depends
 @router.post("/auth/register-email")
 def register_email(payload: RegisterRequest, db: Session = Depends(get_db)):
     """Create unverified user and send OTP code."""
+    email = validate_email_format(payload.email)
     if payload.password != payload.confirm_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Passwords do not match."
         )
 
-    existing_user = user_repository.get_by_email(db, payload.email)
+    existing_user = user_repository.get_by_email(db, email)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -126,13 +140,13 @@ def register_email(payload: RegisterRequest, db: Session = Depends(get_db)):
         db,
         name=payload.name,
         last_name=payload.last_name,
-        email=payload.email,
+        email=email,
         hashed_password=h_password,
         is_google=False
     )
 
     # Store OTP code on user
-    user = user_repository.get_by_email(db, payload.email)
+    user = user_repository.get_by_email(db, email)
     user_repository.update(
         db,
         user.id,
@@ -154,7 +168,8 @@ def register_email(payload: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/auth/verify-otp")
 def verify_otp(payload: OTPVerifyRequest, response: Response, db: Session = Depends(get_db)):
     """Verify 6-digit OTP code and authenticate user session."""
-    user = user_repository.get_by_email(db, payload.email)
+    email = validate_email_format(payload.email)
+    user = user_repository.get_by_email(db, email)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

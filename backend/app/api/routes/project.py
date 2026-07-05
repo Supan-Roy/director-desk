@@ -9,6 +9,7 @@ Endpoints:
   DELETE /projects/{id}         — delete a saved project
 """
 from typing import List, Optional
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -164,10 +165,9 @@ def create_demo_project(db: Session = Depends(get_db)):
     return {"status": "success", "id": project.id, "title": project.title}
 @router.get("/projects", response_model=List[ProjectSummary])
 def list_projects(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
-    """Return all saved projects belonging to the logged in user."""
-    if not current_user:
-        return []
-    return project_service.list_projects(db, user_id=current_user.id)
+    """Return all saved projects belonging to the logged in user, or anonymous ones if not logged in."""
+    user_id = current_user.id if current_user else None
+    return project_service.list_projects(db, user_id=user_id)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectDetail)

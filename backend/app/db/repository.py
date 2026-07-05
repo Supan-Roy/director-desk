@@ -76,9 +76,12 @@ class ProjectRepository:
 
     def get_all(self, db: Session, user_id: Optional[int] = None) -> List[Project]:
         """Return all projects filtered by user (if provided) ordered by newest modification first."""
+        from sqlalchemy import or_
         query = db.query(Project)
         if user_id is not None:
-            query = query.filter(Project.user_id == user_id)
+            query = query.filter(or_(Project.user_id == user_id, Project.user_id == None))
+        else:
+            query = query.filter(Project.user_id == None)
         return (
             query.order_by(Project.updated_at.desc())
             .all()
