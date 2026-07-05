@@ -22,6 +22,17 @@ export default function AssetsPage() {
 
   // Video preview modal state
   const [playingVideo, setPlayingVideo] = useState(null)
+  
+  // Selected asset expand state
+  const [expandedAsset, setExpandedAsset] = useState(null)
+
+  const handleToggleExpand = (type, id) => {
+    if (expandedAsset?.type === type && expandedAsset?.id === id) {
+      setExpandedAsset(null)
+    } else {
+      setExpandedAsset({ type, id })
+    }
+  }
 
   // Debounce search query
   useEffect(() => {
@@ -213,46 +224,103 @@ export default function AssetsPage() {
             {(activeTab === 'all' || activeTab === 'characters') && assets.characters.length > 0 && (
               <div>
                 <h3 className={`text-[12px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2 ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>
-                  <FiUser className="text-purple-400" /> Characters ({assets.characters.length})
+                  <FiUser className="text-purple-450" /> Characters ({assets.characters.length})
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {assets.characters.map(char => (
-                    <div
-                      key={char.id}
-                      className={`rounded-xl border p-4.5 flex gap-4 transition-all duration-300 relative group hover:shadow-lg ${
-                        d
-                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-neutral-200'
-                          : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
-                      }`}
-                    >
-                      {/* Character avatar */}
-                      <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden border border-white/5 bg-black/20 flex items-center justify-center">
-                        {char.image_url ? (
-                          <img src={`${apiBaseUrl}${char.image_url}`} alt={char.character_name} className="h-full w-full object-cover" />
-                        ) : (
-                          <FiUser size={24} className="text-gray-500" />
-                        )}
-                      </div>
+                  {assets.characters.map(char => {
+                    const isExpanded = expandedAsset?.type === 'character' && expandedAsset?.id === char.id
+                    return (
+                      <div
+                        key={char.id}
+                        onClick={() => handleToggleExpand('character', char.id)}
+                        className={`rounded-xl border p-4 flex flex-col justify-between gap-4 transition-all duration-300 relative group cursor-pointer ${
+                          isExpanded
+                            ? d
+                              ? 'bg-neutral-100 border-neutral-350 shadow-md md:col-span-2'
+                              : 'bg-[#12121b] border-neutral-800 shadow-xl md:col-span-2'
+                            : d
+                              ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-md'
+                              : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
+                        }`}
+                      >
+                        <div className="flex gap-4 items-start">
+                          {/* Character avatar */}
+                          <div className={`shrink-0 rounded-xl overflow-hidden border ${d ? 'border-neutral-200' : 'border-white/5'} bg-black/20 flex items-center justify-center transition-all duration-300 ${isExpanded ? 'h-20 w-20' : 'h-14 w-14'}`}>
+                            {char.image_url ? (
+                              <img src={`${apiBaseUrl}${char.image_url}`} alt={char.character_name} className="h-full w-full object-cover" />
+                            ) : (
+                              <FiUser size={isExpanded ? 30 : 20} className="text-gray-500" />
+                            )}
+                          </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className={`text-[13px] font-bold tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>
-                            {char.character_name}
-                          </h4>
-                          <button
-                            onClick={() => navigate(`/projects/${char.project_id}`)}
-                            className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold"
-                            title="Go to project"
-                          >
-                            {char.project_title} <FiExternalLink size={10} />
-                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className={`text-[13.5px] font-black tracking-wide truncate ${d ? 'text-neutral-900' : 'text-white'}`}>
+                                {char.character_name}
+                              </h4>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(`/projects/${char.project_id}`)
+                                }}
+                                className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0"
+                                title="Go to project"
+                              >
+                                {char.project_title} <FiExternalLink size={10} />
+                              </button>
+                            </div>
+                            <p className={`text-[10.5px] leading-relaxed mt-1.5 ${isExpanded ? '' : 'line-clamp-2'} ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                              {char.character_profile?.description || 'AI Cast character profile'}
+                            </p>
+                          </div>
                         </div>
-                        <p className={`text-[10.5px] leading-relaxed mt-1 line-clamp-2 ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                          {char.character_profile?.description || 'AI Cast character profile'}
-                        </p>
+
+                        {/* Expanded details section with nice animation */}
+                        <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 border-t border-dashed border-neutral-300/40 pt-3.5 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-[10.5px] leading-normal">
+                            {char.character_profile?.gender && (
+                              <div>
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-purple-400 block mb-0.5">Gender</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{char.character_profile.gender}</span>
+                              </div>
+                            )}
+                            {char.character_profile?.age && (
+                              <div>
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-emerald-400 block mb-0.5">Age Group</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{char.character_profile.age}</span>
+                              </div>
+                            )}
+                            {char.character_profile?.ethnicity && (
+                              <div>
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-amber-400 block mb-0.5">Ethnicity</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{char.character_profile.ethnicity}</span>
+                              </div>
+                            )}
+                            {char.character_profile?.attire && (
+                              <div className="col-span-2 sm:col-span-3">
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-blue-400 block mb-0.5">Attire & Appearance</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{char.character_profile.attire}</span>
+                              </div>
+                            )}
+                            {char.character_profile?.personality && (
+                              <div className="col-span-2 sm:col-span-3">
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-purple-400 block mb-0.5">Personality & Demeanor</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{char.character_profile.personality}</span>
+                              </div>
+                            )}
+                            {char.character_profile?.prompt_instructions && (
+                              <div className={`col-span-2 sm:col-span-3 p-2.5 rounded-lg border font-mono text-[9px] mt-1 ${
+                                d ? 'bg-neutral-100 border-neutral-200 text-neutral-600' : 'bg-black/30 border-white/5 text-gray-400'
+                              }`}>
+                                <span className="font-bold text-[7.5px] uppercase tracking-wider text-purple-400 block mb-1">Visual Generation Instructions</span>
+                                "{char.character_profile.prompt_instructions}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -261,45 +329,102 @@ export default function AssetsPage() {
             {(activeTab === 'all' || activeTab === 'environments') && assets.environments.length > 0 && (
               <div>
                 <h3 className={`text-[12px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2 ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>
-                  <FiImage className="text-emerald-400" /> Environments ({assets.environments.length})
+                  <FiImage className="text-emerald-450" /> Environments ({assets.environments.length})
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {assets.environments.map(env => (
-                    <div
-                      key={env.id}
-                      className={`rounded-xl border p-4.5 flex gap-4 transition-all duration-300 relative group hover:shadow-lg ${
-                        d
-                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-neutral-200'
-                          : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
-                      }`}
-                    >
-                      {/* Environment preview */}
-                      <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden border border-white/5 bg-black/20 flex items-center justify-center">
-                        {env.image_url ? (
-                          <img src={`${apiBaseUrl}${env.image_url}`} alt={env.environment_name} className="h-full w-full object-cover" />
-                        ) : (
-                          <FiImage size={24} className="text-gray-500" />
-                        )}
-                      </div>
+                  {assets.environments.map(env => {
+                    const isExpanded = expandedAsset?.type === 'environment' && expandedAsset?.id === env.id
+                    return (
+                      <div
+                        key={env.id}
+                        onClick={() => handleToggleExpand('environment', env.id)}
+                        className={`rounded-xl border p-4 flex flex-col justify-between gap-4 transition-all duration-300 relative group cursor-pointer ${
+                          isExpanded
+                            ? d
+                              ? 'bg-neutral-100 border-neutral-350 shadow-md md:col-span-2'
+                              : 'bg-[#12121b] border-neutral-800 shadow-xl md:col-span-2'
+                            : d
+                              ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-md'
+                              : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
+                        }`}
+                      >
+                        <div className="flex gap-4 items-start">
+                          {/* Environment preview */}
+                          <div className={`shrink-0 rounded-xl overflow-hidden border ${d ? 'border-neutral-200' : 'border-white/5'} bg-black/20 flex items-center justify-center transition-all duration-300 ${isExpanded ? 'h-20 w-20' : 'h-14 w-14'}`}>
+                            {env.image_url ? (
+                              <img src={`${apiBaseUrl}${env.image_url}`} alt={env.environment_name} className="h-full w-full object-cover" />
+                            ) : (
+                              <FiImage size={isExpanded ? 30 : 20} className="text-gray-500" />
+                            )}
+                          </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className={`text-[13px] font-bold tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>
-                            {env.environment_name}
-                          </h4>
-                          <button
-                            onClick={() => navigate(`/projects/${env.project_id}`)}
-                            className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold"
-                          >
-                            {env.project_title} <FiExternalLink size={10} />
-                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className={`text-[13.5px] font-black tracking-wide truncate ${d ? 'text-neutral-900' : 'text-white'}`}>
+                                {env.environment_name}
+                              </h4>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(`/projects/${env.project_id}`)
+                                }}
+                                className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0"
+                              >
+                                {env.project_title} <FiExternalLink size={10} />
+                              </button>
+                            </div>
+                            <p className={`text-[10.5px] leading-relaxed mt-1.5 ${isExpanded ? '' : 'line-clamp-2'} ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                              {env.environment_profile?.description || 'Generated environment visual cues'}
+                            </p>
+                          </div>
                         </div>
-                        <p className={`text-[10.5px] leading-relaxed mt-1 line-clamp-2 ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                          {env.environment_profile?.description || 'Generated environment visual cues'}
-                        </p>
+
+                        {/* Expanded details section with nice animation */}
+                        <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 border-t border-dashed border-neutral-300/40 pt-3.5 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-[10.5px] leading-normal">
+                            {env.environment_profile?.time_of_day && (
+                              <div>
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-amber-500 block mb-0.5">Time of Day</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{env.environment_profile.time_of_day}</span>
+                              </div>
+                            )}
+                            {env.environment_profile?.lighting && (
+                              <div>
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-emerald-450 block mb-0.5">Lighting Setup</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{env.environment_profile.lighting}</span>
+                              </div>
+                            )}
+                            {env.environment_profile?.atmosphere && (
+                              <div>
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-purple-400 block mb-0.5">Atmosphere</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{env.environment_profile.atmosphere}</span>
+                              </div>
+                            )}
+                            {env.environment_profile?.key_props && (
+                              <div className="col-span-2 sm:col-span-3">
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-blue-400 block mb-0.5">Key Props & Objects</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{env.environment_profile.key_props}</span>
+                              </div>
+                            )}
+                            {env.environment_profile?.architecture && (
+                              <div className="col-span-2 sm:col-span-3">
+                                <span className="text-[7.5px] uppercase tracking-wider font-bold text-purple-450 block mb-0.5">Architecture & Setting</span>
+                                <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{env.environment_profile.architecture}</span>
+                              </div>
+                            )}
+                            {env.environment_profile?.prompt_instructions && (
+                              <div className={`col-span-2 sm:col-span-3 p-2.5 rounded-lg border font-mono text-[9px] mt-1 ${
+                                d ? 'bg-neutral-100 border-neutral-200 text-neutral-600' : 'bg-black/30 border-white/5 text-gray-400'
+                              }`}>
+                                <span className="font-bold text-[7.5px] uppercase tracking-wider text-purple-400 block mb-1">Visual Generation Instructions</span>
+                                "{env.environment_profile.prompt_instructions}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -308,49 +433,81 @@ export default function AssetsPage() {
             {(activeTab === 'all' || activeTab === 'voices') && assets.voices.length > 0 && (
               <div>
                 <h3 className={`text-[12px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2 ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>
-                  <FiVolume2 className="text-amber-400" /> Voices ({assets.voices.length})
+                  <FiVolume2 className="text-amber-450" /> Voices ({assets.voices.length})
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {assets.voices.map(voice => (
-                    <div
-                      key={voice.id}
-                      className={`rounded-xl border p-4.5 flex flex-col justify-between gap-4.5 transition-all duration-300 relative group hover:shadow-lg ${
-                        d
-                          ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-neutral-200'
-                          : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className={`text-[13px] font-bold tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>
-                            {voice.character_name}
-                          </h4>
-                          <span className={`text-[9px] font-mono tracking-wide mt-1 inline-block opacity-65 ${d ? 'text-neutral-600' : 'text-neutral-450'}`}>
-                            SIG: {voice.voice_signature || 'QwenTTS-Male'}
-                          </span>
+                  {assets.voices.map(voice => {
+                    const isExpanded = expandedAsset?.type === 'voice' && expandedAsset?.id === voice.id
+                    return (
+                      <div
+                        key={voice.id}
+                        onClick={() => handleToggleExpand('voice', voice.id)}
+                        className={`rounded-xl border p-4.5 flex flex-col justify-between gap-4 transition-all duration-300 relative group cursor-pointer ${
+                          isExpanded
+                            ? d
+                              ? 'bg-neutral-100 border-neutral-350 shadow-md md:col-span-2'
+                              : 'bg-[#12121b] border-neutral-800 shadow-xl md:col-span-2'
+                            : d
+                              ? 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:border-neutral-350 hover:shadow-md'
+                              : 'bg-[#0f0f15] border-neutral-900 text-neutral-300 hover:border-neutral-800 hover:shadow-black'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className={`text-[13.5px] font-black tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>
+                              {voice.character_name}
+                            </h4>
+                            <span className={`text-[8.5px] font-mono tracking-wide mt-1 inline-block opacity-65 ${d ? 'text-neutral-600' : 'text-neutral-450'}`}>
+                              SIG: {voice.voice_signature || 'QwenTTS-Male'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/projects/${voice.project_id}`)
+                            }}
+                            className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0"
+                          >
+                            {voice.project_title} <FiExternalLink size={10} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => navigate(`/projects/${voice.project_id}`)}
-                          className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold"
-                        >
-                          {voice.project_title} <FiExternalLink size={10} />
-                        </button>
-                      </div>
 
-                      {/* HTML5 Audio Player */}
-                      {voice.preview_url ? (
-                        <div className={`p-2.5 rounded-xl border ${d ? 'bg-white border-neutral-200' : 'bg-black/35 border-white/5'}`}>
-                          <audio
-                            controls
-                            src={`${apiBaseUrl}${voice.preview_url}`}
-                            className="w-full h-8 text-[11px]"
-                          />
+                        {/* HTML5 Audio Player */}
+                        {voice.preview_url ? (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className={`p-2.5 rounded-xl border ${d ? 'bg-white border-neutral-250' : 'bg-black/35 border-white/5'}`}
+                          >
+                            <audio
+                              controls
+                              src={`${apiBaseUrl}${voice.preview_url}`}
+                              className="w-full h-8 text-[11px]"
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-[10.5px] italic text-gray-500">No preview voice clip generated yet</div>
+                        )}
+
+                        {/* Expanded voice parameters with nice animation */}
+                        <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 border-t border-dashed border-neutral-300/40 pt-3.5 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                          <div className="grid grid-cols-2 gap-4 text-[10.5px] leading-normal">
+                            <div>
+                              <span className="text-[7.5px] uppercase tracking-wider font-bold text-amber-500 block mb-0.5">Gender Target</span>
+                              <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{voice.gender_tag || 'Male'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[7.5px] uppercase tracking-wider font-bold text-emerald-450 block mb-0.5">Speaker Age</span>
+                              <span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{voice.age_tag || 'Adult'}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-[7.5px] uppercase tracking-wider font-bold text-purple-450 block mb-0.5">Technical Signature</span>
+                              <span className={`font-mono text-[9px] block ${d ? 'text-neutral-700' : 'text-neutral-300'}`}>{voice.voice_signature || 'qwen-tts-v2-multilingual'}</span>
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="text-[10.5px] italic text-gray-500">No preview voice clip generated yet</div>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}

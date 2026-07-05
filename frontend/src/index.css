@@ -809,6 +809,15 @@
   border-color: #E5E7EB !important;
 }
 
+/* Ensure purple and active black buttons keep white text in day mode */
+[data-theme="day"] button.bg-purple-700,
+[data-theme="day"] button.bg-purple-650,
+[data-theme="day"] button.bg-purple-600,
+[data-theme="day"] button.bg-black,
+[data-theme="day"] button.bg-black * {
+  color: #ffffff !important;
+}
+
 /* Creative mode cards - reset overrides because they are dark cards in both modes now */
 [data-theme="day"] .creative-presets-section button,
 [data-theme="day"] .featured-productions-section [class*="bg-\[#111111\]"] {
