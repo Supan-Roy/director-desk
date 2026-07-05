@@ -175,7 +175,7 @@ export default function Sidebar() {
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
 
-  const { user, logout, openLoginModal } = useAuth();
+  const { user, logout, openLoginModal, updateProfile } = useAuth();
 
   // Profile states
   const [profile, setProfile] = useState(getUserProfile);
@@ -187,19 +187,53 @@ export default function Sidebar() {
         lastName: user.last_name || '',
         email: user.email,
         plan: 'Pro Plan',
-        photo: null
+        photo: user.photo || null,
+        dob: user.dob || ''
       });
     } else {
+      const saved = localStorage.getItem('user_profile');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setProfile({
+            firstName: parsed.firstName || 'Guest',
+            lastName: parsed.lastName || 'User',
+            email: 'Sign in to save projects',
+            plan: 'Free Session',
+            photo: parsed.photo || null,
+            dob: parsed.dob || ''
+          });
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
       setProfile({
         firstName: 'Guest',
         lastName: 'User',
         email: 'Sign in to save projects',
         plan: 'Free Session',
-        photo: null
+        photo: null,
+        dob: ''
       });
     }
   }, [user]);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  // Handle click outside for profile popover menu
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+    const handleClick = (e) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isProfileMenuOpen]);
+
   const [formFirstName, setFormFirstName] = useState('');
   const [formLastName, setFormLastName] = useState('');
   const [formEmail, setFormEmail] = useState('');
@@ -252,7 +286,7 @@ export default function Sidebar() {
     }
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const updated = {
       firstName: formFirstName,
       lastName: formLastName,
@@ -261,8 +295,18 @@ export default function Sidebar() {
       photo: formPhoto,
       plan: formPlan
     };
-    localStorage.setItem('user_profile', JSON.stringify(updated));
-    setProfile(updated);
+    if (user) {
+      try {
+        await updateProfile(formFirstName, formLastName, formDob, formPhoto);
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'Failed to update profile.');
+        return;
+      }
+    } else {
+      localStorage.setItem('user_profile', JSON.stringify(updated));
+      setProfile(updated);
+    }
     setIsProfileOpen(false);
     window.dispatchEvent(new Event('user_profile_updated'));
   };
@@ -810,7 +854,7 @@ export default function Sidebar() {
       </div>
 
       {/* ── Bottom Section (fixed at bottom) ── */}
-      <div className={`flex flex-col gap-3 p-4 shrink-0 w-full ${isCollapsed ? 'items-center' : ''}`}>
+      <div className={`flex flex-col gap-3 p-4 shrink-0 w-full relative ${isCollapsed ? 'items-center' : ''}`} ref={profileMenuRef}>
         {/* Reset Action */}
         {hasProject && (
           isCollapsed ? (
@@ -836,9 +880,52 @@ export default function Sidebar() {
         {/* Divider */}
         <div className={`h-px shrink-0 transition-all duration-300 ${isCollapsed ? 'w-12 mx-auto' : 'mx-4 w-[calc(100%-2rem)]'} ${d ? 'bg-black/[0.07]' : 'bg-white/[0.04]'}`} />
 
+        {/* User Profile Popover Dropdown Menu */}
+        {isProfileMenuOpen && user && (
+          <div 
+            className={`absolute bottom-[calc(100%-0.5rem)] z-40 rounded-xl border p-1.5 shadow-xl flex flex-col gap-1 animate-scale-in transition-all ${
+              isCollapsed ? 'left-1/2 -translate-x-1/2 w-32' : 'left-4 right-4'
+            } ${
+              d 
+                ? 'bg-white border-neutral-250 text-neutral-800 shadow-neutral-200' 
+                : 'bg-[#0f0f15] border-white/[0.08] text-white shadow-black/80'
+            }`}
+          >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsProfileMenuOpen(false);
+                setIsProfileOpen(true);
+              }}
+              className={`flex items-center gap-2 px-3 py-2 text-[10.5px] font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer w-full text-left ${
+                d ? 'hover:bg-neutral-100 text-gray-700' : 'hover:bg-white/5 text-surface-200'
+              }`}
+            >
+              <FiUser size={13} />
+              <span>Profile</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsProfileMenuOpen(false);
+                logout();
+              }}
+              className={`flex items-center gap-2 px-3 py-2 text-[10.5px] font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer w-full text-left ${
+                d ? 'hover:bg-red-50 text-red-600' : 'hover:bg-red-500/10 text-red-400'
+              }`}
+            >
+              <FiX size={13} />
+              <span>Log Out</span>
+            </button>
+          </div>
+        )}
+
         {/* User Info Card */}
         <div 
-          onClick={() => user ? setIsProfileOpen(true) : openLoginModal()}
+          onClick={(e) => {
+            e.stopPropagation();
+            user ? setIsProfileMenuOpen(!isProfileMenuOpen) : openLoginModal();
+          }}
           className={`flex rounded-lg border relative overflow-hidden group transition-all duration-300 cursor-pointer select-none ${
             isCollapsed ? 'p-1.5 justify-center w-10 h-10 items-center' : 'gap-2.5 p-3 w-full items-center'
           } ${

@@ -34,6 +34,8 @@ class User(Base):
     hashed_password = Column(String, nullable=True)
     is_google = Column(Boolean, default=False, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    photo = Column(Text, nullable=True)
+    dob = Column(String, nullable=True)
     otp_code = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
     delete_token = Column(String, nullable=True)

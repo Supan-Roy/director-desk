@@ -44,20 +44,57 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (user) {
+      const userKey = `user_profile_${user.email}`;
+      const saved = localStorage.getItem(userKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setProfile({
+            firstName: parsed.firstName || user.name,
+            lastName: parsed.lastName || user.last_name || '',
+            email: user.email,
+            plan: 'Pro Plan',
+            photo: parsed.photo || null,
+            dob: parsed.dob || ''
+          });
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
       setProfile({
         firstName: user.name,
         lastName: user.last_name || '',
         email: user.email,
         plan: 'Pro Plan',
-        photo: null
+        photo: null,
+        dob: ''
       });
     } else {
+      const saved = localStorage.getItem('user_profile');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setProfile({
+            firstName: parsed.firstName || 'Guest',
+            lastName: parsed.lastName || 'User',
+            email: 'Sign in to save projects',
+            plan: 'Free Session',
+            photo: parsed.photo || null,
+            dob: parsed.dob || ''
+          });
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
       setProfile({
         firstName: 'Guest',
         lastName: 'User',
         email: 'Sign in to save projects',
         plan: 'Free Session',
-        photo: null
+        photo: null,
+        dob: ''
       });
     }
   }, [user]);

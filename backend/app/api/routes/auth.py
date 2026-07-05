@@ -64,6 +64,13 @@ class GoogleLoginRequest(BaseModel):
     credential: str
 
 
+class ProfileUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    last_name: Optional[str] = None
+    dob: Optional[str] = None
+    photo: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -73,7 +80,10 @@ def check_email(payload: EmailCheckRequest, db: Session = Depends(get_db)):
     """Check if an email is already registered."""
     email = validate_email_format(payload.email)
     user = user_repository.get_by_email(db, email)
-    return {"exists": user is not None}
+    if not user:
+        return {"exists": False, "is_google_only": False}
+    is_google_only = user.hashed_password is None and user.is_google
+    return {"exists": True, "is_google_only": is_google_only}
 
 
 @router.post("/auth/login-email")
@@ -81,7 +91,7 @@ def login_email(payload: LoginRequest, response: Response, db: Session = Depends
     """Log in using email and password, setting session cookie."""
     email = validate_email_format(payload.email)
     user = user_repository.get_by_email(db, email)
-    if not user or user.is_google or not user.hashed_password:
+    if not user or not user.hashed_password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password."
@@ -120,7 +130,9 @@ def login_email(payload: LoginRequest, response: Response, db: Session = Depends
             "id": user.id,
             "name": user.name,
             "last_name": user.last_name,
-            "email": user.email
+            "email": user.email,
+            "photo": user.photo,
+            "dob": user.dob
         }
     }
 
@@ -260,7 +272,9 @@ def verify_otp(payload: OTPVerifyRequest, response: Response, db: Session = Depe
             "id": user.id,
             "name": user.name,
             "last_name": user.last_name,
-            "email": user.email
+            "email": user.email,
+            "photo": user.photo,
+            "dob": user.dob
         }
     }
 
@@ -324,7 +338,9 @@ def google_login(payload: GoogleLoginRequest, response: Response, db: Session = 
             "id": user.id,
             "name": user.name,
             "last_name": user.last_name,
-            "email": user.email
+            "email": user.email,
+            "photo": user.photo,
+            "dob": user.dob
         }
     }
 
@@ -350,5 +366,43 @@ def get_me(current_user: Optional[User] = Depends(get_current_user)):
         "id": current_user.id,
         "name": current_user.name,
         "last_name": current_user.last_name,
-        "email": current_user.email
+        "email": current_user.email,
+        "photo": current_user.photo,
+        "dob": current_user.dob
+    }
+
+
+@router.put("/auth/profile")
+def update_profile(
+    payload: ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """Update user profile in the database."""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
+    user_repository.update(
+        db,
+        current_user.id,
+        name=payload.name,
+        last_name=payload.last_name,
+        dob=payload.dob,
+        photo=payload.photo
+    )
+
+    updated_user = user_repository.get_by_id(db, current_user.id)
+    return {
+        "status": "success",
+        "user": {
+            "id": updated_user.id,
+            "name": updated_user.name,
+            "last_name": updated_user.last_name,
+            "email": updated_user.email,
+            "photo": updated_user.photo,
+            "dob": updated_user.dob
+        }
     }

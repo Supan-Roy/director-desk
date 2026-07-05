@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
   const checkEmail = async (email) => {
     try {
       const response = await apiClient.post('/api/auth/check-email', { email })
-      return response.data.exists // true/false
+      return response.data // { exists, is_google_only }
     } catch (err) {
       throw new Error(err.message || 'Failed to verify email address.')
     }
@@ -102,6 +102,25 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // ── Update Profile (stored in database) ──────────────────────────────────
+  const updateProfile = async (name, lastName, dob, photo) => {
+    try {
+      const response = await apiClient.put('/api/auth/profile', {
+        name,
+        last_name: lastName || null,
+        dob: dob || null,
+        photo: photo || null
+      })
+      if (response.data.status === 'success') {
+        setUser(response.data.user)
+        return response.data.user
+      }
+      throw new Error('Failed to update profile.')
+    } catch (err) {
+      throw new Error(err.message || 'Failed to update profile.')
+    }
+  }
+
   // ── Google OAuth Login ──────────────────────────────────────────────────
   const googleLogin = async (credential) => {
     try {
@@ -165,6 +184,7 @@ export function AuthProvider({ children }) {
     registerEmail,
     verifyOTP,
     resendOTP,
+    updateProfile,
     googleLogin,
     logout,
     requestDeletion

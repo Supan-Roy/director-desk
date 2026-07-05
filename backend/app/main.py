@@ -58,6 +58,8 @@ def _run_migrations(engine) -> None:
         ("projects", "original_script", "TEXT"),
         ("projects", "critic_review", "TEXT"),
         ("users", "is_verified", "BOOLEAN DEFAULT 0"),
+        ("users", "photo", "TEXT"),
+        ("users", "dob", "TEXT"),
         ("projects", "approved", "BOOLEAN DEFAULT 0"),
         ("projects", "is_pinned", "BOOLEAN DEFAULT 0"),
         ("projects", "is_archived", "BOOLEAN DEFAULT 0"),

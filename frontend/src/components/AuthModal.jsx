@@ -107,9 +107,13 @@ export default function AuthModal() {
     setLoading(true)
     setError('')
     try {
-      const exists = await checkEmail(email)
-      if (exists) {
-        setStep('login')
+      const data = await checkEmail(email)
+      if (data.exists) {
+        if (data.is_google_only) {
+          setError('This email is registered via Google. Please sign in using the "Continue with Google" button.')
+        } else {
+          setStep('login')
+        }
       } else {
         setStep('register')
       }
