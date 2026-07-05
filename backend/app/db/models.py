@@ -153,3 +153,25 @@ class SceneVideo(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class CreativeTemplateModel(Base):
+    __tablename__ = "custom_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    production_type = Column(String, nullable=False)
+    aspect_ratio = Column(String, default="16:9")
+    camera_style = Column(String, default="pan")
+    lenses = Column(String, nullable=True)
+    lighting = Column(String, nullable=True)
+    color_grade = Column(String, nullable=True)
+    prompt_examples = Column(JSONType, nullable=True)  # list of strings
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

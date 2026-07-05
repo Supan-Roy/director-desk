@@ -8,7 +8,7 @@ Endpoints:
   GET  /projects/{id}           — get full saved project
   DELETE /projects/{id}         — delete a saved project
 """
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -392,6 +392,79 @@ def select_voice_version(project_id: int, payload: SelectVoiceVersionRequest, db
         
     db.commit()
     return {"status": "success"}
+
+
+# ---------------------------------------------------------------------------
+# Custom Templates CRUD
+# ---------------------------------------------------------------------------
+
+class CreateTemplateRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+    production_type: str
+    aspect_ratio: str = "16:9"
+    camera_style: str = "pan"
+    lenses: Optional[str] = None
+    lighting: Optional[str] = None
+    color_grade: Optional[str] = None
+    prompt_examples: Optional[List[str]] = None
+
+
+@router.get("/templates/custom")
+def get_custom_templates(db: Session = Depends(get_db)):
+    """List all user-defined custom templates."""
+    from app.db.models import CreativeTemplateModel
+    templates = db.query(CreativeTemplateModel).order_by(CreativeTemplateModel.created_at.desc()).all()
+    return [
+        {
+            "id": t.id,
+            "title": t.title,
+            "description": t.description,
+            "production_type": t.production_type,
+            "aspect_ratio": t.aspect_ratio,
+            "camera_style": t.camera_style,
+            "lenses": t.lenses,
+            "lighting": t.lighting,
+            "color_grade": t.color_grade,
+            "prompt_examples": t.prompt_examples or [],
+            "created_at": t.created_at.isoformat() if t.created_at else None
+        }
+        for t in templates
+    ]
+
+
+@router.post("/templates/custom")
+def create_custom_template(payload: CreateTemplateRequest, db: Session = Depends(get_db)):
+    """Create a new custom template."""
+    from app.db.models import CreativeTemplateModel
+    t = CreativeTemplateModel(
+        title=payload.title,
+        description=payload.description,
+        production_type=payload.production_type,
+        aspect_ratio=payload.aspect_ratio,
+        camera_style=payload.camera_style,
+        lenses=payload.lenses,
+        lighting=payload.lighting,
+        color_grade=payload.color_grade,
+        prompt_examples=payload.prompt_examples or []
+    )
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return {"status": "success", "id": t.id}
+
+
+@router.delete("/templates/custom/{id}")
+def delete_custom_template(id: int, db: Session = Depends(get_db)):
+    """Delete a custom template by id."""
+    from app.db.models import CreativeTemplateModel
+    t = db.query(CreativeTemplateModel).filter(CreativeTemplateModel.id == id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Template not found")
+    db.delete(t)
+    db.commit()
+    return {"status": "success"}
+
 
 
 

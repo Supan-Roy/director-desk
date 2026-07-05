@@ -641,14 +641,13 @@ export default function Sidebar() {
       {/* ── Scrollable middle: nav + projects ── */}
       <div className={`flex-1 overflow-y-auto min-h-0 py-3 flex flex-col gap-3 w-full ${isCollapsed ? 'items-center' : ''}`}>
 
-        {/* Nav items */}
         <nav className={`space-y-1 w-full ${isCollapsed ? 'px-2 flex flex-col items-center' : 'px-3'}`}>
           {[
             { icon: FiGrid,      label: 'Studio',      path: '/' },
             { icon: FiFilm,      label: 'Studio Editor', path: '/editor' },
-            { icon: PiRobotBold, label: 'Agents' },
-            { icon: FiLayers,    label: 'Templates' },
-            { icon: FiDatabase,  label: 'Assets' },
+            { icon: PiRobotBold, label: 'Agents',      path: '/agents' },
+            { icon: FiLayers,    label: 'Templates',   path: '/templates' },
+            { icon: FiDatabase,  label: 'Assets',      path: '/assets' },
             { icon: FiSettings,  label: 'Settings',    path: '/settings' },
           ].map((item) => {
             const isActive = item.path ? location.pathname === item.path : false;

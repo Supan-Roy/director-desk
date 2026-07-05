@@ -8,6 +8,8 @@ from app.api.routes.script import router as script_router
 from app.api.routes.project import router as project_router
 from app.api.routes.editor import router as editor_router
 from app.api.routes.scene_breakdown import router as scene_breakdown_router
+from app.api.routes.agents import router as agents_router
+from app.api.routes.assets import router as assets_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -18,3 +20,5 @@ api_router.include_router(rendering_router)
 api_router.include_router(project_router)
 api_router.include_router(editor_router)
 api_router.include_router(scene_breakdown_router)
+api_router.include_router(agents_router)
+api_router.include_router(assets_router)
