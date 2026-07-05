@@ -1,5 +1,6 @@
 import logging
 import json
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
@@ -7,6 +8,8 @@ from fastapi.responses import StreamingResponse
 from app.schemas.requests import GenerateRequest
 from app.services.showrunner_service import showrunner_service
 from app.utils.security import RateLimiter
+from app.services.auth_service import get_current_user
+from app.db.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +100,7 @@ def generate_story(request: GenerateRequest):
 
 
 @router.post("/generate/stream", dependencies=[Depends(RateLimiter(limit=3, window=60))])
-async def generate_story_stream(request: GenerateRequest):
+async def generate_story_stream(request: GenerateRequest, current_user: Optional[User] = Depends(get_current_user)):
     is_safe, error_msg = check_prompt_safety(request.prompt)
     if not is_safe:
         raise HTTPException(status_code=400, detail=error_msg)
@@ -108,6 +111,7 @@ async def generate_story_stream(request: GenerateRequest):
         import asyncio
         queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
+        user_id = current_user.id if current_user else None
         
         def run_sync_generation():
             try:
@@ -118,7 +122,7 @@ async def generate_story_stream(request: GenerateRequest):
 
                     # Auto-save when generation completes successfully
                     if event.get("type") == "complete":
-                        _auto_save_project(request.prompt)
+                        _auto_save_project(request.prompt, user_id=user_id)
 
                 loop.call_soon_threadsafe(queue.put_nowait, None)
             except Exception as e:
@@ -187,12 +191,16 @@ async def resume_story_stream(project_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def _auto_save_project(original_prompt: str) -> None:
+def _auto_save_project(original_prompt: str, user_id: Optional[int] = None) -> None:
     """
     Persist the just-completed generation to the database.
     Runs in the same background thread as generate_stream so we use a
     fresh DB session rather than an async-injected one.
     """
+    if user_id is None:
+        logger.info("Anonymous session. Skipping auto-save to database.")
+        return
+
     try:
         from app.services.project_state import project_state
         from app.services.project_service import project_service
@@ -220,6 +228,7 @@ def _auto_save_project(original_prompt: str) -> None:
             project = project_service.save_project(
                 db,
                 title=project_state.title or "Untitled Production",
+                user_id=user_id,
                 production_type=project_state.production_type,
                 prompt=original_prompt,
                 script=project_state.script,

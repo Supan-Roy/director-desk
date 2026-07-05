@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useAuth } from './AuthContext'
 import {
   getProjectStatus,
   getScript,
@@ -23,6 +24,7 @@ import { featuredProductions } from '../data/featuredProductions'
 const ProjectDataContext = createContext(null)
 
 export function ProjectDataProvider({ children }) {
+  const { user } = useAuth()
   const [hasProject, setHasProject] = useState(false)
   const [title, setTitle] = useState(null)
   const [agents, setAgents] = useState([])
@@ -467,7 +469,7 @@ export function ProjectDataProvider({ children }) {
   useEffect(() => {
     fetchAll()
     fetchSavedProjects()
-  }, [fetchAll, fetchSavedProjects])
+  }, [fetchAll, fetchSavedProjects, user])
 
   // Approve the current project
   const approveProject = useCallback(async () => {

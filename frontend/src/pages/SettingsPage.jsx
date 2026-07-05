@@ -8,6 +8,7 @@ import {
 import Sidebar from '../components/Sidebar'
 import { useTheme } from '../context/ThemeContext'
 import { useProjectData } from '../hooks/useProjectData'
+import { useAuth } from '../context/AuthContext'
 import { apiBaseUrl } from '../services/apiClient'
 
 export default function SettingsPage() {
@@ -19,6 +20,7 @@ export default function SettingsPage() {
     removeSavedProject, 
     updateProjectDetails 
   } = useProjectData()
+  const { user, requestDeletion } = useAuth()
 
   const [activeSubTab, setActiveSubTab] = useState('appearance') // appearance, account, privacy, about
   const [profile, setProfile] = useState(() => {
@@ -41,19 +43,24 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    const handleProfileUpdate = () => {
-      const saved = localStorage.getItem('user_profile');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (!parsed.plan) parsed.plan = "Free Plan";
-          setProfile(parsed);
-        } catch(e) {}
-      }
-    };
-    window.addEventListener('user_profile_updated', handleProfileUpdate);
-    return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
-  }, []);
+    if (user) {
+      setProfile({
+        firstName: user.name,
+        lastName: user.last_name || '',
+        email: user.email,
+        plan: 'Pro Plan',
+        photo: null
+      });
+    } else {
+      setProfile({
+        firstName: 'Guest',
+        lastName: 'User',
+        email: 'Sign in to save projects',
+        plan: 'Free Session',
+        photo: null
+      });
+    }
+  }, [user]);
 
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -61,6 +68,9 @@ export default function SettingsPage() {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false)
   const [deleteProjectsConfirmText, setDeleteProjectsConfirmText] = useState('')
   const [deleteAccountConfirmText, setDeleteAccountConfirmText] = useState('')
+  const [showDeleteRealAccountModal, setShowDeleteRealAccountModal] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('No longer need it')
+  const [deleteAccountSuccess, setDeleteAccountSuccess] = useState(false)
 
   const deleteProjectsRef = useRef(null)
   const deleteAccountRef = useRef(null)
@@ -110,6 +120,19 @@ export default function SettingsPage() {
       alert(`Export failed: ${err.message}`)
     } finally {
       setExporting(false)
+    }
+  }
+
+  const handleDeleteAccountRequest = async (e) => {
+    e.preventDefault()
+    setDeleting(true)
+    try {
+      await requestDeletion(deleteReason)
+      setDeleteAccountSuccess(true)
+    } catch (err) {
+      alert(err.message || 'Failed to request account deletion.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -502,12 +525,36 @@ export default function SettingsPage() {
                       <button
                         onClick={() => { setDeleteAccountConfirmText(''); setShowDeleteAccountModal(true); }}
                         disabled={deleting}
-                        className="sm:shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white-force transition-all text-[9px] font-bold uppercase tracking-widest cursor-pointer disabled:opacity-40"
+                        className="sm:shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-650 hover:bg-red-500 text-white-force transition-all text-[9px] font-bold uppercase tracking-widest cursor-pointer disabled:opacity-40"
                       >
                         <FiAlertTriangle size={10} />
                         <span>Wipe Workspace</span>
                       </button>
                     </div>
+
+                    {/* Delete Account */}
+                    {user && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left pt-3 border-t border-red-500/10 animate-fade-in">
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] font-bold text-red-500 uppercase tracking-wider">Delete Profile & Account</p>
+                          <p className="text-[9.5px] text-surface-500 leading-normal">
+                            Permanently delete your profile and all associated data. A deletion link will be dispatched to your email.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setDeleteReason('No longer need it');
+                            setDeleteAccountSuccess(false);
+                            setShowDeleteRealAccountModal(true);
+                          }}
+                          disabled={deleting}
+                          className="sm:shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-all text-[9px] font-bold uppercase tracking-widest cursor-pointer disabled:opacity-40"
+                        >
+                          <FiTrash2 size={10} />
+                          <span>Delete Account</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -727,6 +774,91 @@ export default function SettingsPage() {
                 {deleting ? 'Wiping...' : 'Confirm Wipe'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* REAL DELETE ACCOUNT VERIFICATION MODAL */}
+      {showDeleteRealAccountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+          <div 
+            onClick={() => setShowDeleteRealAccountModal(false)}
+            className="absolute inset-0 bg-black/75 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+          />
+          <div 
+            className={`relative z-10 w-full max-w-sm rounded-2xl border p-6 shadow-2xl transition-all duration-300 scale-100 flex flex-col gap-4 animate-scale-in ${
+              d 
+                ? 'bg-[#fcfbfa] border-neutral-200 text-neutral-800' 
+                : 'bg-[#0b0b14]/95 border-white/[0.08] text-white shadow-black/80'
+            }`}
+          >
+            <div className="flex items-center gap-3 text-red-600">
+              <FiAlertTriangle size={20} className="shrink-0" />
+              <h3 className="text-sm font-bold uppercase tracking-wider">Delete Account</h3>
+            </div>
+            
+            {!deleteAccountSuccess ? (
+              <form onSubmit={handleDeleteAccountRequest} className="space-y-4">
+                <p className={`text-[12px] leading-relaxed ${d ? 'text-gray-600' : 'text-surface-400'}`}>
+                  Permanently deleting your account will erase all your projects and generated assets. A verification link will be sent to your email.
+                </p>
+
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-gray-500' : 'text-surface-500'}`}>
+                    Why are you leaving?
+                  </label>
+                  <select
+                    value={deleteReason}
+                    onChange={(e) => setDeleteReason(e.target.value)}
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none ${
+                      d 
+                        ? 'bg-white border-neutral-200 text-neutral-800 focus:border-black' 
+                        : 'bg-[#030305] border-white/10 text-white focus:border-white'
+                    }`}
+                  >
+                    <option value="No longer need it">No longer need it</option>
+                    <option value="Too complex / difficult to use">Too complex / difficult to use</option>
+                    <option value="Privacy or security concerns">Privacy or security concerns</option>
+                    <option value="Found a better alternative">Found a better alternative</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteRealAccountModal(false)}
+                    className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer text-center ${
+                      d 
+                        ? 'border-gray-250 hover:bg-gray-150 text-gray-500' 
+                        : 'border-white/[0.08] hover:bg-white/[0.04] text-neutral-300'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={deleting}
+                    className="flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-650 hover:bg-red-500 text-white cursor-pointer transition-colors text-center disabled:opacity-40"
+                  >
+                    {deleting ? 'Requesting...' : 'Request Deletion'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4 text-center">
+                <div className="text-emerald-500 text-xl font-bold">✓ Link Dispatched</div>
+                <p className={`text-[12px] leading-relaxed ${d ? 'text-gray-600' : 'text-surface-400'}`}>
+                  A secure account deletion link was successfully emailed to you. Please check your inbox and verify the request within 1 hour.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteRealAccountModal(false)}
+                  className="w-full py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-purple-700 hover:bg-purple-650 text-white cursor-pointer transition-colors text-center"
+                >
+                  Close
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

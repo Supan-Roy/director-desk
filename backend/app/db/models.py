@@ -1,7 +1,8 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.types import TypeDecorator
 
 from app.db.database import Base
@@ -23,16 +24,41 @@ class JSONType(TypeDecorator):
         return None
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    last_name = Column(String, nullable=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=True)
+    is_google = Column(Boolean, default=False, nullable=False)
+    otp_code = Column(String, nullable=True)
+    otp_expires_at = Column(DateTime, nullable=True)
+    delete_token = Column(String, nullable=True)
+    delete_token_expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+
+
 class Project(Base):
     __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
 
     title = Column(String, index=True, nullable=False)
-
     production_type = Column(String, nullable=True)
-
     prompt = Column(Text, nullable=True)
+
+    user = relationship("User", back_populates="projects")
 
     script = Column(Text, nullable=True)
 

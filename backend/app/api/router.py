@@ -10,6 +10,8 @@ from app.api.routes.editor import router as editor_router
 from app.api.routes.scene_breakdown import router as scene_breakdown_router
 from app.api.routes.agents import router as agents_router
 from app.api.routes.assets import router as assets_router
+from app.api.routes.auth import router as auth_router
+from app.api.routes.settings_auth import router as settings_auth_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -22,3 +24,5 @@ api_router.include_router(editor_router)
 api_router.include_router(scene_breakdown_router)
 api_router.include_router(agents_router)
 api_router.include_router(assets_router)
+api_router.include_router(auth_router)
+api_router.include_router(settings_auth_router)

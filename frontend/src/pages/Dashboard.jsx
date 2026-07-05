@@ -9,6 +9,7 @@ import AgentActivityPanel from '../components/AgentActivityPanel';
 import CreditUsageCard from '../components/CreditUsageCard';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import Footer from '../components/Footer';
 import { creativeTemplates } from '../data/presets';
 import { apiBaseUrl } from '../services/apiClient';
@@ -77,6 +78,7 @@ function DustParticles() {
 export default function Dashboard() {
   const { hasProject, loading } = useProjectData();
   const { isDayMode } = useTheme();
+  const { user, openLoginModal } = useAuth();
   const containerRef = useRef(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -260,7 +262,23 @@ export default function Dashboard() {
             <span className="text-surface-300">Production Studio</span>
           </p>
 
-
+          {!user ? (
+            <button
+              onClick={() => openLoginModal()}
+              className={`px-4 py-1.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md ${
+                isDayMode 
+                  ? 'bg-black text-white hover:bg-neutral-800' 
+                  : 'bg-white text-black hover:bg-neutral-100'
+              }`}
+            >
+              Get Started
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 text-[9px] font-extrabold tracking-widest text-surface-400 uppercase select-none">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Workspace Active</span>
+            </div>
+          )}
         </header>
 
         {/* Studio Workspace Canvas */}

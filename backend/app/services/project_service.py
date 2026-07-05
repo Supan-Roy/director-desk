@@ -23,6 +23,7 @@ class ProjectService:
         db: Session,
         *,
         title: str,
+        user_id: Optional[int] = None,
         production_type: Optional[str],
         prompt: Optional[str],
         script: Optional[str],
@@ -37,10 +38,11 @@ class ProjectService:
         Persist a completed generation as a Project record.
         Called automatically after a successful generation stream completes.
         """
-        logger.info(f"Auto-saving project: '{title}' [{production_type}]")
+        logger.info(f"Auto-saving project: '{title}' [{production_type}] for user={user_id}")
         project = project_repository.create(
             db,
             title=title,
+            user_id=user_id,
             production_type=production_type,
             prompt=prompt,
             script=script,
@@ -54,9 +56,9 @@ class ProjectService:
         logger.info(f"Project saved: id={project.id}")
         return project
 
-    def list_projects(self, db: Session) -> List[ProjectSummary]:
+    def list_projects(self, db: Session, user_id: Optional[int] = None) -> List[ProjectSummary]:
         """Return all projects as lightweight summaries for the sidebar."""
-        projects = project_repository.get_all(db)
+        projects = project_repository.get_all(db, user_id=user_id)
         return [ProjectSummary.model_validate(p) for p in projects]
 
     def get_project(self, db: Session, project_id: int) -> ProjectDetail:

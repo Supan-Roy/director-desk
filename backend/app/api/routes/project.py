@@ -10,13 +10,15 @@ Endpoints:
 """
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.services.project_state import project_state
 from app.services.project_service import project_service
 from app.schemas.project_schemas import ProjectDetail, ProjectSummary, ProjectUpdate
 from app.db.repository import get_db
+from app.services.auth_service import get_current_user, require_user
+from app.db.models import User
 
 router = APIRouter(tags=["project"])
 
@@ -161,42 +163,98 @@ def create_demo_project(db: Session = Depends(get_db)):
         
     return {"status": "success", "id": project.id, "title": project.title}
 @router.get("/projects", response_model=List[ProjectSummary])
-def list_projects(db: Session = Depends(get_db)):
-    """Return all saved projects ordered newest-first (sidebar list)."""
-    return project_service.list_projects(db)
+def list_projects(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+    """Return all saved projects belonging to the logged in user."""
+    if not current_user:
+        return []
+    return project_service.list_projects(db, user_id=current_user.id)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectDetail)
-def get_project(project_id: int, db: Session = Depends(get_db)):
-    """Return the full content of a single saved project."""
+def get_project(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+    """Return the full content of a single saved project, checking ownership."""
+    project_model = project_service.get_project_model(db, project_id)
+    if not project_model:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    if project_model.user_id is not None:
+        if not current_user or current_user.id != project_model.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access this project."
+            )
+
     return project_service.get_project(db, project_id)
 
 
 @router.delete("/projects/{project_id}", status_code=204)
-def delete_project(project_id: int, db: Session = Depends(get_db)):
-    """Permanently delete a saved project."""
+def delete_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Permanently delete a saved project after verifying ownership."""
+    project_model = project_service.get_project_model(db, project_id)
+    if not project_model:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    if project_model.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this project."
+        )
+
     project_service.delete_project(db, project_id)
 
 
+@router.post("/projects/save-current", response_model=ProjectDetail)
+def save_current_project(db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Persist the current in-memory project workspace to database under the current user's profile."""
+    if not project_state.has_project:
+        raise HTTPException(status_code=400, detail="No active project in-memory to save.")
+
+    storyboard_data = []
+    for scene in (project_state.storyboard or []):
+        if hasattr(scene, "__dict__"):
+            try:
+                storyboard_data.append(scene.model_dump())
+            except AttributeError:
+                storyboard_data.append({
+                    "scene": getattr(scene, "scene_number", None),
+                    "shot": getattr(scene, "camera_shot", None),
+                    "environment": getattr(scene, "environment", None),
+                    "mood": getattr(scene, "mood", None),
+                })
+        elif isinstance(scene, dict):
+            storyboard_data.append(scene)
+
+    project = project_service.save_project(
+        db,
+        title=project_state.title or "Untitled Production",
+        user_id=current_user.id,
+        production_type=project_state.production_type,
+        prompt=project_state.prompt or "Manual script creation",
+        script=project_state.script,
+        original_script=project_state.original_script,
+        storyboard=storyboard_data,
+        production_plan=project_state.production_plan,
+        critic_review=project_state.critic_review,
+        scene_breakdown=project_state.scene_breakdown,
+        approved=project_state.approved,
+    )
+
+    project_state.id = project.id
+    return project_service.get_project(db, project.id)
+
+
 @router.patch("/projects/{project_id}", response_model=ProjectDetail)
-def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db)):
-    """Update a saved project's fields (like script or approval)."""
-    # Check if the in-memory state is this project, and update it as well
-    if project_state.has_project and project_state.id == project_id:
-        if payload.script is not None:
-            project_state.script = payload.script
-        if payload.original_script is not None:
-            project_state.original_script = payload.original_script
-        if payload.critic_review is not None:
-            project_state.critic_review = payload.critic_review
-        if payload.scene_breakdown is not None:
-            project_state.scene_breakdown = payload.scene_breakdown
-        if payload.environments is not None:
-            project_state.environments = payload.environments
-        if payload.voices is not None:
-            project_state.voices = payload.voices
-        if payload.approved is not None:
-            project_state.approved = payload.approved
+def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Update a saved project's fields after verifying ownership."""
+    project_model = project_service.get_project_model(db, project_id)
+    if not project_model:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    if project_model.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this project."
+        )
 
     update_dict = payload.model_dump(exclude_unset=True)
     return project_service.update_project(db, project_id, **update_dict)
@@ -245,21 +303,33 @@ def refine_raw_script(payload: dict):
 
 
 @router.get("/projects/export", response_model=List[ProjectDetail])
-def export_projects(db: Session = Depends(get_db)):
-    """Writely export all saved projects with scripts, storyboards, plans."""
+def export_projects(db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Writely export all saved projects with scripts, storyboards, plans for current user."""
     from app.db.repository import project_repository
-    projects = project_repository.get_all(db)
+    projects = project_repository.get_all(db, user_id=current_user.id)
     return [ProjectDetail.model_validate(p) for p in projects]
 
 
 @router.delete("/projects", status_code=204)
-def delete_all_projects(db: Session = Depends(get_db)):
-    """Permanently delete all saved projects and reset workspace."""
-    project_service.delete_all_projects(db)
+def delete_all_projects(db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Permanently delete all saved projects belonging to current user and reset workspace."""
+    from app.db.models import Project
+    db.query(Project).filter(Project.user_id == current_user.id).delete()
+    db.commit()
     project_state.reset()
 
 
-from pydantic import BaseModel
+def _verify_project_ownership(db: Session, project_id: int, user: Optional[User]):
+    project_model = project_service.get_project_model(db, project_id)
+    if not project_model:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    if project_model.user_id is not None:
+        if not user or user.id != project_model.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access this project's assets."
+            )
+
 
 class SelectVersionRequest(BaseModel):
     character_name: str
@@ -267,8 +337,9 @@ class SelectVersionRequest(BaseModel):
 
 
 @router.get("/projects/{project_id}/characters")
-def get_project_characters(project_id: int, db: Session = Depends(get_db)):
-    """Return all generated character assets for a given project."""
+def get_project_characters(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+    """Return all generated character assets for a given project after checking ownership."""
+    _verify_project_ownership(db, project_id, current_user)
     from app.db.models import CharacterAsset
     assets = db.query(CharacterAsset).filter(CharacterAsset.project_id == project_id).all()
     return [
@@ -287,8 +358,9 @@ def get_project_characters(project_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/projects/{project_id}/characters/select-version")
-def select_character_version(project_id: int, payload: SelectVersionRequest, db: Session = Depends(get_db)):
+def select_character_version(project_id: int, payload: SelectVersionRequest, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
     """Set a specific character version as the preferred/active one."""
+    _verify_project_ownership(db, project_id, current_user)
     from app.db.models import CharacterAsset
     assets = db.query(CharacterAsset).filter(
         CharacterAsset.project_id == project_id, 
@@ -311,8 +383,9 @@ class SelectEnvironmentVersionRequest(BaseModel):
 
 
 @router.get("/projects/{project_id}/environments")
-def get_project_environments(project_id: int, db: Session = Depends(get_db)):
-    """Return all generated environment assets for a given project."""
+def get_project_environments(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+    """Return all generated environment assets for a given project after checking ownership."""
+    _verify_project_ownership(db, project_id, current_user)
     from app.db.models import EnvironmentAsset
     assets = db.query(EnvironmentAsset).filter(EnvironmentAsset.project_id == project_id).all()
     return [
@@ -331,8 +404,9 @@ def get_project_environments(project_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/projects/{project_id}/environments/select-version")
-def select_environment_version(project_id: int, payload: SelectEnvironmentVersionRequest, db: Session = Depends(get_db)):
+def select_environment_version(project_id: int, payload: SelectEnvironmentVersionRequest, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
     """Set a specific environment version as the preferred/active one."""
+    _verify_project_ownership(db, project_id, current_user)
     from app.db.models import EnvironmentAsset
     assets = db.query(EnvironmentAsset).filter(
         EnvironmentAsset.project_id == project_id, 
@@ -355,8 +429,9 @@ class SelectVoiceVersionRequest(BaseModel):
 
 
 @router.get("/projects/{project_id}/voices")
-def get_project_voices(project_id: int, db: Session = Depends(get_db)):
-    """Return all generated voice assets for a given project."""
+def get_project_voices(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+    """Return all generated voice assets for a given project after checking ownership."""
+    _verify_project_ownership(db, project_id, current_user)
     from app.db.models import VoiceAsset
     assets = db.query(VoiceAsset).filter(VoiceAsset.project_id == project_id).all()
     return [
@@ -376,8 +451,9 @@ def get_project_voices(project_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/projects/{project_id}/voices/select-version")
-def select_voice_version(project_id: int, payload: SelectVoiceVersionRequest, db: Session = Depends(get_db)):
+def select_voice_version(project_id: int, payload: SelectVoiceVersionRequest, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
     """Set a specific voice version as the preferred/active one."""
+    _verify_project_ownership(db, project_id, current_user)
     from app.db.models import VoiceAsset
     assets = db.query(VoiceAsset).filter(
         VoiceAsset.project_id == project_id, 
@@ -387,7 +463,6 @@ def select_voice_version(project_id: int, payload: SelectVoiceVersionRequest, db
     for asset in assets:
         profile = dict(asset.voice_profile)
         profile["is_preferred"] = (asset.id == payload.preferred_asset_id)
-        # Type mark dirty
         asset.voice_profile = profile
         
     db.commit()
@@ -434,8 +509,8 @@ def get_custom_templates(db: Session = Depends(get_db)):
 
 
 @router.post("/templates/custom")
-def create_custom_template(payload: CreateTemplateRequest, db: Session = Depends(get_db)):
-    """Create a new custom template."""
+def create_custom_template(payload: CreateTemplateRequest, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Create a new custom template (requires registration)."""
     from app.db.models import CreativeTemplateModel
     t = CreativeTemplateModel(
         title=payload.title,
@@ -455,8 +530,8 @@ def create_custom_template(payload: CreateTemplateRequest, db: Session = Depends
 
 
 @router.delete("/templates/custom/{id}")
-def delete_custom_template(id: int, db: Session = Depends(get_db)):
-    """Delete a custom template by id."""
+def delete_custom_template(id: int, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Delete a custom template by id (requires registration)."""
     from app.db.models import CreativeTemplateModel
     t = db.query(CreativeTemplateModel).filter(CreativeTemplateModel.id == id).first()
     if not t:

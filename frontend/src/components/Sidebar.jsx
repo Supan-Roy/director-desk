@@ -31,6 +31,8 @@ import { useTheme } from '../context/ThemeContext';
 import { encodeId, decodeId } from '../utils/hashids';
 import ProjectIcon from './ProjectIcon';
 import { apiBaseUrl } from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from './AuthModal';
 
 // ── Custom SVGs ─────────────────────────────────────────────────────────────
 
@@ -173,8 +175,30 @@ export default function Sidebar() {
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
 
+  const { user, logout, openLoginModal } = useAuth();
+
   // Profile states
   const [profile, setProfile] = useState(getUserProfile);
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        firstName: user.name,
+        lastName: user.last_name || '',
+        email: user.email,
+        plan: 'Pro Plan',
+        photo: null
+      });
+    } else {
+      setProfile({
+        firstName: 'Guest',
+        lastName: 'User',
+        email: 'Sign in to save projects',
+        plan: 'Free Session',
+        photo: null
+      });
+    }
+  }, [user]);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [formFirstName, setFormFirstName] = useState('');
   const [formLastName, setFormLastName] = useState('');
@@ -814,7 +838,7 @@ export default function Sidebar() {
 
         {/* User Info Card */}
         <div 
-          onClick={() => setIsProfileOpen(true)}
+          onClick={() => user ? setIsProfileOpen(true) : openLoginModal()}
           className={`flex rounded-lg border relative overflow-hidden group transition-all duration-300 cursor-pointer select-none ${
             isCollapsed ? 'p-1.5 justify-center w-10 h-10 items-center' : 'gap-2.5 p-3 w-full items-center'
           } ${
@@ -1081,9 +1105,20 @@ export default function Sidebar() {
                 <FiDatabase size={12} />
                 <span>Create Demo Project</span>
               </button>
-            </div>
+          </div>
 
-            {/* Action Buttons */}
+          {/* Log Out button */}
+          <div className="border-t border-white/[0.04] pt-4 text-left">
+            <button
+              type="button"
+              onClick={logout}
+              className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/15 border border-red-500/25 text-red-400 cursor-pointer transition-colors text-center flex items-center justify-center gap-1.5"
+            >
+              Log Out
+            </button>
+          </div>
+
+          {/* Action Buttons */}
             <div className="flex gap-2.5 border-t border-white/[0.04] pt-4 select-none">
               <button
                 type="button"
@@ -1154,6 +1189,8 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      <AuthModal />
     </aside>
   );
 }
