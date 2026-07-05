@@ -990,12 +990,12 @@ export default function Sidebar() {
                   <input
                     type="email"
                     value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
+                    disabled
                     placeholder="director@director-desk.com"
-                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none ${
+                    className={`w-full text-xs rounded-lg px-3 py-1.5 border focus:outline-none cursor-not-allowed opacity-60 ${
                       d 
-                        ? 'bg-white border-neutral-200 text-neutral-800 focus:border-black' 
-                        : 'bg-black/35 border-white/[0.06] text-white focus:border-white focus:ring-1 focus:ring-white'
+                        ? 'bg-neutral-100 border-neutral-200 text-neutral-500' 
+                        : 'bg-black/50 border-white/[0.03] text-surface-400'
                     }`}
                   />
                 </div>

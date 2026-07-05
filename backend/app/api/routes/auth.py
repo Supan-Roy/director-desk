@@ -56,6 +56,10 @@ class OTPVerifyRequest(BaseModel):
     otp_code: str
 
 
+class ResendOTPRequest(BaseModel):
+    email: str
+
+
 class GoogleLoginRequest(BaseModel):
     credential: str
 
@@ -87,6 +91,16 @@ def login_email(payload: LoginRequest, response: Response, db: Session = Depends
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password."
+        )
+
+    if not user.is_verified:
+        otp = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        user_repository.update(db, user.id, otp_code=otp, otp_expires_at=expires_at)
+        send_otp_email(user.email, otp)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email address not verified. A new verification OTP code has been sent to your email."
         )
 
     # Issue session cookie
@@ -165,6 +179,38 @@ def register_email(payload: RegisterRequest, db: Session = Depends(get_db)):
     return {"status": "success", "message": "Verification OTP sent to your email."}
 
 
+@router.post("/auth/resend-otp")
+def resend_otp(payload: ResendOTPRequest, db: Session = Depends(get_db)):
+    """Regenerate and resend verification OTP code."""
+    email = validate_email_format(payload.email)
+    user = user_repository.get_by_email(db, email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+
+    # Generate 6-digit OTP code
+    otp = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    user_repository.update(
+        db,
+        user.id,
+        otp_code=otp,
+        otp_expires_at=expires_at
+    )
+
+    sent = send_otp_email(user.email, otp)
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please try again."
+        )
+
+    return {"status": "success", "message": "Verification OTP sent to your email."}
+
+
 @router.post("/auth/verify-otp")
 def verify_otp(payload: OTPVerifyRequest, response: Response, db: Session = Depends(get_db)):
     """Verify 6-digit OTP code and authenticate user session."""
@@ -194,8 +240,8 @@ def verify_otp(payload: OTPVerifyRequest, response: Response, db: Session = Depe
             detail="OTP code has expired. Please request a new one."
         )
 
-    # Clear OTP
-    user_repository.update(db, user.id, otp_code=None, otp_expires_at=None)
+    # Clear OTP and mark verified
+    user_repository.update(db, user.id, otp_code=None, otp_expires_at=None, is_verified=True)
 
     # Issue session cookie
     token = create_access_token({"user_id": user.id, "email": user.email})
@@ -256,9 +302,10 @@ def google_login(payload: GoogleLoginRequest, response: Response, db: Session = 
             hashed_password=None,
             is_google=True
         )
-    elif not user.is_google:
+        user_repository.update(db, user.id, is_verified=True)
+    elif not user.is_google or not user.is_verified:
         # Convert existing user to Google login OR link it
-        user_repository.update(db, user.id, is_google=True)
+        user_repository.update(db, user.id, is_google=True, is_verified=True)
 
     # Issue session cookie
     token = create_access_token({"user_id": user.id, "email": user.email})

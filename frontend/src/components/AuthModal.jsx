@@ -13,6 +13,7 @@ export default function AuthModal() {
     loginEmail,
     registerEmail,
     verifyOTP,
+    resendOTP,
     googleLogin,
     user
   } = useAuth()
@@ -143,7 +144,12 @@ export default function AuthModal() {
         }
       }
     } catch (err) {
-      setError(err.message || 'Invalid credentials.')
+      const errMsg = err.message || 'Invalid credentials.'
+      setError(errMsg)
+      if (errMsg.toLowerCase().includes('not verified')) {
+        setStep('otp')
+        setSuccessMsg(errMsg)
+      }
     } finally {
       setLoading(false)
     }
@@ -505,6 +511,29 @@ export default function AuthModal() {
                 disabled={loading}
                 className="w-full text-center tracking-[0.75em] font-mono bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg py-3 text-lg text-white"
               />
+              <div className="flex justify-between items-center pt-0.5 select-none">
+                <span className="text-[9.5px] text-surface-500">Didn't receive code?</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true);
+                    setError('');
+                    setSuccessMsg('');
+                    try {
+                      await resendOTP(email);
+                      setSuccessMsg('A new OTP verification code has been sent successfully.');
+                    } catch (err) {
+                      setError(err.message || 'Failed to resend verification code.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  className="text-[9.5px] text-purple-400 hover:text-purple-300 font-extrabold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Resend Code
+                </button>
+              </div>
             </div>
 
             <div className="flex gap-2">

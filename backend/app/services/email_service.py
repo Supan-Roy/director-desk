@@ -8,8 +8,8 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Fetch variables from environment
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "onboarding@resend.dev")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY") or os.getenv("EMAIL_HOST_PASSWORD") or ""
+FROM_EMAIL = os.getenv("FROM_EMAIL") or os.getenv("DEFAULT_FROM_EMAIL") or "onboarding@resend.dev"
 
 
 def send_email(to_email: str, subject: str, html_content: str) -> bool:
@@ -27,7 +27,8 @@ def send_email(to_email: str, subject: str, html_content: str) -> bool:
     url = "https://api.resend.com/emails"
     headers = {
         "Authorization": f"Bearer {RESEND_API_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "User-Agent": "DirectorDesk/1.0"
     }
     
     # Note: test credentials can only send to the registered owner's email.
@@ -52,6 +53,25 @@ def send_email(to_email: str, subject: str, html_content: str) -> bool:
     except urllib.error.HTTPError as e:
         err_body = e.read().decode('utf-8')
         logger.error(f"Failed to send email via Resend. HTTPError: {e.code} - {err_body}")
+        
+        # Self-healing fallback: If custom from_email failed with 403 (unverified domain), try onboarding@resend.dev
+        if e.code == 403 and FROM_EMAIL != "onboarding@resend.dev":
+            logger.warning("Attempting self-healing fallback to 'onboarding@resend.dev'...")
+            data["from"] = "Director Desk <onboarding@resend.dev>"
+            try:
+                fallback_req = urllib.request.Request(
+                    url,
+                    data=json.dumps(data).encode('utf-8'),
+                    headers=headers,
+                    method="POST"
+                )
+                with urllib.request.urlopen(fallback_req) as fallback_response:
+                    fallback_res_body = fallback_response.read().decode('utf-8')
+                    logger.info(f"Email sent successfully using fallback to {to_email}. Response: {fallback_res_body}")
+                    return True
+            except Exception as fallback_exc:
+                logger.error(f"Fallback email sending failed: {fallback_exc}")
+        
         return False
     except Exception as e:
         logger.error(f"Failed to send email via Resend. Exception: {e}")
@@ -63,7 +83,12 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
     subject = "Director Desk - Your Verification OTP Code"
     html = f"""
     <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-        <h2 style="color: #6d28d9; text-align: center;">Director Desk</h2>
+        <div style="text-align: center; margin-bottom: 25px; margin-top: 10px;">
+            <span style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase; color: #0f172a; font-family: 'Helvetica Neue', Arial, sans-serif; display: inline-block; vertical-align: middle;">
+                DIRECT<span style="color: #6d28d9;">O</span>R <span style="font-weight: 300; letter-spacing: 1px; color: #6d28d9;">DESK</span>
+            </span>
+            <div style="font-size: 8px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin-top: 4px;">CREATIVE STUDIO</div>
+        </div>
         <p>Hello,</p>
         <p>Thank you for signing up for Director Desk! Please use the following 6-digit One-Time Password (OTP) to complete your registration or login:</p>
         <div style="text-align: center; margin: 30px 0;">
@@ -82,7 +107,12 @@ def send_delete_confirmation_email(to_email: str, confirm_url: str) -> bool:
     subject = "Director Desk - Confirm Account Deletion"
     html = f"""
     <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-        <h2 style="color: #dc2626; text-align: center;">Director Desk</h2>
+        <div style="text-align: center; margin-bottom: 25px; margin-top: 10px;">
+            <span style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase; color: #0f172a; font-family: 'Helvetica Neue', Arial, sans-serif; display: inline-block; vertical-align: middle;">
+                DIRECT<span style="color: #dc2626;">O</span>R <span style="font-weight: 300; letter-spacing: 1px; color: #dc2626;">DESK</span>
+            </span>
+            <div style="font-size: 8px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin-top: 4px;">CREATIVE STUDIO</div>
+        </div>
         <p>Hello,</p>
         <p>We received a request to permanently delete your Director Desk account. Please note that this action is irreversible and will delete all your projects, character assets, scene videos, and account details.</p>
         <p>To confirm and complete this request, please click the link below:</p>

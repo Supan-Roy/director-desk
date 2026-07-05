@@ -92,6 +92,16 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // ── Resend OTP code ─────────────────────────────────────────────────────
+  const resendOTP = async (email) => {
+    try {
+      const response = await apiClient.post('/api/auth/resend-otp', { email })
+      return response.data
+    } catch (err) {
+      throw new Error(err.message || 'Failed to resend OTP code.')
+    }
+  }
+
   // ── Google OAuth Login ──────────────────────────────────────────────────
   const googleLogin = async (credential) => {
     try {
@@ -154,6 +164,7 @@ export function AuthProvider({ children }) {
     loginEmail,
     registerEmail,
     verifyOTP,
+    resendOTP,
     googleLogin,
     logout,
     requestDeletion
