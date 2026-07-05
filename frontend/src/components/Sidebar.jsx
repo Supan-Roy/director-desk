@@ -626,19 +626,11 @@ export default function Sidebar() {
         isCollapsed ? 'flex-col items-center gap-3 px-3 py-4' : 'flex-row items-center justify-between px-5 py-4 w-full'
       }`}>
         <div className="flex items-center gap-3">
-          <div className={`relative p-1.5 rounded-lg border transition-colors duration-500 ${
-            d ? 'border-neutral-200 bg-neutral-100/60' : 'border-surface-600 bg-surface-950'
-          }`}>
-            <div className={`absolute top-0 left-0 w-1.5 h-1.5 border-t border-l ${d ? 'border-black/80' : 'border-white/80'}`} />
-            <div className={`absolute top-0 right-0 w-1.5 h-1.5 border-t border-r ${d ? 'border-black/80' : 'border-white/80'}`} />
-            <div className={`absolute bottom-0 left-0 w-1.5 h-1.5 border-b border-l ${d ? 'border-black/80' : 'border-white/80'}`} />
-            <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r ${d ? 'border-black/80' : 'border-white/80'}`} />
-            <img
-              src="/logo.svg"
-              alt="Director Desk Logo"
-              className="h-7 w-7 shrink-0 transition-transform duration-500 group-hover:scale-105"
-            />
-          </div>
+          <img
+            src="/logo.svg"
+            alt="Director Desk Logo"
+            className="h-8 w-8 shrink-0 transition-transform duration-500 group-hover:scale-110"
+          />
           {!isCollapsed && (
             <div className="flex flex-col">
               <span className="flex items-center gap-1 select-none leading-none">
