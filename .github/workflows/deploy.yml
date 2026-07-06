@@ -18,7 +18,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ALIBABA_HOST }}
-          username: root
+          username: admin
           key: ${{ secrets.ALIBABA_SSH_KEY }}
           port: 22
           script: |
