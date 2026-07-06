@@ -1,0 +1,35 @@
+name: Deploy to Alibaba Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Execute Remote SSH Commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ALIBABA_HOST }}
+          username: root
+          key: ${{ secrets.ALIBABA_SSH_KEY }}
+          port: 22
+          script: |
+            # Navigate to the deployment folder on the Alibaba Cloud server
+            cd /opt/director-desk
+            
+            # Fetch and pull latest changes from main branch
+            git fetch --all
+            git reset --hard origin/main
+            
+            # Rebuild and restart the container services
+            # Note: We rebuild without cache to ensure the latest static frontend/backend changes are applied
+            docker compose down
+            docker compose up -d --build
