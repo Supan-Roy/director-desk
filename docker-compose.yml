@@ -10,6 +10,7 @@ services:
       - ./frontend/.env
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     command: npm run dev -- --host 0.0.0.0
     profiles:
       - dev
