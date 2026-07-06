@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useProjectData } from '../context/ProjectDataContext'
-import { FiX, FiMail, FiLock, FiUser, FiArrowRight, FiShield } from 'react-icons/fi'
+import { FiX, FiMail, FiLock, FiUser, FiArrowRight, FiShield, FiEye, FiEyeOff } from 'react-icons/fi'
 import { FcGoogle } from 'react-icons/fc'
 import { apiBaseUrl } from '../services/apiClient'
 
@@ -31,7 +31,16 @@ export default function AuthModal() {
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
   const googleBtnRef = useRef(null)
+
+  // Reset visibility states when changing auth steps
+  useEffect(() => {
+    setShowPassword(false)
+    setShowConfirmPassword(false)
+  }, [step])
 
   // Clear state when modal toggles
   useEffect(() => {
@@ -43,6 +52,8 @@ export default function AuthModal() {
       setName('')
       setLastName('')
       setOtpCode('')
+      setShowPassword(false)
+      setShowConfirmPassword(false)
       setError('')
       setSuccessMsg('')
     }
@@ -376,14 +387,21 @@ export default function AuthModal() {
               <div className="relative">
                 <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-4 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-9 py-2 text-xs text-white"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showPassword ? <FiEyeOff size={13} /> : <FiEye size={13} />}
+                </button>
               </div>
             </div>
 
@@ -451,14 +469,21 @@ export default function AuthModal() {
               <div className="relative">
                 <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Min. 6 characters"
                   required
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-4 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-9 py-2 text-xs text-white"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showPassword ? <FiEyeOff size={13} /> : <FiEye size={13} />}
+                </button>
               </div>
             </div>
 
@@ -467,14 +492,21 @@ export default function AuthModal() {
               <div className="relative">
                 <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat password"
                   required
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-4 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-9 py-2 text-xs text-white"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showConfirmPassword ? <FiEyeOff size={13} /> : <FiEye size={13} />}
+                </button>
               </div>
             </div>
 
