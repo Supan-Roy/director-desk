@@ -1,3 +1,23 @@
+"""
+QwenService — Alibaba Cloud AI Integration
+==========================================
+
+Director Desk uses **Alibaba Cloud Qwen (通义千问)** as its exclusive AI provider.
+All script writing, storyboarding, scene breakdown, production planning, critic
+review, image generation, and video synthesis are powered by Qwen models accessed
+through the Alibaba Cloud DashScope API.
+
+API Provider : Alibaba Cloud — Model Studio (DashScope)
+Base URL     : https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+Compatibility: OpenAI-compatible endpoint (used with the openai-python SDK)
+Models used  :
+  - qwen-plus          → Primary language model (all text agents)
+  - qwen-vl-plus       → Vision model (image understanding / context files)
+  - wan2.6-t2i         → Text-to-image generation (storyboard frames)
+  - wan2.7-t2v / wan2.1-i2v  → Video generation (scene clips)
+
+Documentation: https://www.alibabacloud.com/help/en/model-studio/
+"""
 import os
 from typing import Generator
 
@@ -6,9 +26,11 @@ from openai import OpenAI
 
 load_dotenv()
 
+# ── Alibaba Cloud DashScope client (OpenAI-compatible) ─────────────────────────
+# Base URL: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 client = OpenAI(
     api_key=os.getenv("QWEN_API_KEY"),
-    base_url=os.getenv("QWEN_API_BASE_URL") or None,
+    base_url=os.getenv("QWEN_API_BASE_URL") or "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
 )
 
 
