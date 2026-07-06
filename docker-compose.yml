@@ -1,11 +1,22 @@
 name: director-desk
 
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    profiles:
+      - dev
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
-    ports:
-      - "80:5173"
     env_file:
       - ./frontend/.env
     volumes:
@@ -14,12 +25,11 @@ services:
     command: npm run dev -- --host 0.0.0.0
     profiles:
       - dev
+    restart: unless-stopped
 
   backend:
     build:
       context: ./backend
-    ports:
-      - "8080:8000"
     env_file:
       - ./backend/.env
     environment:
@@ -34,6 +44,7 @@ services:
       - db
     profiles:
       - dev
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
