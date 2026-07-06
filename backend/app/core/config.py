@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     app_env: str = 'development'
     app_host: str = '0.0.0.0'
     app_port: int = 8000
-    cors_origins: list[str] = [
+    cors_origins: str | list[str] = [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ]
