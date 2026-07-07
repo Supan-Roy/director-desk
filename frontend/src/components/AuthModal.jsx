@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext'
 import { useProjectData } from '../context/ProjectDataContext'
 import { FiX, FiMail, FiLock, FiUser, FiArrowRight, FiShield, FiEye, FiEyeOff } from 'react-icons/fi'
@@ -303,39 +304,48 @@ export default function AuthModal() {
           </div>
           <span className="text-[9.5px] font-bold tracking-widest uppercase text-surface-400 leading-none">
             Production Registry
-          </span>
+        {/* Title */}
+        <div className="flex flex-col items-center gap-2 mb-6 select-none">
+          <div className="w-10 h-10 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <FiShield size={20} />
+          </div>
+          <h2 className="text-sm font-extrabold uppercase tracking-[0.25em] text-white">
+            Studio Authentication
+          </h2>
+          <p className="text-[10px] text-surface-500 font-medium">
+            Access your secure director workspace
+          </p>
         </div>
 
-        {/* Notification Errors */}
+        {/* Errors / Success notifications */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] rounded-lg px-3.5 py-2 mb-4 leading-relaxed text-left flex gap-2 items-start animate-fade-in">
-            <FiShield className="shrink-0 mt-0.5" size={13} />
-            <span>{error}</span>
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-[10.5px] text-red-400 font-semibold leading-relaxed">
+            {error}
           </div>
         )}
-
-        {/* Notification Success */}
         {successMsg && (
-          <div className="bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[11px] rounded-lg px-3.5 py-2 mb-4 leading-relaxed text-left animate-fade-in">
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[10.5px] text-emerald-400 font-semibold leading-relaxed">
             {successMsg}
           </div>
         )}
 
-        {/* ── STEP 1: EMAIL INPUT ── */}
+        {/* Step 1: Check Email */}
         {step === 'email' && (
           <form onSubmit={handleEmailSubmit} className="space-y-4">
-            <div className="text-left space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Email Address</label>
+            <div className="flex flex-col gap-1.5 text-left">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                Email Address
+              </label>
               <div className="relative">
-                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
+                <FiMail className="absolute left-3 top-3 text-surface-500" size={14} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  placeholder="director@director-desk.com"
                   required
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-4 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-surface-600 transition-colors"
                 />
               </div>
             </div>
@@ -343,49 +353,62 @@ export default function AuthModal() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-purple-700 hover:bg-purple-650 text-white font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="w-full bg-accent hover:bg-accent-dim text-white font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <span>{loading ? 'Processing...' : 'Continue'}</span>
+              {loading ? 'Checking...' : 'Continue'}
               <FiArrowRight size={12} />
             </button>
 
-            {/* Google Authentication Integration */}
-            <div className="relative flex py-2 items-center">
+            {/* Google Sign In Separator */}
+            <div className="relative flex py-2 items-center select-none">
               <div className="flex-grow border-t border-white/[0.04]"></div>
-              <span className="flex-shrink mx-3 text-[9px] text-surface-500 uppercase tracking-widest font-black">OR</span>
+              <span className="flex-shrink mx-4 text-[9px] uppercase tracking-widest text-surface-600 font-bold">or</span>
               <div className="flex-grow border-t border-white/[0.04]"></div>
             </div>
 
-            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
-              <div className="flex justify-center" ref={googleBtnRef} id="google-signin-btn" />
-            ) : (
-              <button
-                type="button"
-                onClick={handleMockGoogleLogin}
-                disabled={loading}
-                className="w-full bg-white text-neutral-900 hover:bg-neutral-100 font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer border border-neutral-200"
-              >
-                <FcGoogle size={14} />
-                <span>Continue with Google</span>
-              </button>
-            )}
+            {/* Google Login Trigger */}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.google?.accounts?.id) {
+                  window.google.accounts.id.prompt()
+                } else {
+                  setError('Google Sign-In is initializing. Please try again in a few seconds.')
+                }
+              }}
+              disabled={loading}
+              className="w-full bg-[#0c0c16]/30 hover:bg-[#0c0c16]/70 border border-white/[0.04] text-white font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <FcGoogle size={14} />
+              <span>Continue with Google</span>
+            </button>
           </form>
         )}
 
-        {/* ── STEP 2a: LOGIN PASSWORD ── */}
+        {/* Step 2a: Login */}
         {step === 'login' && (
           <form onSubmit={handleLoginSubmit} className="space-y-4">
-            <div className="text-left space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-surface-400">Log In As</label>
-              <div className="text-xs font-semibold text-surface-300 bg-white/[0.02] border border-white/[0.04] px-3 py-2 rounded-lg truncate">
-                {email}
+            <div className="flex flex-col gap-1.5 text-left">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                Email Address
+              </label>
+              <div className="relative">
+                <FiMail className="absolute left-3 top-3 text-surface-500" size={14} />
+                <input
+                  type="email"
+                  value={email}
+                  disabled
+                  className="w-full bg-[#0c0c16]/30 border border-white/[0.04] rounded-lg pl-9 pr-3 py-2 text-xs text-surface-500 cursor-not-allowed"
+                />
               </div>
             </div>
 
-            <div className="text-left space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Password</label>
+            <div className="flex flex-col gap-1.5 text-left">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                Password
+              </label>
               <div className="relative">
-                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
+                <FiLock className="absolute left-3 top-3 text-surface-500" size={14} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -393,14 +416,14 @@ export default function AuthModal() {
                   placeholder="••••••••"
                   required
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-9 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-10 py-2 text-xs text-white placeholder-surface-600 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-white transition-colors cursor-pointer"
+                  className="absolute right-3 top-3.5 text-surface-500 hover:text-white cursor-pointer"
                 >
-                  {showPassword ? <FiEyeOff size={13} /> : <FiEye size={13} />}
+                  {showPassword ? <FiEyeOff size={12} /> : <FiEye size={12} />}
                 </button>
               </div>
             </div>
@@ -416,81 +439,97 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-purple-700 hover:bg-purple-650 text-white font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="flex-1 bg-accent hover:bg-accent-dim text-white font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
               >
-                <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-                <FiArrowRight size={12} />
+                {loading ? 'Authenticating...' : 'Sign In'}
               </button>
             </div>
           </form>
         )}
 
-        {/* ── STEP 2b: REGISTER ACCOUNT ── */}
+        {/* Step 2b: Register */}
         {step === 'register' && (
-          <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-            <div className="text-left space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-surface-400">Register Email</label>
-              <div className="text-xs font-semibold text-surface-300 bg-white/[0.02] border border-white/[0.04] px-3 py-2 rounded-lg truncate">
-                {email}
+          <form onSubmit={handleRegisterSubmit} className="space-y-3">
+            <div className="flex flex-col gap-1.5 text-left">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                Email Address
+              </label>
+              <div className="relative">
+                <FiMail className="absolute left-3 top-3 text-surface-500" size={14} />
+                <input
+                  type="email"
+                  value={email}
+                  disabled
+                  className="w-full bg-[#0c0c16]/30 border border-white/[0.04] rounded-lg pl-9 pr-3 py-2 text-xs text-surface-500 cursor-not-allowed"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="text-left space-y-1">
-                <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">First Name</label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1.5 text-left">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                  First Name
+                </label>
                 <div className="relative">
-                  <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
+                  <FiUser className="absolute left-3 top-3 text-surface-500" size={14} />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="John"
+                    placeholder="Elena"
                     required
                     disabled={loading}
-                    className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-3 py-2 text-xs text-white"
+                    className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-surface-600 transition-colors"
                   />
                 </div>
               </div>
-              <div className="text-left space-y-1">
-                <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Last Name</label>
+
+              <div className="flex flex-col gap-1.5 text-left">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                  Last Name
+                </label>
                 <input
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Doe"
+                  placeholder="Rostova"
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg px-3 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg px-3 py-2 text-xs text-white placeholder-surface-600 transition-colors"
                 />
               </div>
             </div>
 
-            <div className="text-left space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Password</label>
+            <div className="flex flex-col gap-1.5 text-left">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                Password
+              </label>
               <div className="relative">
-                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
+                <FiLock className="absolute left-3 top-3 text-surface-500" size={14} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 characters"
+                  placeholder="Min 6 characters"
                   required
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-9 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-10 py-2 text-xs text-white placeholder-surface-600 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-white transition-colors cursor-pointer"
+                  className="absolute right-3 top-3.5 text-surface-500 hover:text-white cursor-pointer"
                 >
-                  {showPassword ? <FiEyeOff size={13} /> : <FiEye size={13} />}
+                  {showPassword ? <FiEyeOff size={12} /> : <FiEye size={12} />}
                 </button>
               </div>
             </div>
 
-            <div className="text-left space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-surface-500">Confirm Password</label>
+            <div className="flex flex-col gap-1.5 text-left">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                Confirm Password
+              </label>
               <div className="relative">
-                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={13} />
+                <FiLock className="absolute left-3 top-3 text-surface-500" size={14} />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
@@ -498,14 +537,14 @@ export default function AuthModal() {
                   placeholder="Repeat password"
                   required
                   disabled={loading}
-                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-9 py-2 text-xs text-white"
+                  className="w-full bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg pl-9 pr-10 py-2 text-xs text-white placeholder-surface-600 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-white transition-colors cursor-pointer"
+                  className="absolute right-3 top-3.5 text-surface-500 hover:text-white cursor-pointer"
                 >
-                  {showConfirmPassword ? <FiEyeOff size={13} /> : <FiEye size={13} />}
+                  {showConfirmPassword ? <FiEyeOff size={12} /> : <FiEye size={12} />}
                 </button>
               </div>
             </div>
@@ -521,22 +560,22 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-purple-700 hover:bg-purple-650 text-white font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="flex-1 bg-accent hover:bg-accent-dim text-white font-extrabold uppercase tracking-wider text-[10px] py-2.5 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
               >
-                <span>{loading ? 'Creating...' : 'Register'}</span>
-                <FiArrowRight size={12} />
+                {loading ? 'Creating Account...' : 'Sign Up'}
               </button>
             </div>
           </form>
         )}
 
-        {/* ── STEP 3: OTP VERIFICATION ── */}
+        {/* Step 3: OTP Verification */}
         {step === 'otp' && (
           <form onSubmit={handleOTPSubmit} className="space-y-4">
-            <div className="text-left space-y-2">
-              <p className="text-[11px] leading-relaxed text-surface-400">
-                Please enter the 6-digit OTP code dispatched to <strong className="text-white">{email}</strong>.
-              </p>
+            <p className="text-[11px] text-surface-400 text-left leading-normal">
+              Enter the 6-digit OTP verification code dispatched to <span className="text-white font-bold">{email}</span> to verify your email.
+            </p>
+
+            <div className="flex flex-col gap-2">
               <input
                 type="text"
                 maxLength={6}
@@ -547,29 +586,23 @@ export default function AuthModal() {
                 disabled={loading}
                 className="w-full text-center tracking-[0.75em] font-mono bg-[#030305] border border-surface-700 focus:border-white focus:outline-none rounded-lg py-3 text-lg text-white"
               />
-              <div className="flex justify-between items-center pt-0.5 select-none">
-                <span className="text-[9.5px] text-surface-500">Didn't receive code?</span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setLoading(true);
-                    setError('');
-                    setSuccessMsg('');
-                    try {
-                      await resendOTP(email);
-                      setSuccessMsg('A new OTP verification code has been sent successfully.');
-                    } catch (err) {
-                      setError(err.message || 'Failed to resend verification code.');
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading}
-                  className="text-[9.5px] text-purple-400 hover:text-purple-300 font-extrabold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  Resend Code
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await resendOTP(email);
+                    setSuccessMsg('A new OTP code has been sent.');
+                  } catch (err) {
+                    setError(err.message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="text-[9px] text-surface-500 hover:text-white uppercase tracking-widest font-bold underline decoration-surface-700 underline-offset-4"
+              >
+                Resend Code
+              </button>
             </div>
 
             <div className="flex gap-2">
@@ -591,6 +624,7 @@ export default function AuthModal() {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

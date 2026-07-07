@@ -943,9 +943,7 @@ export default function Sidebar() {
                 setIsProfileMenuOpen(false);
                 logout();
               }}
-              className={`flex items-center gap-2 px-3 py-2 text-[10.5px] font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer w-full text-left ${
-                d ? 'hover:bg-red-50 text-red-600' : 'hover:bg-red-500/10 text-red-400'
-              }`}
+              className="flex items-center gap-2 px-3 py-2 text-[10.5px] font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer w-full text-left bg-red-600 hover:bg-red-550 text-white"
             >
               <FiX size={13} />
               <span>Log Out</span>
@@ -997,7 +995,7 @@ export default function Sidebar() {
       </div>
  
       {/* Profile Modal */}
-      {isProfileOpen && (
+      {isProfileOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
           {/* Backdrop */}
           <div 
@@ -1232,7 +1230,7 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={logout}
-              className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/15 border border-red-500/25 text-red-400 cursor-pointer transition-colors text-center flex items-center justify-center gap-1.5"
+              className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-600 hover:bg-red-550 text-white cursor-pointer transition-colors text-center flex items-center justify-center gap-1.5"
             >
               Log Out
             </button>
@@ -1261,11 +1259,12 @@ export default function Sidebar() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
-      {projectToDelete && (
+      {projectToDelete && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
           {/* Backdrop */}
           <div 
@@ -1307,7 +1306,8 @@ export default function Sidebar() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       </aside>
