@@ -184,9 +184,10 @@ export default function CreativeModes({ onSelectTemplate }) {
             {isHov && tmpl.specs && (
               <div
                 onClick={(e) => e.stopPropagation()}
+                style={isMobile ? { backgroundColor: '#121212' } : {}}
                 className={`absolute z-50 text-left select-text pointer-events-auto flex flex-col justify-between shadow-[0_25px_50px_rgba(0,0,0,0.85)] ${
                   isMobile
-                    ? `top-0 h-full w-full bg-[#121212]/98 border border-accent/40 rounded-lg p-2.5 animate-fade-in ${
+                    ? `top-0 h-full w-full bg-[#121212] border border-accent/40 rounded-lg p-2.5 animate-fade-in ${
                         idx % 2 === 0 ? 'left-full ml-2' : 'right-full mr-2'
                       }`
                     : `top-0 h-full w-[140%] bg-[#141414] border border-accent/40 rounded-lg p-4 ${
