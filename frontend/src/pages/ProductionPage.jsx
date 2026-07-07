@@ -1679,7 +1679,14 @@ export default function ProductionPage() {
                                     <img 
                                       src={activeAsset.image_url.startsWith('/') ? apiBaseUrl + activeAsset.image_url : activeAsset.image_url} 
                                       alt={char.name} 
-                                      className="w-full h-full object-cover rounded-t-lg transition-transform duration-700 hover:scale-105" 
+                                      draggable="false"
+                                      className="w-full h-full object-cover rounded-t-lg transition-transform duration-700 hover:scale-105 select-none" 
+                                      onContextMenu={(e) => e.preventDefault()}
+                                    />
+                                    {/* Security Overlay */}
+                                    <div 
+                                      className="absolute inset-0 z-10 bg-transparent select-none" 
+                                      onContextMenu={(e) => e.preventDefault()}
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
                                     
@@ -1931,7 +1938,14 @@ export default function ProductionPage() {
                                       <img 
                                         src={activeAsset.image_url.startsWith('/') ? apiBaseUrl + activeAsset.image_url : activeAsset.image_url} 
                                         alt={env.name} 
-                                        className="w-full h-full object-cover rounded-t-lg transition-transform duration-700 hover:scale-105" 
+                                        draggable="false"
+                                        className="w-full h-full object-cover rounded-t-lg transition-transform duration-700 hover:scale-105 select-none" 
+                                        onContextMenu={(e) => e.preventDefault()}
+                                      />
+                                      {/* Security Overlay */}
+                                      <div 
+                                        className="absolute inset-0 z-10 bg-transparent select-none" 
+                                        onContextMenu={(e) => e.preventDefault()}
                                       />
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
                                       
@@ -2146,11 +2160,20 @@ export default function ProductionPage() {
                                   <div className="flex justify-between items-start gap-3 border-b border-white/[0.03] pb-3">
                                     <div className="flex items-center gap-3">
                                       {activeCharAsset?.image_url ? (
-                                        <img 
-                                          src={activeCharAsset.image_url.startsWith('/') ? apiBaseUrl + activeCharAsset.image_url : activeCharAsset.image_url} 
-                                          alt={v.character} 
-                                          className="w-10 h-10 rounded-lg object-cover border border-white/[0.08] shrink-0" 
-                                        />
+                                        <div className="relative w-10 h-10 shrink-0 select-none">
+                                          <img 
+                                            src={activeCharAsset.image_url.startsWith('/') ? apiBaseUrl + activeCharAsset.image_url : activeCharAsset.image_url} 
+                                            alt={v.character} 
+                                            draggable="false"
+                                            className="w-full h-full rounded-lg object-cover border border-white/[0.08] select-none" 
+                                            onContextMenu={(e) => e.preventDefault()}
+                                          />
+                                          {/* Security Overlay */}
+                                          <div 
+                                            className="absolute inset-0 z-10 bg-transparent select-none" 
+                                            onContextMenu={(e) => e.preventDefault()}
+                                          />
+                                        </div>
                                       ) : (
                                         <div className="w-10 h-10 rounded-lg bg-white/[0.02] border border-white/[0.06] flex items-center justify-center text-surface-400 shrink-0">
                                           <FiUser size={16} />
@@ -2512,8 +2535,10 @@ export default function ProductionPage() {
                                           <FiVolume2 className="text-accent animate-pulse mb-3" size={32} />
                                           <audio 
                                              controls 
+                                             controlsList="nodownload"
                                              src={apiBaseUrl + activeVideo.video_url} 
                                             className="w-full max-w-md" 
+                                            onContextMenu={(e) => e.preventDefault()}
                                           />
                                           <span className="text-[10px] text-surface-500 font-mono mt-3 select-none">AUDIO SPEECH TRACK ACTIVE</span>
                                         </div>

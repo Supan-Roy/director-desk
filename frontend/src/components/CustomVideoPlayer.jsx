@@ -131,7 +131,7 @@ export default function CustomVideoPlayer({ src, poster, className }) {
       className={`relative group bg-neutral-950 overflow-hidden flex flex-col justify-center select-none ${className}`}
     >
       {/* Video Element */}
-      <video
+       <video
         ref={videoRef}
         src={src}
         poster={poster}
@@ -140,7 +140,10 @@ export default function CustomVideoPlayer({ src, poster, className }) {
         onPause={handlePauseState}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        className="w-full h-full object-cover cursor-pointer"
+        controlsList="nodownload"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+        className="w-full h-full object-cover cursor-pointer select-none"
         playsInline
       />
 

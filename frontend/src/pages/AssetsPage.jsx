@@ -245,9 +245,22 @@ export default function AssetsPage() {
                       >
                         <div className="flex gap-4 items-start">
                           {/* Character avatar */}
-                          <div className={`shrink-0 rounded-xl overflow-hidden border ${d ? 'border-neutral-200' : 'border-white/5'} bg-black/20 flex items-center justify-center transition-all duration-300 ${isExpanded ? 'h-20 w-20' : 'h-14 w-14'}`}>
+                          <div className={`shrink-0 rounded-xl overflow-hidden border ${d ? 'border-neutral-200' : 'border-white/5'} bg-black/20 flex items-center justify-center transition-all duration-300 relative ${isExpanded ? 'h-20 w-20' : 'h-14 w-14'}`}>
                             {char.image_url ? (
-                              <img src={`${apiBaseUrl}${char.image_url}`} alt={char.character_name} className="h-full w-full object-cover" />
+                              <>
+                                <img 
+                                  src={`${apiBaseUrl}${char.image_url}`} 
+                                  alt={char.character_name} 
+                                  draggable="false"
+                                  className="h-full w-full object-cover select-none" 
+                                  onContextMenu={(e) => e.preventDefault()}
+                                />
+                                {/* Security Overlay */}
+                                <div 
+                                  className="absolute inset-0 z-10 bg-transparent select-none" 
+                                  onContextMenu={(e) => e.preventDefault()}
+                                />
+                              </>
                             ) : (
                               <FiUser size={isExpanded ? 30 : 20} className="text-gray-500" />
                             )}
@@ -350,9 +363,22 @@ export default function AssetsPage() {
                       >
                         <div className="flex gap-4 items-start">
                           {/* Environment preview */}
-                          <div className={`shrink-0 rounded-xl overflow-hidden border ${d ? 'border-neutral-200' : 'border-white/5'} bg-black/20 flex items-center justify-center transition-all duration-300 ${isExpanded ? 'h-20 w-20' : 'h-14 w-14'}`}>
+                          <div className={`shrink-0 rounded-xl overflow-hidden border ${d ? 'border-neutral-200' : 'border-white/5'} bg-black/20 flex items-center justify-center transition-all duration-300 relative ${isExpanded ? 'h-20 w-20' : 'h-14 w-14'}`}>
                             {env.image_url ? (
-                              <img src={`${apiBaseUrl}${env.image_url}`} alt={env.environment_name} className="h-full w-full object-cover" />
+                              <>
+                                <img 
+                                  src={`${apiBaseUrl}${env.image_url}`} 
+                                  alt={env.environment_name} 
+                                  draggable="false"
+                                  className="h-full w-full object-cover select-none" 
+                                  onContextMenu={(e) => e.preventDefault()}
+                                />
+                                {/* Security Overlay */}
+                                <div 
+                                  className="absolute inset-0 z-10 bg-transparent select-none" 
+                                  onContextMenu={(e) => e.preventDefault()}
+                                />
+                              </>
                             ) : (
                               <FiImage size={isExpanded ? 30 : 20} className="text-gray-500" />
                             )}
@@ -531,11 +557,17 @@ export default function AssetsPage() {
                         }`}
                       >
                         {/* Video thumbnail and hover-play badge */}
-                        <div className="aspect-video bg-black relative flex items-center justify-center border-b border-white/5 overflow-hidden">
+                        <div className="aspect-video bg-black relative flex items-center justify-center border-b border-white/5 overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
                           {isRendered ? (
                             <>
                               {video.thumbnail_url ? (
-                                <img src={`${apiBaseUrl}${video.thumbnail_url}`} alt="Video Thumbnail" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                <img 
+                                  src={`${apiBaseUrl}${video.thumbnail_url}`} 
+                                  alt="Video Thumbnail" 
+                                  draggable="false"
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 select-none" 
+                                  onContextMenu={(e) => e.preventDefault()}
+                                />
                               ) : (
                                 <div className="absolute inset-0 bg-[#0a0a0f]" />
                               )}
@@ -623,8 +655,10 @@ export default function AssetsPage() {
               <video
                 src={`${apiBaseUrl}${playingVideo.video_url}`}
                 controls
-                autoPlay
-                className="w-full h-auto aspect-video max-h-[75vh]"
+                controlsList="nodownload"
+                disablePictureInPicture
+                onContextMenu={(e) => e.preventDefault()}
+                className="w-full h-auto aspect-video max-h-[75vh] select-none"
               />
             </div>
             <div className="px-4">

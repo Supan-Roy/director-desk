@@ -210,7 +210,10 @@ export default function TemplatesPage() {
                           muted
                           loop
                           playsInline
-                          className="w-full h-full object-cover"
+                          controlsList="nodownload"
+                          disablePictureInPicture
+                          onContextMenu={(e) => e.preventDefault()}
+                          className="w-full h-full object-cover select-none pointer-events-auto"
                           onMouseEnter={(e) => {
                             e.target.play().catch(() => {});
                           }}

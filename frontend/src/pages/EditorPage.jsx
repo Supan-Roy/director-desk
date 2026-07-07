@@ -2258,7 +2258,10 @@ export default function EditorPage() {
                         src={resolveUrl(activeVideoClip.url)}
                         muted={isMuted}
                         onMouseDown={(e) => handleVideoPlayerMouseDown(e, activeVideoClip)}
-                        className={`w-full h-full transition-transform cursor-grab active:cursor-grabbing ${
+                        controlsList="nodownload"
+                        disablePictureInPicture
+                        onContextMenu={(e) => e.preventDefault()}
+                        className={`w-full h-full transition-transform cursor-grab active:cursor-grabbing select-none ${
                           activeVideoClip.fitMode === 'cover' ? 'object-cover' : 'object-contain'
                         }`}
                         style={getVideoStyle(activeVideoClip)}
@@ -2393,7 +2396,9 @@ export default function EditorPage() {
                     <img
                       src={resolveUrl(logo.url)}
                       alt="Logo Overlay"
-                      className={`absolute z-30 transition-all ${
+                      draggable="false"
+                      onContextMenu={(e) => e.preventDefault()}
+                      className={`absolute z-30 transition-all select-none ${
                         logo.position === 'top-left' ? 'top-4 left-4' :
                         logo.position === 'top-right' ? 'top-4 right-4' :
                         logo.position === 'bottom-left' ? 'bottom-4 left-4' :

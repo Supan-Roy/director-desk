@@ -3,63 +3,8 @@ import { apiBaseUrl } from '../services/apiClient'
 
 const EditorContext = createContext(null)
 
-// Hardcoded premium assets available out of the box
-const initialSampleAssets = [
-  {
-    id: 'robot_transform.mp4',
-    name: 'Robot Transform (CGI Sci-Fi)',
-    url: '/videos/robot_transform.mp4',
-    type: 'video',
-    duration: 5.16,
-    width: 1920,
-    height: 1080,
-  },
-  {
-    id: 'cinematic_noir.mp4',
-    name: 'Cinematic Noir (Detective Walk)',
-    url: '/videos/cinematic_noir.mp4',
-    type: 'video',
-    duration: 5.16,
-    width: 1920,
-    height: 1080,
-  },
-  {
-    id: 'space_odyssey.mp4',
-    name: 'Space Odyssey (Nebula View)',
-    url: '/videos/space_odyssey.mp4',
-    type: 'video',
-    duration: 5.16,
-    width: 1920,
-    height: 1080,
-  },
-  {
-    id: 'documentary_realism.mp4',
-    name: 'Documentary Realism (Fisherman)',
-    url: '/videos/documentary_realism.mp4',
-    type: 'video',
-    duration: 5.16,
-    width: 1920,
-    height: 1080,
-  },
-  {
-    id: 'sci-fi_city.mp4',
-    name: 'Sci-Fi Metropolis (Vast Fly-by)',
-    url: '/videos/sci-fi_city.mp4',
-    type: 'video',
-    duration: 5.16,
-    width: 1920,
-    height: 1080,
-  },
-  {
-    id: 'logo.svg',
-    name: 'Director Desk Logo',
-    url: '/logo.svg',
-    type: 'image',
-    duration: 5.0,
-    width: 200,
-    height: 200,
-  }
-]
+// Hardcoded premium assets available out of the box (empty by default to avoid auto-importing preset videos)
+const initialSampleAssets = []
 
 export function EditorProvider({ children }) {
   const [assets, setAssets] = useState(() => {
