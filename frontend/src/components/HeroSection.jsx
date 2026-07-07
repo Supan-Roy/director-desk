@@ -571,6 +571,16 @@ export default function HeroSection({
   const [toastMsg, setToastMsg] = useState('');
   const { isDayMode } = useTheme();
 
+  const [showSettingsOnMobile, setShowSettingsOnMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     if (!errorMsg) return;
     const timer = setTimeout(() => {
@@ -837,7 +847,7 @@ export default function HeroSection({
 
   return (
     <section className={`relative z-30 mx-auto text-center transition-all duration-500 w-full ${
-      hasProject ? 'py-2 mt-1' : 'py-3 mt-2'
+      hasProject ? 'py-1.5 md:py-2 mt-0.5 md:mt-1' : 'py-3 mt-2'
     }`}>
       {/* Studio Background Image — always visible for immersive studio feel */}
       <>
@@ -917,8 +927,11 @@ export default function HeroSection({
           </div>
         )}
 
-        {/* Prompt Input / Production Console Box */}
-        <div className={`relative rounded-lg border p-5 transition-all duration-200 text-left ${
+        <div className={`relative rounded-lg border transition-all duration-200 text-left ${
+          hasProject 
+            ? 'p-2.5 md:p-5' 
+            : 'p-3 md:p-5'
+        } ${
           isDayMode
             ? focused 
               ? 'bg-white border-accent shadow-[0_4px_20px_rgba(139,92,246,0.12)]' 
@@ -1059,7 +1072,11 @@ export default function HeroSection({
                 }
               }}
               placeholder="Describe your creative concept or project idea, paste an image, or drop context files..."
-              className={`flex-1 bg-transparent border-0 outline-none text-[14px] leading-relaxed resize-none h-20 focus:ring-0 px-1 pt-1 font-mono transition-colors duration-200 ${
+              className={`flex-1 bg-transparent border-0 outline-none text-[13px] md:text-[14px] leading-relaxed resize-none focus:ring-0 px-1 pt-1 font-mono transition-all duration-200 ${
+                hasProject 
+                  ? 'h-10 md:h-12' 
+                  : 'h-16 md:h-20'
+              } ${
                 isDayMode ? 'placeholder-neutral-400 text-neutral-900' : 'placeholder-surface-500 text-white'
               }`}
               disabled={loading}
@@ -1127,104 +1144,129 @@ export default function HeroSection({
           )}
 
           {/* Divider */}
-          <div className={`h-px my-4 relative z-10 transition-colors duration-300 ${
-            isDayMode ? 'bg-black/[0.08]' : 'bg-surface-700'
-          }`} />
+          {(!hasProject || !isMobile || showSettingsOnMobile) && (
+            <div className={`h-px my-3 md:my-4 relative z-10 transition-colors duration-300 ${
+              isDayMode ? 'bg-black/[0.08]' : 'bg-surface-700'
+            }`} />
+          )}
 
           {/* Row 2: Selectors & Initiate Production */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-1 relative z-10">
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Production Type Selector */}
-              <CustomSelect
-                label="Format"
-                value={selectedProdType}
-                onChange={setSelectedProdType}
-                options={productionTypes}
-                icon={FiFilm}
-                disabled={loading}
-              />
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5 relative z-10">
+            {(!hasProject || !isMobile || showSettingsOnMobile) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Production Type Selector */}
+                <CustomSelect
+                  label="Format"
+                  value={selectedProdType}
+                  onChange={setSelectedProdType}
+                  options={productionTypes}
+                  icon={FiFilm}
+                  disabled={loading}
+                />
 
-              {/* Aspect Ratio Selector */}
-              <CustomSelect
-                label="Aspect Ratio"
-                value={aspect}
-                onChange={setAspect}
-                options={aspectRatios}
-                icon={FiMaximize2}
-                disabled={loading}
-              />
+                {/* Aspect Ratio Selector */}
+                <CustomSelect
+                  label="Aspect Ratio"
+                  value={aspect}
+                  onChange={setAspect}
+                  options={aspectRatios}
+                  icon={FiMaximize2}
+                  disabled={loading}
+                />
 
-              {/* Style Presets Selector */}
-              <CustomSelect
-                label="Style Preset"
-                value={style}
-                onChange={setStyle}
-                options={styles}
-                icon={FiLayers}
-                disabled={loading}
-              />
+                {/* Style Presets Selector */}
+                <CustomSelect
+                  label="Style Preset"
+                  value={style}
+                  onChange={setStyle}
+                  options={styles}
+                  icon={FiLayers}
+                  disabled={loading}
+                />
 
-              {/* Camera Motion Selector */}
-              <CustomSelect
-                label="Camera Motion"
-                value={camera}
-                onChange={setCamera}
-                options={cameraMotions}
-                icon={FiVideo}
-                disabled={loading}
-              />
+                {/* Camera Motion Selector */}
+                <CustomSelect
+                  label="Camera Motion"
+                  value={camera}
+                  onChange={setCamera}
+                  options={cameraMotions}
+                  icon={FiVideo}
+                  disabled={loading}
+                />
 
-              {/* Quality Preset Selector */}
-              <CustomSelect
-                label="Render Quality"
-                value={quality}
-                onChange={setQuality}
-                options={qualities}
-                icon={FiSliders}
-                disabled={loading}
-              />
+                {/* Quality Preset Selector */}
+                <CustomSelect
+                  label="Render Quality"
+                  value={quality}
+                  onChange={setQuality}
+                  options={qualities}
+                  icon={FiSliders}
+                  disabled={loading}
+                />
 
-              {/* Orchestration Mode Selector */}
-              <CustomSelect
-                label="Orchestration"
-                value={orchestrationMode}
-                onChange={setOrchestrationMode}
-                options={orchestrationModes}
-                icon={PiRobotBold}
-                disabled={loading}
-              />
-            </div>
+                {/* Orchestration Mode Selector */}
+                <CustomSelect
+                  label="Orchestration"
+                  value={orchestrationMode}
+                  onChange={setOrchestrationMode}
+                  options={orchestrationModes}
+                  icon={PiRobotBold}
+                  disabled={loading}
+                />
+              </div>
+            )}
 
-            {/* Initiate Button */}
-            <button
-              onClick={handleSubmit}
-              disabled={!prompt.trim() || loading}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none shrink-0 ml-auto cursor-pointer ${
-                !prompt.trim() || loading
-                  ? isDayMode
-                    ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
-                    : 'cursor-not-allowed border border-[#2A2A2A] bg-[#1A1A1A] text-[#666666]'
-                  : isDayMode
-                    ? 'bg-accent border border-accent text-white-force hover:bg-accent-dim hover:shadow-[0_4px_12px_rgba(139,92,246,0.25)]'
-                    : 'bg-surface-950 border border-accent text-white hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
-              }`}
-            >
-              {loading ? (
-                <>
-                  <FiLoader size={12} className="animate-spin" />
-                  <span>Generating</span>
-                </>
-              ) : (
-                <>
-                  <span className={`text-[10px] mr-0.5 ${
-                    !prompt.trim() || loading
-                      ? isDayMode ? 'text-neutral-400' : 'text-[#666666]'
-                      : isDayMode ? 'text-white-force' : 'text-accent'
-                  }`}>▶</span>
-                  <span>Initiate Production</span>
-                </>
+            {/* Action buttons wrapper */}
+            <div className={`flex items-center gap-2 shrink-0 ${
+              isMobile && hasProject ? 'w-full justify-between mt-1' : 'ml-auto'
+            }`}>
+              {hasProject && isMobile && (
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsOnMobile(!showSettingsOnMobile)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border transition-colors cursor-pointer ${
+                    showSettingsOnMobile
+                      ? 'bg-accent/15 border-accent text-accent'
+                      : isDayMode
+                        ? 'bg-neutral-50 border-neutral-200 text-neutral-600'
+                        : 'bg-surface-800 border-surface-700 text-surface-400'
+                  }`}
+                >
+                  <FiSliders size={11} />
+                  <span>{showSettingsOnMobile ? "Hide Settings" : "Configure"}</span>
+                </button>
               )}
-            </button>
+
+              <button
+                onClick={handleSubmit}
+                disabled={!prompt.trim() || loading}
+                className={`flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none cursor-pointer ${
+                  !prompt.trim() || loading
+                    ? isDayMode
+                      ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
+                      : 'cursor-not-allowed border border-[#2A2A2A] bg-[#1A1A1A] text-[#666666]'
+                    : isDayMode
+                      ? 'bg-accent border border-accent text-white-force hover:bg-accent-dim hover:shadow-[0_4px_12px_rgba(139,92,246,0.25)]'
+                      : 'bg-surface-950 border border-accent text-white hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
+                }`}
+              >
+                {loading ? (
+                  <>
+                    <FiLoader size={12} className="animate-spin" />
+                    <span>Generating</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={`text-[10px] mr-0.5 ${
+                      !prompt.trim() || loading
+                        ? isDayMode ? 'text-neutral-400' : 'text-[#666666]'
+                        : isDayMode ? 'text-white-force' : 'text-accent'
+                    }`}>▶</span>
+                    <span>Initiate Production</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 

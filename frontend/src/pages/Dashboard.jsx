@@ -250,15 +250,19 @@ export default function Dashboard() {
       </div>
 
       {/* Permanent Studio Sidebar */}
-      <div className="relative z-30 shrink-0 h-screen">
+      <div className="relative z-30 shrink-0 h-screen max-md:h-0">
         <Sidebar />
       </div>
 
       {/* Main Studio Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 pr-8 pl-8 md:pl-12 transition-all duration-300 relative z-20 overflow-y-auto">
+      <div className={`flex-1 flex flex-col min-w-0 px-4 md:pr-8 md:pl-12 transition-all duration-300 relative z-20 ${
+        (hasProject || loading) 
+          ? 'max-md:h-screen max-md:overflow-hidden pb-4' 
+          : 'overflow-y-auto pb-8'
+      }`}>
         {/* Minimal Header */}
         <header className="flex items-center justify-between border-b py-2 shrink-0 transition-colors duration-500 border-white/[0.03] [data-theme='day']_&:border-black/[0.06]">
-          <p className="text-[10px] font-extrabold tracking-[0.25em] uppercase header-breadcrumb">
+          <p className="text-[10px] font-extrabold tracking-[0.25em] uppercase header-breadcrumb max-md:pl-10">
             <span className="text-surface-300">Production Studio</span>
           </p>
 
@@ -282,8 +286,14 @@ export default function Dashboard() {
         </header>
 
         {/* Studio Workspace Canvas */}
-        <main className="flex-1 py-4">
-          <div className="mx-auto max-w-[1400px] space-y-6 pb-8">
+        <main className={`flex-1 py-2 md:py-4 ${
+          (hasProject || loading) ? 'min-h-0 flex flex-col' : ''
+        }`}>
+          <div className={`mx-auto max-w-[1400px] w-full ${
+            (hasProject || loading) 
+              ? 'space-y-3 md:space-y-6 pb-2 min-h-0 flex flex-col flex-1' 
+              : 'space-y-6 pb-8'
+          }`}>
             
             {/* Hero Studio Block */}
             <HeroSection 
@@ -309,27 +319,25 @@ export default function Dashboard() {
             )}
 
             {(hasProject || loading) && (
-              <div className="space-y-8">
+              <div className="space-y-4 md:space-y-8 min-h-0 flex flex-col flex-1">
                 {/* Production Workspace: Screenplays, Storyboard slides, & timeline details */}
-                {(hasProject || loading) && (
-                  <div className="workspace-reveal flex flex-col lg:flex-row gap-8 mt-10">
-                    {/* Screenplay & Storyboards tabbed panels */}
-                    <div className="min-w-0 flex-1">
-                      <TabbedContent />
-                    </div>
-
-                    {/* Technical Command Panels */}
-                    <div className="w-full lg:w-80 shrink-0 space-y-6">
-                      <AgentActivityPanel />
-                      <CreditUsageCard />
-                    </div>
+                <div className="workspace-reveal flex flex-col lg:flex-row gap-4 md:gap-8 mt-2 md:mt-10 min-h-0 flex-1">
+                  {/* Screenplay & Storyboards tabbed panels */}
+                  <div className="min-w-0 flex-1 min-h-0 flex flex-col">
+                    <TabbedContent />
                   </div>
-                )}
+
+                  {/* Technical Command Panels (Desktop only, hidden on mobile since it is inside tabs) */}
+                  <div className="hidden lg:block w-80 shrink-0 space-y-6">
+                    <AgentActivityPanel />
+                    <CreditUsageCard />
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </main>
-        <Footer />
+        {(!hasProject && !loading) && <Footer />}
       </div>
     </div>
   );

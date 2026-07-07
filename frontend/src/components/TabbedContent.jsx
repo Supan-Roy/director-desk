@@ -9,6 +9,8 @@ import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { encodeId } from '../utils/hashids';
+import AgentActivityPanel from './AgentActivityPanel';
+import CreditUsageCard from './CreditUsageCard';
 
 const tabs = [
   { id: 'script', label: 'Script', icon: FiFileText },
@@ -981,6 +983,20 @@ export default function TabbedContent() {
     agents
   } = useProjectData();
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const availableTabs = [
+    ...tabs,
+    ...(isMobile ? [{ id: 'agents', label: 'Agents', icon: FiTrendingUp }] : [])
+  ];
+
   const tabScrollContainerRef = useRef(null);
 
   // Auto-switch tabs to follow the active agent during generation
@@ -1048,10 +1064,10 @@ export default function TabbedContent() {
       </div>
 
       {/* Tab headers */}
-      <div className="mb-4 flex gap-1 rounded-xl bg-white/[0.02] p-1 ring-1 ring-white/[0.04]">
-        {tabs.filter(tab => {
+      <div className="mb-4 flex flex-wrap gap-1 rounded-xl bg-white/[0.02] p-1 ring-1 ring-white/[0.04]">
+        {availableTabs.filter(tab => {
           if (productionType === 'Podcast') {
-            return tab.id === 'script' || tab.id === 'plan';
+            return tab.id === 'script' || tab.id === 'plan' || tab.id === 'agents';
           }
           if (productionType === 'Audio Story') {
             return tab.id !== 'storyboard';
@@ -1061,20 +1077,20 @@ export default function TabbedContent() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150 ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] md:text-[13px] font-medium transition-all duration-150 min-w-[70px] ${
               activeTab === tab.id
                 ? 'tab-active'
                 : 'text-surface-500 hover:text-surface-300'
             }`}
           >
-            <tab.icon size={13} />
+            <tab.icon size={12} />
             <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* Tab content */}
-      <div ref={tabScrollContainerRef} className="max-h-[520px] overflow-y-auto pr-1">
+      <div ref={tabScrollContainerRef} className="max-h-[300px] md:max-h-[520px] overflow-y-auto pr-1">
         {activeTab === 'script' && <ScriptTab script={script} />}
         {activeTab === 'storyboard' && <StoryboardTab storyboard={storyboard} productionType={productionType} />}
         {activeTab === 'breakdown' && <SceneBreakdownTab breakdown={sceneBreakdown} storyboard={storyboard} productionType={productionType} loading={loading} />}
@@ -1092,6 +1108,12 @@ export default function TabbedContent() {
             onRefine={refineProject} 
             loading={loading} 
           />
+        )}
+        {activeTab === 'agents' && (
+          <div className="space-y-6 pt-1">
+            <AgentActivityPanel />
+            <CreditUsageCard />
+          </div>
         )}
       </div>
     </section>

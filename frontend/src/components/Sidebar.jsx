@@ -24,6 +24,7 @@ import {
   FiCamera,
   FiX,
   FiCheck,
+  FiMenu,
 } from 'react-icons/fi';
 import { PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
@@ -176,6 +177,19 @@ export default function Sidebar() {
   const [renameValue, setRenameValue] = useState('');
 
   const { user, logout, openLoginModal, updateProfile } = useAuth();
+
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const handleToggle = () => setIsMobileOpen(prev => !prev);
+    const handleClose = () => setIsMobileOpen(false);
+    window.addEventListener('toggle-sidebar', handleToggle);
+    window.addEventListener('close-sidebar', handleClose);
+    return () => {
+      window.removeEventListener('toggle-sidebar', handleToggle);
+      window.removeEventListener('close-sidebar', handleClose);
+    };
+  }, []);
 
   // Profile states
   const [profile, setProfile] = useState(getUserProfile);
@@ -411,6 +425,7 @@ export default function Sidebar() {
               ? `/projects/${encodeId(project.id)}/production`
               : `/projects/${encodeId(project.id)}`;
             navigate(targetUrl);
+            setIsMobileOpen(false);
           }
         }}
         title={project.title}
@@ -615,11 +630,39 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className={`shrink-0 h-screen border-r flex flex-col select-none transition-all duration-300 ${
-      isCollapsed ? 'w-20 items-center' : 'w-64'
-    } ${
-      d ? 'bg-white border-black/[0.07]' : 'border-surface-700 bg-surface-950'
-    }`}>
+    <>
+      {/* Mobile Drawer Backdrop Overlay */}
+      {isMobileOpen && (
+        <div 
+          onClick={() => setIsMobileOpen(false)}
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-[2px] transition-opacity duration-300"
+        />
+      )}
+
+      {/* Floating Hamburger Toggle Button on Mobile */}
+      {!isMobileOpen && (
+        <button
+          onClick={() => setIsMobileOpen(true)}
+          className={`fixed left-4 top-[14px] z-40 md:hidden p-1.5 rounded-lg border transition-colors duration-200 cursor-pointer shadow-md ${
+            d 
+              ? 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 shadow-[0_2px_8px_rgba(0,0,0,0.06)]' 
+              : 'bg-surface-900 border-surface-700 text-surface-400 hover:text-white shadow-[0_4px_12px_rgba(0,0,0,0.5)]'
+          }`}
+          title="Open Navigation"
+        >
+          <FiMenu size={16} />
+        </button>
+      )}
+
+      <aside className={`fixed md:relative top-0 left-0 z-50 h-screen border-r flex flex-col select-none transition-all duration-300 ${
+        isMobileOpen 
+          ? 'max-md:translate-x-0 max-md:w-[240px]' 
+          : 'max-md:-translate-x-full'
+      } ${
+        isCollapsed ? 'md:w-20 md:items-center' : 'md:w-64'
+      } ${
+        d ? 'bg-white border-black/[0.07]' : 'border-surface-700 bg-surface-950'
+      }`}>
 
       {/* ── Logo (fixed, never scrolls away) ── */}
       <div className={`flex shrink-0 select-none relative group transition-all duration-300 ${
@@ -677,14 +720,27 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Collapse / Expand Toggle Button */}
+        {/* Mobile Close Button */}
+        <button
+          onClick={() => setIsMobileOpen(false)}
+          className={`md:hidden p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center ${
+            d
+              ? 'text-gray-500 hover:bg-black/5 hover:text-gray-800'
+              : 'text-surface-400 hover:bg-white/10 hover:text-white'
+          }`}
+          title="Close Sidebar"
+        >
+          <FiX size={16} />
+        </button>
+
+        {/* Collapse / Expand Toggle Button (Desktop only) */}
         <button
           onClick={() => {
             const nextState = !isCollapsed;
             setIsCollapsed(nextState);
             localStorage.setItem('sidebar-collapsed', String(nextState));
           }}
-          className={`p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center ${
+          className={`hidden md:flex p-2 rounded-lg transition-colors cursor-pointer items-center justify-center ${
             d
               ? 'text-gray-500 hover:bg-black/5 hover:text-gray-800'
               : 'text-surface-400 hover:bg-white/10 hover:text-white'
@@ -714,7 +770,12 @@ export default function Sidebar() {
             return (
               <button
                 key={item.label}
-                onClick={() => item.path && navigate(item.path)}
+                onClick={() => {
+                  if (item.path) {
+                    navigate(item.path);
+                    setIsMobileOpen(false);
+                  }
+                }}
                 title={isCollapsed ? item.label : undefined}
                 className={`flex items-center rounded-lg transition-all duration-300 relative group ${
                   isCollapsed ? 'justify-center w-12 h-12 p-0' : 'w-full gap-3.5 px-3.5 py-2.5 text-[12px] font-medium'
@@ -1270,6 +1331,7 @@ export default function Sidebar() {
       )}
 
       <AuthModal />
-    </aside>
+      </aside>
+    </>
   );
 }
