@@ -256,7 +256,7 @@ export default function AuthModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop with backdrop blur */}
       <div 
-        onClick={closeLoginModal}
+        onClick={step === 'email' ? closeLoginModal : undefined}
         className="absolute inset-0 bg-black/75 backdrop-blur-sm transition-opacity duration-300"
       />
 

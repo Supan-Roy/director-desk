@@ -93,11 +93,11 @@ function CustomSelect({ label, value, onChange, options, icon: Icon, disabled })
   const activeOption = options.find((o) => o.id === value) || options[0];
 
   return (
-    <div className={`relative ${isOpen ? 'z-30' : 'z-10'}`} ref={dropdownRef}>
+    <div className={`relative w-full md:w-auto ${isOpen ? 'z-30' : 'z-10'}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`flex items-center gap-3 rounded-lg px-3 py-1.5 border text-left transition-all duration-150 cursor-pointer focus:outline-none min-w-[155px] ${
+        className={`flex items-center gap-2 md:gap-3 rounded-lg px-2.5 py-1.5 border text-left transition-all duration-150 cursor-pointer focus:outline-none w-full min-w-[120px] md:min-w-[155px] ${
           disabled ? 'opacity-40 cursor-not-allowed' : ''
         } ${
           isDayMode
@@ -106,14 +106,14 @@ function CustomSelect({ label, value, onChange, options, icon: Icon, disabled })
         }`}
         disabled={disabled}
       >
-        <div className={`p-1.5 rounded shrink-0 ${isDayMode ? 'bg-neutral-200 border border-neutral-300 text-neutral-600' : 'bg-surface-800 border border-surface-700 text-surface-300'}`}>
+        <div className={`p-1 md:p-1.5 rounded shrink-0 ${isDayMode ? 'bg-neutral-200 border border-neutral-300 text-neutral-600' : 'bg-surface-800 border border-surface-700 text-surface-300'}`}>
           <Icon size={12} />
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center">
           <span className={`text-[8px] font-bold uppercase tracking-wider leading-none ${isDayMode ? 'text-neutral-400' : 'text-surface-500'}`}>
             {label}
           </span>
-          <span className={`text-[11px] font-bold truncate mt-1 leading-tight ${isDayMode ? 'text-neutral-800' : 'text-surface-100'}`}>
+          <span className={`text-[10px] md:text-[11px] font-bold truncate mt-0.5 md:mt-1 leading-tight ${isDayMode ? 'text-neutral-800' : 'text-surface-100'}`}>
             {activeOption.value || activeOption.label}
           </span>
         </div>
@@ -126,7 +126,7 @@ function CustomSelect({ label, value, onChange, options, icon: Icon, disabled })
       </button>
 
       {isOpen && (
-        <div className={`absolute left-0 top-full mt-1.5 z-55 min-w-[185px] rounded-lg border p-1 shadow-2xl space-y-0.5 ${
+        <div className={`absolute left-0 right-0 mt-1.5 z-55 min-w-[140px] max-md:w-full rounded-lg border p-1 shadow-2xl space-y-0.5 ${
           isDayMode
             ? 'bg-white border-neutral-200 text-neutral-800 shadow-xl'
             : 'bg-surface-800 border-surface-600 text-surface-200 shadow-black/85'
@@ -1151,9 +1151,9 @@ export default function HeroSection({
           )}
 
           {/* Row 2: Selectors & Initiate Production */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5 relative z-10">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5 relative z-10 w-full">
             {(!hasProject || !isMobile || showSettingsOnMobile) && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="grid grid-cols-2 gap-2 w-full md:flex md:flex-wrap md:items-center md:gap-2.5 md:w-auto">
                 {/* Production Type Selector */}
                 <CustomSelect
                   label="Format"

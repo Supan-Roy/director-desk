@@ -1330,8 +1330,8 @@ export default function Sidebar() {
         </div>
       )}
 
-      <AuthModal />
       </aside>
+      <AuthModal />
     </>
   );
 }
