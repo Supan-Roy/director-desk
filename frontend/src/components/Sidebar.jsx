@@ -908,27 +908,7 @@ export default function Sidebar() {
 
       {/* ── Bottom Section (fixed at bottom) ── */}
       <div className={`flex flex-col gap-3 p-4 shrink-0 w-full relative ${isCollapsed ? 'items-center' : ''}`} ref={profileMenuRef}>
-        {/* Reset Action */}
-        {hasProject && (
-          isCollapsed ? (
-            <button
-              onClick={reset}
-              className="w-12 h-12 rounded-lg bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 flex items-center justify-center text-red-400 transition-all cursor-pointer"
-              title="Reset Session"
-            >
-              <FiRefreshCw size={15} className="shrink-0 animate-pulse text-red-400" />
-            </button>
-          ) : (
-            <button
-              onClick={reset}
-              className="flex w-full items-center gap-3 rounded-lg bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 px-3.5 py-2.5 text-[11px] text-red-400 font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer"
-              title="Reset Production Workspace"
-            >
-              <FiRefreshCw size={13} className="shrink-0 animate-pulse text-red-400" />
-              <span>Reset Session</span>
-            </button>
-          )
-        )}
+
 
         {/* Divider */}
         <div className={`h-px shrink-0 transition-all duration-300 ${isCollapsed ? 'w-12 mx-auto' : 'mx-4 w-[calc(100%-2rem)]'} ${d ? 'bg-black/[0.07]' : 'bg-white/[0.04]'}`} />
