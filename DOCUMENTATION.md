@@ -1095,4 +1095,4 @@ The project doesn't have a formal test suite. Testing is manual:
 
 ---
 
-*Documentation generated from codebase analysis. For the most up-to-date information, refer to the source files.*
+
