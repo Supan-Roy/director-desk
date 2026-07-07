@@ -1241,8 +1241,7 @@ export default function HeroSection({
                 <button
                   type="button"
                   onClick={reset}
-                  disabled={loading}
-                  className={`flex items-center justify-center px-3 py-2.5 md:px-4 md:py-3 rounded-lg border transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                  className={`flex items-center justify-center px-3 py-2.5 md:px-4 md:py-3 rounded-lg border transition-all duration-200 cursor-pointer ${
                     isDayMode
                       ? 'bg-black border-black text-white hover:bg-neutral-800 hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]'
                       : 'bg-white border-white text-black hover:bg-neutral-200 hover:shadow-[0_4px_12px_rgba(255,255,255,0.1)]'

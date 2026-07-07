@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import {
   getProjectStatus,
@@ -26,6 +26,7 @@ const ProjectDataContext = createContext(null)
 export function ProjectDataProvider({ children }) {
   const { user } = useAuth()
   const [hasProject, setHasProject] = useState(false)
+  const abortControllerRef = useRef(null)
   const [title, setTitle] = useState(null)
   const [agents, setAgents] = useState([])
   const [script, setScript] = useState('')
@@ -209,6 +210,11 @@ export function ProjectDataProvider({ children }) {
       { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" }
     ])
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+
     try {
       const response = await fetch(`${apiBaseUrl}/api/generate/stream`, {
         method: 'POST',
@@ -216,6 +222,7 @@ export function ProjectDataProvider({ children }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ prompt, mode, production_type: prodType, files }),
+        signal: abortControllerRef.current.signal
       })
 
       if (!response.ok) {
@@ -404,6 +411,10 @@ export function ProjectDataProvider({ children }) {
 
   // ── Reset ───────────────────────────────────────────────────────────────
   const handleReset = async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
     setLoading(true)
     setError(null)
     try {
@@ -544,12 +555,18 @@ export function ProjectDataProvider({ children }) {
       { id: "critic",          name: "Critic Agent",          role: "Quality Review",     icon: "🔍", status: "waiting" }
     ])
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+
     try {
       const response = await fetch(`${apiBaseUrl}/api/generate/stream/resume/${projectId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        signal: abortControllerRef.current.signal
       })
 
       if (!response.ok) {
