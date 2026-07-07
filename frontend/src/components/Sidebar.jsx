@@ -656,8 +656,8 @@ export default function Sidebar() {
 
       <aside className={`fixed md:relative top-0 left-0 z-50 h-screen border-r flex flex-col select-none transition-all duration-300 ${
         isMobileOpen 
-          ? 'max-md:translate-x-0 max-md:w-[240px]' 
-          : 'max-md:-translate-x-full'
+          ? 'max-md:translate-x-0 max-md:w-[240px] max-md:visible' 
+          : 'max-md:-translate-x-full max-md:invisible'
       } ${
         isCollapsed ? 'md:w-20 md:items-center' : 'md:w-64'
       } ${
