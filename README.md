@@ -12,7 +12,7 @@ Designed for creators, filmmakers, and AI artists, the platform features a colla
 
 The diagram below details how the Vite frontend interacts with the FastAPI backend, local SQLite database storage, and external AI generation services.
 
-![Director Desk - System Architecture & Workflow](frontend/public/images/Director Desk - System Architecture & Workflow.png)
+![Director Desk - System Architecture & Workflow](frontend/public/images/Director%20Desk%20-%20System%20Architecture%20&%20Workflow.png)
 
 ---
 
