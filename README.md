@@ -32,9 +32,10 @@ graph TD
     end
 
     %% Database & Storage
-    subgraph Storage [Alibaba Cloud Storage]
-        SQLite[(SQLite DB / OSS)]
-        MediaFiles[(OSS: MP4/MP3 Assets)]
+    subgraph Storage [Alibaba Cloud]
+        PostgreSQL[(PostgreSQL DB)]
+        OSS[(OSS: MP4/MP3 Assets)]
+        Redis[(Redis Queue)]
     end
 
     subgraph AI [Alibaba Cloud DashScope]
@@ -171,5 +172,8 @@ Open your browser and navigate to `http://localhost:5173` to enter the Director 
 ---
 
 ## 👥 Credits
+
+**Developed by - Supan Roy**
+redits
 
 **Developed by - Supan Roy**
