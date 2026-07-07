@@ -250,15 +250,15 @@ export default function Dashboard() {
       </div>
 
       {/* Permanent Studio Sidebar */}
-      <div className="relative z-30 shrink-0 h-screen max-md:h-0">
+      <div className="relative z-30 shrink-0 h-screen max-md:h-0 max-md:w-0 max-md:absolute max-md:overflow-hidden">
         <Sidebar />
       </div>
 
       {/* Main Studio Viewport */}
-      <div className={`flex-1 flex flex-col min-w-0 px-4 md:pr-8 md:pl-12 transition-all duration-300 relative z-20 ${
+      <div className={`flex-1 flex flex-col min-w-0 px-4 md:pr-8 md:pl-12 transition-all duration-300 relative z-20 overflow-x-hidden ${
         (hasProject || loading) 
           ? 'max-md:h-screen max-md:overflow-hidden pb-4' 
-          : 'overflow-y-auto pb-8'
+          : 'overflow-y-auto overflow-x-hidden pb-8'
       }`}>
         {/* Minimal Header */}
         <header className="flex items-center justify-between border-b py-2 shrink-0 transition-colors duration-500 border-white/[0.03] [data-theme='day']_&:border-black/[0.06]">
