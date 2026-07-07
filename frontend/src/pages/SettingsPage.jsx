@@ -138,6 +138,18 @@ export default function SettingsPage() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showDeleteAccountModal])
 
+  const handlePlanSelect = (planName) => {
+    setPlanMessage("Coming Soon");
+    const updated = { ...profile, plan: planName };
+    setProfile(updated);
+    if (user) {
+      const userKey = `user_profile_${user.email}`;
+      localStorage.setItem(userKey, JSON.stringify(updated));
+    } else {
+      localStorage.setItem('user_profile', JSON.stringify(updated));
+    }
+  };
+
   const handleExportData = async () => {
     try {
       setExporting(true)
@@ -394,7 +406,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Subscription Plans Section */}
                   <div className="space-y-3 pt-2 text-left">
                     <h3 className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-gray-500' : 'text-surface-500'}`}>
                       Subscription Plans
@@ -407,12 +418,12 @@ export default function SettingsPage() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Free Plan */}
                       <div className={`p-4 rounded-xl border flex flex-col justify-between relative ${
                         (profile.plan === 'Free Plan' || profile.plan === 'Free Session')
                           ? 'border-accent bg-accent/5'
-                          : d ? 'bg-white border-neutral-200' : 'bg-[#090910]/95 border-white/[0.04]'
+                          : d ? 'bg-white border-neutral-200 shadow-xs' : 'bg-[#090910]/95 border-white/[0.04]'
                       }`}>
                         <div>
                           <div className="flex justify-between items-start">
@@ -439,12 +450,21 @@ export default function SettingsPage() {
                             </li>
                           </ul>
                         </div>
-                        <button
-                          disabled
-                          className="w-full mt-4 py-2 rounded-lg bg-white/5 border border-white/5 text-surface-500 text-[9.5px] font-bold uppercase tracking-wider cursor-not-allowed text-center"
-                        >
-                          Current Plan
-                        </button>
+                        {(profile.plan === 'Free Plan' || profile.plan === 'Free Session') ? (
+                          <button
+                            disabled
+                            className="w-full mt-4 py-2 rounded-lg bg-white/5 border border-white/5 text-surface-500 text-[9.5px] font-bold uppercase tracking-wider cursor-not-allowed text-center animate-fade-in"
+                          >
+                            Current Plan
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePlanSelect('Free Plan')}
+                            className="w-full mt-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer text-center transition-all animate-fade-in"
+                          >
+                            Switch to Free Plan
+                          </button>
+                        )}
                       </div>
 
                       {/* Pro Plan */}
@@ -482,55 +502,21 @@ export default function SettingsPage() {
                             </li>
                           </ul>
                         </div>
-                        <button
-                          onClick={() => setPlanMessage("Upgrade to Pro Plan failed: Payment integration is disabled in this demo environment.")}
-                          className="w-full mt-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer text-center transition-colors shadow-md shadow-accent/10 active:translate-y-[0.5px]"
-                        >
-                          Upgrade to Pro
-                        </button>
-                      </div>
-
-                      {/* Max Plan */}
-                      <div className={`p-4 rounded-xl border flex flex-col justify-between relative ${
-                        profile.plan === 'Max Plan'
-                          ? 'border-accent bg-accent/5'
-                          : d ? 'bg-white border-neutral-200 hover:border-neutral-350 shadow-xs' : 'bg-[#090910]/95 border-white/[0.04] hover:border-white/[0.08]'
-                      }`}>
-                        <div>
-                          <div className="flex justify-between items-start">
-                            <span className={`text-[10.5px] font-bold uppercase tracking-wider ${d ? 'text-gray-900' : 'text-white'}`}>Max Plan</span>
-                            {profile.plan === 'Max Plan' && (
-                              <span className="text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent text-white leading-none">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <p className={`text-lg font-bold mt-1 ${d ? 'text-gray-900' : 'text-white'}`}>$99<span className="text-[10px] font-normal text-surface-500">/mo</span></p>
-                          <ul className="mt-3 space-y-1.5 text-[9.5px] text-surface-400 font-semibold">
-                            <li className="flex items-center gap-1.5">
-                              <FiCheck className="text-emerald-400 shrink-0" size={10} />
-                              <span>Unlimited credits</span>
-                            </li>
-                            <li className="flex items-center gap-1.5">
-                              <FiCheck className="text-emerald-400 shrink-0" size={10} />
-                              <span>All premium agents</span>
-                            </li>
-                            <li className="flex items-center gap-1.5">
-                              <FiCheck className="text-emerald-400 shrink-0" size={10} />
-                              <span>IMAX aspect support</span>
-                            </li>
-                            <li className="flex items-center gap-1.5">
-                              <FiCheck className="text-emerald-400 shrink-0" size={10} />
-                              <span>Custom watermarks</span>
-                            </li>
-                          </ul>
-                        </div>
-                        <button
-                          onClick={() => setPlanMessage("Upgrade to Max Plan failed: Payment integration is disabled in this demo environment.")}
-                          className="w-full mt-4 py-2 rounded-lg bg-purple-700 hover:bg-purple-650 text-white text-[9.5px] font-bold uppercase tracking-wider cursor-pointer text-center transition-colors shadow-md shadow-purple-900/10 active:translate-y-[0.5px]"
-                        >
-                          Upgrade to Max
-                        </button>
+                        {profile.plan === 'Pro Plan' ? (
+                          <button
+                            disabled
+                            className="w-full mt-4 py-2 rounded-lg bg-white/5 border border-white/5 text-surface-500 text-[9.5px] font-bold uppercase tracking-wider cursor-not-allowed text-center animate-fade-in"
+                          >
+                            Current Plan
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePlanSelect('Pro Plan')}
+                            className="w-full mt-4 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 text-[9.5px] font-bold uppercase tracking-wider cursor-pointer text-center transition-all animate-fade-in"
+                          >
+                            Switch to Pro Plan
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
