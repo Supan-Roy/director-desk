@@ -12,58 +12,7 @@ Designed for creators, filmmakers, and AI artists, the platform features a colla
 
 The diagram below details how the Vite frontend interacts with the FastAPI backend, local SQLite database storage, and external AI generation services.
 
-```mermaid
-graph TD
-    %% Frontend Layer
-    subgraph Frontend [React + Vite Client]
-        UI[Studio Viewport]
-        Templates[Visual Templates Lookbook]
-        Assets[Asset Library & Media Players]
-        AgentsPlay[Multi-Agent Chat Console]
-        ProjectEdit[Storyboard & Timeline Editors]
-    end
-
-    %% Backend Layer
-    subgraph Backend [FastAPI Application Server]
-        API[API Router]
-        DbHandler[SQLAlchemy ORM]
-        AgentEngine[Collaborative Agent Orchestrator]
-        VideoEngine[FFmpeg Video Compiler]
-    end
-
-    %% Database & Storage
-    subgraph Storage [Alibaba Cloud]
-        PostgreSQL[(PostgreSQL DB)]
-        OSS[(OSS: MP4/MP3 Assets)]
-        Redis[(Redis Queue)]
-    end
-
-    subgraph AI [Alibaba Cloud DashScope]
-        LLM[Qwen-Plus: Text]
-        TTS[Qwen3-TTS-Flash: Voice]
-        Image[Wan2.6-T2I: Images]
-        VideoGen[Wan2.7-T2V / HappyHorse-I2V]
-    end
-
-    %% Connection Flows
-    UI -->|HTTP Requests| API
-    Templates -->|Query Presets & Apply| API
-    Assets -->|Search & Fetch Details| API
-    AgentsPlay -->|Interactive Multi-Agent Chat| API
-    ProjectEdit -->|Timeline & Clip Operations| API
-
-    API --> DbHandler
-    API --> AgentEngine
-    API --> VideoEngine
-
-    DbHandler -->|Read/Write Metadata| SQLite
-    VideoEngine -->|Assemble Clips & Export| MediaFiles
-
-    AgentEngine -->|Generate Scripts & Prompts| LLM
-    AgentEngine -->|Synthesize Voice Signatures| TTS
-    AgentEngine -->|Render Character/Env Portraits| Image
-    AgentEngine -->|Render Scene Footage| VideoGen
-```
+![Director Desk - System Architecture & Workflow](frontend/public/images/Director Desk - System Architecture & Workflow.png)
 
 ---
 
