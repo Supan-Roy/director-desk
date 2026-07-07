@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from app.db.repository import get_db, user_repository
 from app.db.models import User
 from app.services.auth_service import require_user
-from app.services.email_service import send_delete_confirmation_email
+from app.services.email_service import send_delete_otp_email
+import random
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -24,39 +25,90 @@ class DeleteRequestPayload(BaseModel):
 @router.post("/settings/delete-account/request")
 def request_account_deletion(
     payload: DeleteRequestPayload,
-    request: Request,
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db)
 ):
-    """Generate deletion token, store on user record, and send confirmation email."""
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    """Generate deletion OTP, store on user record, and send confirmation email."""
+    otp = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
 
-    # Save deletion token to database
+    # Save deletion token (as OTP) to database
     user_repository.update(
         db,
         current_user.id,
-        delete_token=token,
+        delete_token=otp,
         delete_token_expires_at=expires_at
     )
 
-    # Construct verification link pointing to backend confirm endpoint
-    confirm_url = f"{request.base_url}api/settings/delete-account/confirm?token={token}"
-
     # Log reason for telemetry/admin audit
-    logger.info(f"User {current_user.email} requested account deletion. Reason: {payload.reason}")
+    logger.info(f"User {current_user.email} requested account deletion via OTP. Reason: {payload.reason}")
 
     # Send email
-    sent = send_delete_confirmation_email(current_user.email, confirm_url)
+    sent = send_delete_otp_email(current_user.email, otp)
     if not sent:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send deletion confirmation email. Please try again."
+            detail="Failed to send deletion verification OTP. Please try again."
         )
 
     return {
         "status": "success",
-        "message": "Account deletion verification email has been dispatched."
+        "message": "Account deletion verification OTP has been dispatched to your email."
+    }
+
+
+class DeleteConfirmPayload(BaseModel):
+    otp_code: str
+
+
+@router.post("/settings/delete-account/confirm")
+def confirm_account_deletion_otp(
+    payload: DeleteConfirmPayload,
+    response: Response,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """Validate delete OTP, purge user data from DB, and clear session cookie."""
+    if not current_user.delete_token or current_user.delete_token != payload.otp_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid deletion verification code."
+        )
+
+    now = datetime.now(timezone.utc)
+    exp = current_user.delete_token_expires_at
+    if exp and exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+
+    if not exp or now > exp:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Deletion verification code has expired. Please request a new code."
+        )
+
+    email = current_user.email
+
+    # Purge user (SQLite cascades deletes to projects via foreign key)
+    deleted = user_repository.delete(db, current_user.id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user profile database record. Please contact support."
+        )
+
+    # Clear authentication cookie
+    response.delete_cookie(
+        key="session_token",
+        httponly=True,
+        samesite="lax",
+        secure=False
+    )
+
+    logger.info(f"User account {email} permanently purged via verified OTP code.")
+
+    return {
+        "status": "success",
+        "message": "Account successfully deleted."
     }
 
 

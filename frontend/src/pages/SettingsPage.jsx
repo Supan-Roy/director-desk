@@ -20,7 +20,7 @@ export default function SettingsPage() {
     removeSavedProject, 
     updateProjectDetails 
   } = useProjectData()
-  const { user, requestDeletion } = useAuth()
+  const { user, requestDeletion, confirmDeletion } = useAuth()
 
   const [activeSubTab, setActiveSubTab] = useState('appearance') // appearance, account, privacy, about
   const [planMessage, setPlanMessage] = useState(null)
@@ -109,6 +109,7 @@ export default function SettingsPage() {
   const [showDeleteRealAccountModal, setShowDeleteRealAccountModal] = useState(false)
   const [deleteReason, setDeleteReason] = useState('No longer need it')
   const [deleteAccountSuccess, setDeleteAccountSuccess] = useState(false)
+  const [deleteOtpCode, setDeleteOtpCode] = useState('')
 
   const deleteProjectsRef = useRef(null)
   const deleteAccountRef = useRef(null)
@@ -181,6 +182,22 @@ export default function SettingsPage() {
       setDeleteAccountSuccess(true)
     } catch (err) {
       alert(err.message || 'Failed to request account deletion.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleConfirmDeleteAccount = async (e) => {
+    e.preventDefault()
+    if (!deleteOtpCode || deleteOtpCode.length !== 6) {
+      alert("Please enter a valid 6-digit OTP code.")
+      return
+    }
+    setDeleting(true)
+    try {
+      await confirmDeletion(deleteOtpCode)
+    } catch (err) {
+      alert(err.message || 'Verification of account deletion code failed.')
     } finally {
       setDeleting(false)
     }
@@ -1010,19 +1027,56 @@ export default function SettingsPage() {
                 </div>
               </form>
             ) : (
-              <div className="space-y-4 text-center">
-                <div className="text-emerald-500 text-xl font-bold">✓ Link Dispatched</div>
-                <p className={`text-[12px] leading-relaxed ${d ? 'text-gray-600' : 'text-surface-400'}`}>
-                  A secure account deletion link was successfully emailed to you. Please check your inbox and verify the request within 1 hour.
+              <form onSubmit={handleConfirmDeleteAccount} className="space-y-4">
+                <div className="text-emerald-500 text-xs font-bold uppercase tracking-wider">✓ OTP Code Sent</div>
+                <p className={`text-[11px] leading-relaxed text-left ${d ? 'text-gray-600' : 'text-surface-400'}`}>
+                  An account deletion code has been emailed to you. Enter the 6-digit OTP code below to confirm final deletion.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteRealAccountModal(false)}
-                  className="w-full py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-purple-700 hover:bg-purple-650 text-white cursor-pointer transition-colors text-center"
-                >
-                  Close
-                </button>
-              </div>
+                
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-gray-500' : 'text-surface-500'}`}>
+                    Verification OTP
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={deleteOtpCode}
+                    onChange={(e) => setDeleteOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="000000"
+                    required
+                    disabled={deleting}
+                    className={`w-full text-center tracking-[0.5em] font-mono text-sm rounded-lg py-2 border focus:outline-none ${
+                      d 
+                        ? 'bg-white border-neutral-250 text-neutral-800 focus:border-black' 
+                        : 'bg-[#030305] border-white/10 text-white focus:border-white'
+                    }`}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteAccountSuccess(false)
+                      setDeleteOtpCode('')
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer text-center ${
+                      d 
+                        ? 'border-gray-250 hover:bg-gray-150 text-gray-500' 
+                        : 'border-white/[0.08] hover:bg-white/[0.04] text-neutral-300'
+                    }`}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={deleting || deleteOtpCode.length !== 6}
+                    className="flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white cursor-pointer transition-colors text-center disabled:opacity-40"
+                  >
+                    {deleting ? 'Confirming...' : 'Wipe Account'}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
         </div>

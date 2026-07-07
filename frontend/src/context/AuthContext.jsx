@@ -155,10 +155,23 @@ export function AuthProvider({ children }) {
   // ── Request Deletion ────────────────────────────────────────────────────
   const requestDeletion = async (reason) => {
     try {
-      const response = await apiClient.post('/settings/delete-account/request', { reason })
+      const response = await apiClient.post('/api/settings/delete-account/request', { reason })
       return response.data
     } catch (err) {
-      throw new Error(err.message || 'Failed to dispatch account deletion link.')
+      throw new Error(err.message || 'Failed to dispatch account deletion OTP.')
+    }
+  }
+
+  // ── Confirm Deletion ────────────────────────────────────────────────────
+  const confirmDeletion = async (otpCode) => {
+    try {
+      const response = await apiClient.post('/api/settings/delete-account/confirm', { otp_code: otpCode })
+      setUser(null)
+      // Reset window location to root index upon deletion
+      window.location.href = '/'
+      return response.data
+    } catch (err) {
+      throw new Error(err.message || 'Verification of account deletion code failed.')
     }
   }
 
@@ -187,7 +200,8 @@ export function AuthProvider({ children }) {
     updateProfile,
     googleLogin,
     logout,
-    requestDeletion
+    requestDeletion,
+    confirmDeletion
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

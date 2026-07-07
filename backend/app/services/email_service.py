@@ -126,3 +126,28 @@ def send_delete_confirmation_email(to_email: str, confirm_url: str) -> bool:
     </div>
     """
     return send_email(to_email, subject, html)
+
+
+def send_delete_otp_email(to_email: str, otp: str) -> bool:
+    """Send account deletion confirmation OTP code to user email."""
+    subject = "Director Desk - Confirm Account Deletion OTP"
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <div style="text-align: center; margin-bottom: 25px; margin-top: 10px;">
+            <span style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase; color: #0f172a; font-family: 'Helvetica Neue', Arial, sans-serif; display: inline-block; vertical-align: middle;">
+                DIRECT<span style="color: #dc2626;">O</span>R <span style="font-weight: 300; letter-spacing: 1px; color: #dc2626;">DESK</span>
+            </span>
+            <div style="font-size: 8px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin-top: 4px;">CREATIVE STUDIO</div>
+        </div>
+        <p>Hello,</p>
+        <p>We received a request to permanently delete your Director Desk account. Please note that this action is irreversible and will delete all your projects, character assets, scene videos, and account details.</p>
+        <p>To confirm and complete this request, use the following 6-digit verification code in the studio console:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: 800; letter-spacing: 4px; color: #dc2626; background-color: #fef2f2; border: 1px solid #fca5a5; padding: 12px 24px; border-radius: 8px; display: inline-block; font-family: monospace;">
+                {otp}
+            </span>
+        </div>
+        <p style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px;">This OTP code is valid for 15 minutes. If you did not request this, please ignore this email and secure your account.</p>
+    </div>
+    """
+    return send_email(to_email, subject, html)
