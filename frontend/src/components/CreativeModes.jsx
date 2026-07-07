@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { creativeTemplates } from '../data/presets';
 
@@ -76,6 +77,7 @@ function TemplateImage({ src, alt }) {
 }
 
 export default function CreativeModes({ onSelectTemplate }) {
+  const navigate = useNavigate();
   const [hoveredCard, setHoveredCard] = useState(null);
   const [zCard, setZCard] = useState(null);
 
@@ -120,7 +122,10 @@ export default function CreativeModes({ onSelectTemplate }) {
           </h3>
           <div className="h-px w-24 bg-surface-700" />
         </div>
-        <button className="text-[10px] font-bold text-surface-500 hover:text-accent transition-colors flex items-center gap-1.5">
+        <button 
+          onClick={() => navigate('/templates')}
+          className="text-[10px] font-bold text-surface-500 hover:text-accent transition-colors flex items-center gap-1.5 cursor-pointer"
+        >
           <span>View all presets</span>
           <span>→</span>
         </button>
