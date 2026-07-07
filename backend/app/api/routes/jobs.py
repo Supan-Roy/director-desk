@@ -967,23 +967,49 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
             if isinstance(scene_chars, str):
                 scene_chars = [scene_chars]
             
+        # ── Continuity detection: check if previous scene exists in same location ──
+        from app.utils.frame_extractor import extract_last_frame
+        previous_scene_video_url = None
+        if scene_number > 1:
+            prev_scene = db.query(SceneVideo).filter(
+                SceneVideo.project_id == project_id,
+                SceneVideo.scene_number == scene_number - 1,
+                SceneVideo.status == "completed",
+                SceneVideo.is_approved == True,
+            ).order_by(SceneVideo.version.desc()).first()
+            if prev_scene and prev_scene.video_url:
+                # Convert /static/uploads/xxx.mp4 to absolute local path
+                local_video_path = prev_scene.video_url.lstrip("/")
+                if not os.path.exists(local_video_path) and os.path.exists(os.path.join("backend", local_video_path)):
+                    local_video_path = os.path.join("backend", local_video_path)
+                if os.path.exists(local_video_path):
+                    last_frame_url = extract_last_frame(local_video_path)
+                    if last_frame_url:
+                        previous_scene_video_url = last_frame_url
+                        logger.info(f"Extracted last frame from scene {scene_number-1}: {last_frame_url}")
+
         # Compile Scene Package using ScenePackageCompiler
         await redis_job_service.update_job_status(job_id, "processing", progress=15, message="Compiling Scene Production Package...")
         from app.services.scene_compiler import ScenePackageCompiler
         from app.services.asset_resolver import AssetResolver
         
-        scene_package = ScenePackageCompiler.compile_scene_package(project_id, scene_number, scene_dict)
+        scene_package = ScenePackageCompiler.compile_scene_package(
+            project_id, scene_number, scene_dict,
+            previous_scene_video_url=previous_scene_video_url,
+        )
         
         # Read compiled parameters
         compiled_prompt = scene_package["enriched_prompt"]
-        raw_ref_image = scene_package["composed_reference"]
+        raw_ref_image = scene_package["reference_url"]  # clean portrait or last frame
+        reference_type = scene_package["reference_type"]
         duration = scene_package["duration"]
         negative_prompt = scene_package["negative_prompt"]
+        is_continuation = scene_package.get("is_continuation", False)
         
         # Auto-select video model pipeline based on reference image presence
         if raw_ref_image:
             model = "happyhorse-1.0-i2v"
-            logger.info(f"Auto-selected Image-to-Video model: {model} using reference {raw_ref_image}")
+            logger.info(f"Auto-selected Image-to-Video model: {model} using {reference_type} reference {raw_ref_image}")
         else:
             model = "wan2.7-t2v"
             logger.info(f"Auto-selected Text-to-Video model: {model} (no references found)")

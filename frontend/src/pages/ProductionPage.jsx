@@ -2486,7 +2486,7 @@ export default function ProductionPage() {
                             badgeClass = "ready";
                           }
 
-                          const raw_ref_image = scene.details?.composed_reference || scene.details?.image_url || null;
+                          const raw_ref_image = scene.details?.reference_url || scene.details?.image_url || null;
 
                           return (
                             <div 
