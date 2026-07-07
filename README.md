@@ -31,16 +31,17 @@ graph TD
         VideoEngine[FFmpeg Video Compiler]
     end
 
-    %% Database & External Services
-    subgraph Storage [Local Database & Filesystem]
-        SQLite[(SQLite DB)]
-        MediaFiles[(Local MP4/MP3 Storage)]
+    %% Database & Storage
+    subgraph Storage [Alibaba Cloud Storage]
+        SQLite[(SQLite DB / OSS)]
+        MediaFiles[(OSS: MP4/MP3 Assets)]
     end
 
-    subgraph External [AI Generation Layer]
-        LLM[Qwen Multi-Modal API]
-        TTS[OpenAI / Qwen TTS Engine]
-        VideoGen[Cinematic Video Models]
+    subgraph AI [Alibaba Cloud DashScope]
+        LLM[Qwen-Plus: Text]
+        TTS[Qwen3-TTS-Flash: Voice]
+        Image[Wan2.6-T2I: Images]
+        VideoGen[Wan2.7-T2V / HappyHorse-I2V]
     end
 
     %% Connection Flows
@@ -59,6 +60,7 @@ graph TD
 
     AgentEngine -->|Generate Scripts & Prompts| LLM
     AgentEngine -->|Synthesize Voice Signatures| TTS
+    AgentEngine -->|Render Character/Env Portraits| Image
     AgentEngine -->|Render Scene Footage| VideoGen
 ```
 
@@ -105,7 +107,7 @@ graph TD
 
 *   **Frontend:** React 18, Vite, Tailwind CSS, Lucide / React Icons
 *   **Backend:** FastAPI (Python), SQLite (Local Database), SQLAlchemy ORM
-*   **Integrations:** Qwen Multi-Modal APIs (Creative Prompting & Scene Continuity), OpenAI/Qwen TTS Engine, FFmpeg (Video Compilation & Assembly)
+*   **Integrations:** Qwen Multi-Modal APIs (Alibaba Cloud DashScope: Qwen-Plus, Wan2.6-T2I, Wan2.7-T2V, HappyHorse-I2V, Qwen3-TTS-Flash), FFmpeg (Video Compilation & Assembly)
 
 ---
 
