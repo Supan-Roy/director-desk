@@ -123,6 +123,3 @@ Open your browser and navigate to `http://localhost:5173` to enter the Director 
 ## 👥 Credits
 
 **Developed by - Supan Roy**
-redits
-
-**Developed by - Supan Roy**
