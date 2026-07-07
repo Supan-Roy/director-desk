@@ -1,4 +1,4 @@
-# Director Desk 🎬
+# Director Desk 🎬 — Track 2: AI Showrunner
 
 Director Desk is an advanced, production-grade **AI Showrunner and Creative Director Platform** that automates cinematic storytelling. From screenwriting and multi-agent character casting to environment design, voice directing, video generation, and final video assembly, Director Desk orchestrates the entire creative lifecycle under a unified dashboard.
 

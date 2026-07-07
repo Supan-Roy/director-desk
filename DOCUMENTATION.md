@@ -1,7 +1,8 @@
-# Director Desk — Complete Documentation
+# Director Desk — Complete Documentation (Track 2: AI Showrunner)
 
 > **AI Showrunner & Creative Director Platform**  
 > Orchestrates cinematic storytelling from screenwriting to final video export.
+> *Track 2 submission — Leverages Wan / HappyHorse video generation with multi-agent orchestration for autonomous short drama creation.*
 
 ---
 
