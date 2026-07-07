@@ -725,8 +725,9 @@ export default function EditorPage() {
       '1.90:1': 1.90
     }
     const ratio = ratioMap[ar] || (16 / 9)
-    const maxW = 480
-    const maxH = 270
+    const isMobileSize = window.innerWidth < 768
+    const maxW = isMobileSize ? Math.min(480, window.innerWidth - 32) : 480
+    const maxH = isMobileSize ? Math.round(maxW / (16 / 9)) : 270
     
     if (ratio >= (16 / 9)) {
       return {
@@ -843,6 +844,15 @@ export default function EditorPage() {
   const [playerVolume, setPlayerVolume] = useState(1.0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+  const [activeMobileView, setActiveMobileView] = useState('player') // library, player, inspector, timeline
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const fileInputRef = useRef(null)
   const logoInputRef = useRef(null)
@@ -1575,7 +1585,7 @@ export default function EditorPage() {
     }`}>
 
       {/* Viewport Sidebar */}
-      <div className="relative z-30 shrink-0 h-screen">
+      <div className="relative z-30 shrink-0 h-screen max-md:h-0">
         <Sidebar />
       </div>
 
@@ -1668,11 +1678,65 @@ export default function EditorPage() {
           </div>
         </header>
 
+        {/* Mobile View Switcher Bar */}
+        {isMobile && (
+          <div className="flex border-b border-[#212128] bg-[#16161c] shrink-0 select-none z-20">
+            <button
+              onClick={() => setActiveMobileView('library')}
+              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeMobileView === 'library'
+                  ? 'bg-accent/10 text-accent border-b-2 border-accent'
+                  : 'text-neutral-505 hover:text-neutral-300'
+              }`}
+            >
+              <span>📁</span>
+              <span>Library</span>
+            </button>
+            <button
+              onClick={() => setActiveMobileView('player')}
+              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeMobileView === 'player'
+                  ? 'bg-accent/10 text-accent border-b-2 border-accent'
+                  : 'text-neutral-505 hover:text-neutral-300'
+              }`}
+            >
+              <span>📺</span>
+              <span>Player</span>
+            </button>
+            <button
+              onClick={() => setActiveMobileView('inspector')}
+              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeMobileView === 'inspector'
+                  ? 'bg-accent/10 text-accent border-b-2 border-accent'
+                  : 'text-neutral-505 hover:text-neutral-300'
+              }`}
+            >
+              <span>⚙️</span>
+              <span>Inspector</span>
+            </button>
+            <button
+              onClick={() => setActiveMobileView('timeline')}
+              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeMobileView === 'timeline'
+                  ? 'bg-accent/10 text-accent border-b-2 border-accent'
+                  : 'text-neutral-505 hover:text-neutral-300'
+              }`}
+            >
+              <span>🎞️</span>
+              <span>Timeline</span>
+            </button>
+          </div>
+        )}
+
         {/* Multi-Panel Editor Layout (Library, Player, Properties) */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
+        <div className={`flex-1 flex overflow-hidden min-h-0 ${
+          isMobile ? (activeMobileView === 'timeline' ? 'hidden' : 'flex') : ''
+        }`}>
           
           {/* Left Panel: Media Library & Context Loader */}
-          <div className="w-80 border-r flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216]">
+          <div className={`w-80 border-r flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216] ${
+            isMobile ? (activeMobileView === 'library' ? 'w-full' : 'hidden') : ''
+          }`}>
             {/* Tabs selector */}
             <div className="flex border-b border-[#212128] bg-[#16161c] select-none">
               <button
@@ -2226,7 +2290,9 @@ export default function EditorPage() {
           </div>
 
           {/* Center Column: Real-time Video Preview Player */}
-          <div className="flex-1 flex flex-col bg-black/40 relative">
+          <div className={`flex-1 flex flex-col bg-black/40 relative ${
+            isMobile ? (activeMobileView === 'player' ? 'flex' : 'hidden') : ''
+          }`}>
             <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
                   {/* Preview Window Monitor */}
               <div 
@@ -2537,7 +2603,9 @@ export default function EditorPage() {
           </div>
 
           {/* Right Panel: Properties & Effects controls */}
-          <div className="w-80 border-l flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216]">
+          <div className={`w-80 border-l flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216] ${
+            isMobile ? (activeMobileView === 'inspector' ? 'w-full' : 'hidden') : ''
+          }`}>
             <div className="p-4 border-b border-[#212128] [data-theme='day']_&:border-black/[0.05] flex items-center gap-2 text-neutral-300 bg-[#16161c] shrink-0">
               <FiSliders size={13} className="text-accent" />
               <span className="text-[10px] font-extrabold uppercase tracking-wider">Property inspector</span>
@@ -3606,8 +3674,10 @@ export default function EditorPage() {
 
         {/* Bottom Multi-track Timeline Panel */}
         <div 
-          className="border-t flex flex-col shrink-0 border-white/[0.06] bg-[#0a0a0f] relative z-30 overflow-hidden"
-          style={{ height: `${timelineHeight}px` }}
+          className={`border-t flex flex-col shrink-0 border-white/[0.06] bg-[#0a0a0f] relative z-30 overflow-hidden ${
+            isMobile ? (activeMobileView === 'timeline' ? 'flex-1 h-full' : 'hidden') : ''
+          }`}
+          style={isMobile ? {} : { height: `${timelineHeight}px` }}
         >
           {/* Timeline Resize Handle */}
           <div
