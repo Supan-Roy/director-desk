@@ -42,18 +42,19 @@ def get_project_scenes_status(project_id: int, db: Session = Depends(get_db)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
         
-    if project.production_type == "Podcast":
+    if project.production_type in ("Podcast", "Audio Story"):
+        label = "Podcast Audio" if project.production_type == "Podcast" else "Audio Story"
         return [{
             "scene_number": 1,
-            "scene_number_str": "Podcast Audio",
+            "scene_number_str": label,
             "package_ready": True,
             "missing_assets": [],
             "details": {
                 "location": "N/A",
                 "characters": [],
                 "duration": "5 Minutes",
-                "summary": "Full Podcast Audio compilation of the script",
-                "prompt": "Podcast audio generation"
+                "summary": f"Full {project.production_type} audio compilation of the script",
+                "prompt": f"{project.production_type} audio generation"
             }
         }]
 

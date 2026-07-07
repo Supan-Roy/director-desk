@@ -1092,7 +1092,11 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
                             raise ValueError("No paragraphs synthesized successfully")
                     else:
                         # Audio-only generation for other audio formats (Audio Story): Synthesize the dialogue/narration text
-                        speech_text = scene_dict.get("audio_notes") or scene_dict.get("summary") or "Ambient audio track."
+                        speech_text = scene_dict.get("audio_notes") or scene_dict.get("summary") or ""
+                        # Avoid synthesizing placeholder text from empty breakdown
+                        if not speech_text or speech_text.strip() in ("N/A", "n/a", "Ambient audio track."):
+                            # Fall back to the full project script/narration
+                            speech_text = project.script or ""
                         clean_speech = re.sub(r'^[A-Z\s]+:\s*', '', speech_text)
                         
                         filename = f"scene_{project_id}_{scene_number}_v{next_version}.mp3"

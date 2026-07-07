@@ -43,8 +43,8 @@ class ShowrunnerService:
             for s in storyboard_list
         ])
         
-        is_podcast = production_type == "Podcast"
-        if is_podcast:
+        is_audio_type = production_type in ("Podcast", "Audio Story")
+        if is_audio_type:
             breakdown = {
                 "total_runtime": "N/A",
                 "consistency_warnings": [],
@@ -53,7 +53,7 @@ class ShowrunnerService:
                     "characters_needed": [],
                     "locations_needed": [],
                     "props_needed": [],
-                    "sound_requirements": ["Podcast main audio track"],
+                    "sound_requirements": [f"{production_type} main audio track"],
                     "vfx_requirements": []
                 }
             }
@@ -247,7 +247,7 @@ class ShowrunnerService:
                 "status": "active"
             }
             
-            if production_type == "Podcast":
+            if production_type in ("Podcast", "Audio Story"):
                 breakdown = {
                     "total_runtime": "N/A",
                     "consistency_warnings": [],
@@ -256,7 +256,7 @@ class ShowrunnerService:
                         "characters_needed": [],
                         "locations_needed": [],
                         "props_needed": [],
-                        "sound_requirements": ["Podcast main audio track"],
+                        "sound_requirements": [f"{production_type} main audio track"],
                         "vfx_requirements": []
                     }
                 }
@@ -506,7 +506,7 @@ class ShowrunnerService:
                 for s in storyboard_list
             ])
             
-            if production_type == "Podcast":
+            if production_type in ("Podcast", "Audio Story"):
                 breakdown = {
                     "total_runtime": "N/A",
                     "consistency_warnings": [],
@@ -515,7 +515,7 @@ class ShowrunnerService:
                         "characters_needed": [],
                         "locations_needed": [],
                         "props_needed": [],
-                        "sound_requirements": ["Podcast main audio track"],
+                        "sound_requirements": [f"{production_type} main audio track"],
                         "vfx_requirements": []
                     }
                 }
@@ -608,7 +608,7 @@ class ShowrunnerService:
             time.sleep(0.5)
 
             # 6. Critic review — stream progressively section-by-section
-            if production_type == "Podcast":
+            if production_type in ("Podcast", "Audio Story"):
                 critic_review = {"overall_rating": "N/A", "suggestions": []}
                 project_state.critic_review = critic_review
                 project_state.critic_notes = []
@@ -766,7 +766,7 @@ class ShowrunnerService:
                     "status": "active"
                 }
                 
-                if production_type == "Podcast":
+                if production_type in ("Podcast", "Audio Story"):
                     breakdown = {
                         "total_runtime": "N/A",
                         "consistency_warnings": [],
@@ -775,7 +775,7 @@ class ShowrunnerService:
                             "characters_needed": [],
                             "locations_needed": [],
                             "props_needed": [],
-                            "sound_requirements": ["Podcast main audio track"],
+                            "sound_requirements": [f"{production_type} main audio track"],
                             "vfx_requirements": []
                         }
                     }
@@ -860,7 +860,7 @@ class ShowrunnerService:
                     "agent": "critic",
                     "status": "active"
                 }
-                if production_type == "Podcast":
+                if production_type in ("Podcast", "Audio Story"):
                     critic_review = {"overall_rating": "N/A", "suggestions": []}
                     project_state.critic_review = critic_review
                     project_state.critic_notes = []
