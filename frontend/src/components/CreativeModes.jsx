@@ -186,7 +186,9 @@ export default function CreativeModes({ onSelectTemplate }) {
                 onClick={(e) => e.stopPropagation()}
                 className={`absolute z-50 text-left select-text pointer-events-auto flex flex-col justify-between shadow-[0_25px_50px_rgba(0,0,0,0.85)] ${
                   isMobile
-                    ? 'inset-0 w-full h-full bg-[#121212]/95 border border-accent/40 rounded-lg p-2.5 animate-fade-in'
+                    ? `top-0 h-full w-full bg-[#121212]/98 border border-accent/40 rounded-lg p-2.5 animate-fade-in ${
+                        idx % 2 === 0 ? 'left-full ml-2' : 'right-full mr-2'
+                      }`
                     : `top-0 h-full w-[140%] bg-[#141414] border border-accent/40 rounded-lg p-4 ${
                         idx <= 2 ? 'left-full ml-4 animate-popout-right' : 'right-full mr-4 animate-popout-left'
                       }`
