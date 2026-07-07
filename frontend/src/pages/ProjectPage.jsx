@@ -217,21 +217,17 @@ function StoryboardView({ storyboard, productionType, onProceed, loading }) {
         }
 
         return (
-          <div key={idx} className="scene-card flex gap-4">
-            <div className="flex shrink-0 flex-col items-center gap-2">
-              <div className="flex h-14 w-20 items-center justify-center rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06]">
-                <FiImage size={16} className="text-surface-600" />
-              </div>
-              <span className="text-[10px] font-semibold text-accent/60">#{String(sceneNum)}</span>
+          <div key={idx} className="scene-card flex gap-4 items-start">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[11px] font-bold font-mono">
+              {String(sceneNum).padStart(2, '0')}
             </div>
-            <div className="min-w-0 flex-1 space-y-2">
-              <h4 className="text-sm font-medium text-surface-200">{String(shotVal)}</h4>
-              <p className="text-[12px] leading-relaxed text-surface-400">{String(descVal)}</p>
-              <div className="flex flex-wrap gap-1.5">
-                <span className="badge-shot">{String(shotVal)}</span>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-medium text-surface-200">{String(shotVal)}</h4>
                 <span className="badge-mood">{String(moodVal)}</span>
               </div>
-              <p className="text-[11px] text-surface-500"><span className="text-surface-600">Env:</span> {String(envVal)}</p>
+              <p className="text-[12px] leading-relaxed text-surface-400">{String(descVal)}</p>
+              <p className="text-[10.5px] text-surface-500 font-mono">{String(envVal)}</p>
             </div>
           </div>
         );
