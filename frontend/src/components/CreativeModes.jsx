@@ -19,14 +19,24 @@ function VideoThumbnail({ src, isHovered }) {
   }, [isHovered]);
 
   return (
-    <video
-      ref={videoRef}
-      src={src}
-      muted
-      loop
-      playsInline
-      className="h-full w-full object-cover filter contrast-[1.05]"
-    />
+    <div className="relative w-full h-full select-none">
+      <video
+        ref={videoRef}
+        src={src}
+        muted
+        loop
+        playsInline
+        controlsList="nodownload"
+        disablePictureInPicture
+        className="h-full w-full object-cover filter contrast-[1.05] select-none"
+        onContextMenu={(e) => e.preventDefault()}
+      />
+      {/* Transparent Security Overlay */}
+      <div 
+        className="absolute inset-0 z-10 bg-transparent select-none" 
+        onContextMenu={(e) => e.preventDefault()}
+      />
+    </div>
   );
 }
 
@@ -41,7 +51,7 @@ function TemplateImage({ src, alt }) {
   }, [src]);
 
   return (
-    <div className="relative w-full h-full bg-[#111111] overflow-hidden">
+    <div className="relative w-full h-full bg-[#111111] overflow-hidden select-none">
       {!isLoaded && (
         <div className="absolute inset-0 bg-[#15151a] shimmer-effect" />
       )}
@@ -49,10 +59,17 @@ function TemplateImage({ src, alt }) {
         ref={imgRef}
         src={src}
         alt={alt}
+        draggable="false"
         onLoad={() => setIsLoaded(true)}
-        className={`h-full w-full object-cover filter contrast-[1.05] transition-opacity duration-300 ${
+        className={`h-full w-full object-cover filter contrast-[1.05] transition-opacity duration-300 select-none ${
           isLoaded ? 'opacity-100' : 'opacity-0'
         }`}
+        onContextMenu={(e) => e.preventDefault()}
+      />
+      {/* Transparent Security Overlay */}
+      <div 
+        className="absolute inset-0 z-10 bg-transparent select-none" 
+        onContextMenu={(e) => e.preventDefault()}
       />
     </div>
   );
@@ -61,6 +78,15 @@ function TemplateImage({ src, alt }) {
 export default function CreativeModes({ onSelectTemplate }) {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [zCard, setZCard] = useState(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleMouseEnter = (id) => {
     setHoveredCard(id);
@@ -111,13 +137,13 @@ export default function CreativeModes({ onSelectTemplate }) {
             onMouseLeave={handleMouseLeave}
             style={{
               zIndex: hoveredCard === tmpl.id ? 30 : (zCard === tmpl.id ? 10 : 1),
-              transform: isHov ? 'scale(1.35) translateY(-8px)' : 'scale(1.0) translateY(0px)',
+              transform: isHov ? (isMobile ? 'scale(1.05)' : 'scale(1.35) translateY(-8px)') : 'scale(1.0) translateY(0px)',
               transition: 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease',
               willChange: 'transform',
             }}
             className="group text-left flex flex-col h-[205px] w-full border border-white/10 relative rounded-lg bg-[#111111] hover:border-accent/60 shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.7)]"
           >
-            {/* Glossy top-shine reflection (removed gradient shine for flat style) */}
+            {/* Glossy top-shine reflection */}
             <div className="absolute inset-0 bg-white/[0.01] pointer-events-none z-20" />
 
             {/* Template Visual Header - Video thumbnail always matches the video */}
@@ -149,40 +175,44 @@ export default function CreativeModes({ onSelectTemplate }) {
               </p>
             </div>
 
-            {/* Popout Filmmaking Info Panel - Larger */}
+            {/* Popout Filmmaking Info Panel */}
             {isHov && tmpl.specs && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className={`absolute top-0 h-full w-[140%] bg-[#141414] border border-accent/40 rounded-lg p-4 z-50 text-left select-text pointer-events-auto flex flex-col justify-between shadow-[0_25px_50px_rgba(0,0,0,0.85)] ${
-                  idx <= 2 ? 'left-full ml-4 animate-popout-right' : 'right-full mr-4 animate-popout-left'
+                className={`absolute z-50 text-left select-text pointer-events-auto flex flex-col justify-between shadow-[0_25px_50px_rgba(0,0,0,0.85)] ${
+                  isMobile
+                    ? 'inset-0 w-full h-full bg-[#121212]/95 border border-accent/40 rounded-lg p-2.5 animate-fade-in'
+                    : `top-0 h-full w-[140%] bg-[#141414] border border-accent/40 rounded-lg p-4 ${
+                        idx <= 2 ? 'left-full ml-4 animate-popout-right' : 'right-full mr-4 animate-popout-left'
+                      }`
                 }`}
               >
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent block mb-2 border-b border-white/5 pb-2">
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-accent block mb-1 md:mb-2 border-b border-white/5 pb-1 md:pb-2 leading-none">
                     Filmmaking Profile
                   </span>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1 md:space-y-2">
                     <div>
-                      <span className="text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Lens Config</span>
-                      <span className="text-[11px] font-bold text-white block mt-1 leading-snug">{tmpl.specs.lenses}</span>
+                      <span className="text-[7px] md:text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Lens Config</span>
+                      <span className="text-[10px] md:text-[11px] font-bold text-white block mt-0.5 md:mt-1 leading-snug truncate">{tmpl.specs.lenses}</span>
                     </div>
                     <div>
-                      <span className="text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Lighting Scheme</span>
-                      <span className="text-[11px] font-bold text-white block mt-1 leading-snug">{tmpl.specs.lighting}</span>
+                      <span className="text-[7px] md:text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Lighting Scheme</span>
+                      <span className="text-[10px] md:text-[11px] font-bold text-white block mt-0.5 md:mt-1 leading-snug truncate">{tmpl.specs.lighting}</span>
                     </div>
                     <div>
-                      <span className="text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Color Profile</span>
-                      <span className="text-[11px] font-bold text-white block mt-1 leading-snug">{tmpl.specs.colorGrade}</span>
+                      <span className="text-[7px] md:text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Color Profile</span>
+                      <span className="text-[10px] md:text-[11px] font-bold text-white block mt-0.5 md:mt-1 leading-snug truncate">{tmpl.specs.colorGrade}</span>
                     </div>
                     <div>
-                      <span className="text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Choreography</span>
-                      <span className="text-[11px] font-bold text-white block mt-1 leading-snug">{tmpl.specs.movement}</span>
+                      <span className="text-[7px] md:text-[8px] font-extrabold uppercase text-surface-550 tracking-wider block leading-none">Choreography</span>
+                      <span className="text-[10px] md:text-[11px] font-bold text-white block mt-0.5 md:mt-1 leading-snug truncate">{tmpl.specs.movement}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-surface-400 font-mono leading-none">
+                <div className="pt-1 md:pt-2 border-t border-white/5 flex items-center justify-between text-[8px] md:text-[9px] font-bold uppercase tracking-wider text-surface-400 font-mono leading-none">
                   <span>{tmpl.productionType}</span>
                   <span className="text-accent">{tmpl.duration}</span>
                 </div>

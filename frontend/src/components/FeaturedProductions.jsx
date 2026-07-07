@@ -165,11 +165,18 @@ export default function FeaturedProductions() {
               <div className="absolute inset-0 bg-white/[0.01] pointer-events-none z-20" />
 
               {/* Landscape image with Hover Zoom */}
-              <div className="relative w-[38%] h-full overflow-hidden shrink-0">
+              <div className="relative w-[38%] h-full overflow-hidden shrink-0 select-none">
                 <img
                   src={item.image}
                   alt={item.title}
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.85] group-hover:brightness-[0.75] contrast-[1.05]"
+                  draggable="false"
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.85] group-hover:brightness-[0.75] contrast-[1.05] select-none"
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+                {/* Security Overlay (protects image from downloading/long press) */}
+                <div 
+                  className="absolute inset-0 z-15 bg-transparent select-none" 
+                  onContextMenu={(e) => e.preventDefault()}
                 />
                 {/* Gradient mask blending image into background */}
                 <div className={`absolute inset-0 z-10 pointer-events-none bg-gradient-to-r ${gradientClass}`} />
