@@ -277,12 +277,7 @@ export default function Dashboard() {
             >
               Get Started
             </button>
-          ) : (
-            <div className="flex items-center gap-2 text-[9px] font-extrabold tracking-widest text-surface-400 uppercase select-none">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Workspace Active</span>
-            </div>
-          )}
+          ) : null}
         </header>
 
         {/* Studio Workspace Canvas */}
