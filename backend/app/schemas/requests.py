@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 
 class FilePayload(BaseModel):
@@ -7,7 +7,7 @@ class FilePayload(BaseModel):
     content: str  # text for text/md, base64 for pdf/images
 
 class GenerateRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., max_length=500)
     mode: Optional[str] = "fast"
     production_type: Optional[str] = "Auto Detect"
     files: Optional[List[FilePayload]] = []

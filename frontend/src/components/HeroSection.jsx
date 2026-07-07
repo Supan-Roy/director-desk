@@ -788,6 +788,11 @@ export default function HeroSection({
     setErrorMsg('');
     setToastMsg('');
 
+    if (prompt.length > 500) {
+      setToastMsg("Prompt is too long (maximum 500 characters).");
+      return;
+    }
+
     if (isGibberishPrompt(prompt)) {
       setToastMsg("Please enter a valid word or description to initiate production.");
       return;
@@ -1016,6 +1021,7 @@ export default function HeroSection({
             {/* Prompt text field */}
             <textarea
               value={prompt}
+              maxLength={500}
               onChange={(e) => {
                 setPrompt(e.target.value);
                 if (toastMsg) {
@@ -1217,9 +1223,20 @@ export default function HeroSection({
             )}
 
             {/* Action buttons wrapper */}
-            <div className={`flex items-center gap-2 shrink-0 ${
+            <div className={`flex items-center gap-3 shrink-0 ${
               isMobile && hasProject ? 'w-full justify-between mt-1' : 'ml-auto'
             }`}>
+              {prompt.length > 0 && (
+                <span className={`text-[10px] font-mono select-none font-bold mr-1 ${
+                  prompt.length > 450 
+                    ? 'text-red-500' 
+                    : prompt.length > 350 
+                      ? 'text-amber-500' 
+                      : 'text-surface-500'
+                }`}>
+                  {prompt.length} / 500
+                </span>
+              )}
               {hasProject && isMobile && (
                 <button
                   type="button"

@@ -20,6 +20,9 @@ def check_prompt_safety(prompt: str) -> tuple[bool, str]:
     if not prompt:
         return True, ""
         
+    if len(prompt) > 500:
+        return False, "Prompt is too long (maximum 500 characters)."
+        
     prompt_lower = prompt.lower()
     
     # 1. ALWAYS BLOCKED keywords (regardless of context)
