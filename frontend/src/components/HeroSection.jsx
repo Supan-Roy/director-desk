@@ -788,8 +788,8 @@ export default function HeroSection({
     setErrorMsg('');
     setToastMsg('');
 
-    if (prompt.length > 500) {
-      setToastMsg("Prompt is too long (maximum 500 characters).");
+    if (prompt.length > 2000) {
+      setToastMsg("Prompt is too long (maximum 2000 characters).");
       return;
     }
 
@@ -1021,7 +1021,7 @@ export default function HeroSection({
             {/* Prompt text field */}
             <textarea
               value={prompt}
-              maxLength={500}
+              maxLength={2000}
               onChange={(e) => {
                 setPrompt(e.target.value);
                 if (toastMsg) {
@@ -1228,13 +1228,13 @@ export default function HeroSection({
             }`}>
               {prompt.length > 0 && (
                 <span className={`text-[10px] font-mono select-none font-bold mr-1 ${
-                  prompt.length > 450 
+                  prompt.length > 1900 
                     ? 'text-red-500' 
-                    : prompt.length > 350 
+                    : prompt.length > 1500 
                       ? 'text-amber-500' 
                       : 'text-surface-500'
                 }`}>
-                  {prompt.length} / 500
+                  {prompt.length} / 2000
                 </span>
               )}
               {hasProject && isMobile && (

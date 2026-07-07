@@ -7,7 +7,7 @@ class FilePayload(BaseModel):
     content: str  # text for text/md, base64 for pdf/images
 
 class GenerateRequest(BaseModel):
-    prompt: str = Field(..., max_length=500)
+    prompt: str = Field(..., max_length=2000)
     mode: Optional[str] = "fast"
     production_type: Optional[str] = "Auto Detect"
     files: Optional[List[FilePayload]] = []

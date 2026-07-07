@@ -21,7 +21,7 @@ def check_prompt_safety(prompt: str) -> tuple[bool, str]:
         return True, ""
         
     if len(prompt) > 500:
-        return False, "Prompt is too long (maximum 500 characters)."
+        return False, "Prompt is too long (maximum 2000 characters)."
         
     prompt_lower = prompt.lower()
     
