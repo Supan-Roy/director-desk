@@ -257,7 +257,7 @@ function PlanView({ plan, onProceed, loading }) {
       {Array.isArray(plan.phases) && plan.phases.map((phase) => {
         if (!phase) return null;
         return (
-          <div key={phase.name} className="glass-panel rounded-xl p-4">
+          <div key={phase.name} className="card-premium p-4">
             <div className="mb-3 flex items-center justify-between">
               <h5 className="text-[13px] font-medium text-surface-200">{phase.name}</h5>
               <span className={`text-[11px] ${phase.status === 'complete' ? 'text-emerald-400/80' : 'text-surface-600'}`}>
@@ -389,9 +389,7 @@ function SceneBreakdownView({ breakdown, storyboard, productionType, onProceed, 
   return (
     <div className="space-y-8 text-left select-text">
       {/* Overview Block */}
-      <div className={`rounded-xl border p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
-        d ? 'bg-neutral-50/50 border-neutral-200' : 'bg-[#111111] border-white/[0.04]'
-      }`}>
+      <div className="card-premium p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h4 className={`text-xs font-bold uppercase tracking-[0.15em] ${d ? 'text-neutral-500' : 'text-surface-400'}`}>
             Scene Specs Overview
@@ -414,7 +412,7 @@ function SceneBreakdownView({ breakdown, storyboard, productionType, onProceed, 
 
       {/* Warnings Block */}
       {Array.isArray(displayBreakdown.consistency_warnings) && displayBreakdown.consistency_warnings.length > 0 && (
-        <div className="rounded-xl border border-amber-500/10 bg-amber-500/[0.02] p-4">
+        <div className="card-premium p-4 border border-amber-500/10">
           <div className="flex items-center gap-2 text-amber-500 text-xs font-bold uppercase tracking-wider mb-2">
             <FiAlertCircle size={14} />
             <span>Consistency Audit Warnings</span>
@@ -439,16 +437,10 @@ function SceneBreakdownView({ breakdown, storyboard, productionType, onProceed, 
           return (
             <div 
               key={idx} 
-              className={`rounded-xl border transition-all duration-300 animate-fade-in ${
-                d 
-                  ? 'bg-white border-neutral-200 shadow-sm hover:border-neutral-300' 
-                  : 'bg-[#0B0B0B] border-white/[0.05] hover:border-white/[0.08]'
-              }`}
+              className="card-premium"
             >
               {/* Scene Header */}
-              <div className={`px-5 py-4 border-b flex flex-wrap justify-between items-center gap-3 ${
-                d ? 'border-neutral-100 bg-neutral-50/30' : 'border-white/[0.04] bg-[#111111]/30'
-              }`}>
+              <div className="card-premium-header px-5 py-4 flex flex-wrap justify-between items-center gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-bold font-mono text-accent">
                     {scene.scene_number || `SCENE ${idx + 1}`}
@@ -597,9 +589,7 @@ function SceneBreakdownView({ breakdown, storyboard, productionType, onProceed, 
               </div>
 
               {/* Prompt Generation Section */}
-              <div className={`px-5 py-4 border-t flex flex-col gap-3 rounded-b-xl ${
-                d ? 'border-neutral-100 bg-neutral-50/20' : 'border-white/[0.04] bg-white/[0.005]'
-              }`}>
+              <div className="card-premium-section px-5 py-4 flex flex-col gap-3">
                 {/* AI Visual Prompt */}
                 <div>
                   <div className="flex items-center justify-between gap-3 mb-1.5">
@@ -655,9 +645,7 @@ function SceneBreakdownView({ breakdown, storyboard, productionType, onProceed, 
       </div>
        {/* Consolidated Asset Requirements */}
       {displayBreakdown.asset_requirements && (
-        <div className={`rounded-xl border p-5 ${
-          d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-        }`}>
+        <div className="card-premium p-5">
           <div className="flex items-center gap-2.5 border-b pb-3 mb-4 border-white/[0.04]">
             <span className="text-base">📦</span>
             <div>
@@ -960,7 +948,7 @@ function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGo
   return (
     <div className="space-y-6 select-text">
       {/* Score Card */}
-      <div className="glass-panel rounded-2xl p-5 border border-white/[0.04] bg-surface-950/20 flex items-center justify-between gap-6 flex-wrap">
+      <div className="card-premium p-5 flex items-center justify-between gap-6 flex-wrap">
         <div className="space-y-1">
           <h4 className="text-xs font-bold uppercase tracking-wider text-surface-200">Review Report Summary</h4>
           <p className="text-[11px] text-surface-500">Actionable assessment of structure, pacing, clarity, and visual alignment.</p>
@@ -976,7 +964,7 @@ function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGo
       {/* Review Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Strengths */}
-        <div className="glass-panel rounded-xl p-5 border border-emerald-500/10 bg-emerald-500/[0.01]">
+        <div className="card-premium p-5 border border-emerald-500/10">
           <div className="flex items-center gap-2 mb-3 text-emerald-400">
             <FiCheckSquare size={13} />
             <h5 className="text-[10px] font-bold uppercase tracking-wider">Strengths</h5>
@@ -995,7 +983,7 @@ function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGo
         </div>
 
         {/* Weaknesses */}
-        <div className="glass-panel rounded-xl p-5 border border-rose-500/10 bg-rose-500/[0.01]">
+        <div className="card-premium p-5 border border-rose-500/10">
           <div className="flex items-center gap-2 mb-3 text-rose-400">
             <FiAlertCircle size={13} />
             <h5 className="text-[10px] font-bold uppercase tracking-wider">Weaknesses</h5>
@@ -1015,7 +1003,7 @@ function ReviewView({ criticReview, approved, onApprove, onRefine, loading, onGo
       </div>
 
       {/* Suggestions */}
-      <div className="glass-panel rounded-xl p-5 border border-white/[0.03] bg-surface-950/10">
+      <div className="card-premium p-5">
         <div className="flex items-center gap-2 mb-3 text-accent">
           <FiTrendingUp size={13} />
           <h5 className="text-[10px] font-bold uppercase tracking-wider">Refinement Suggestions</h5>
@@ -1416,7 +1404,7 @@ export default function ProjectPage() {
                 </div>
 
                 {/* Tab content — always visible; AgentActivityPanel is shown above during streaming */}
-                <div className="glass-panel rounded-xl p-6 bg-surface-950/45 border border-white/[0.03]">
+                <div className="card-premium p-6">
                   {contextLoading && (
                     <div className="space-y-3 mb-6">
                       <div className="text-center space-y-1 pb-3 border-b border-white/[0.04]">

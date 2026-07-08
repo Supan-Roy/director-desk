@@ -47,7 +47,7 @@ function ScriptTab({ script }) {
 
   if (!script && !isEditing) {
     return (
-      <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
+      <div className="flex min-h-[280px] items-center justify-center card-premium p-6">
         <p className="text-sm text-surface-600">Script will appear here after generation.</p>
       </div>
     );
@@ -158,7 +158,7 @@ function ScriptTab({ script }) {
   };
 
   return (
-    <div className="glass-panel rounded-xl p-8 bg-surface-950/45 border border-white/[0.03] screenplay-prose flex flex-col gap-4">
+    <div className="card-premium p-6 screenplay-prose flex flex-col gap-4">
       {/* Version and Edit/Copy Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.04] pb-3 mb-2">
         {hasMultipleVersions ? (
@@ -246,7 +246,7 @@ function StoryboardTab({ storyboard, productionType }) {
   const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
   if (!Array.isArray(storyboard) || storyboard.length === 0) {
     return (
-      <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
+      <div className="flex min-h-[280px] items-center justify-center card-premium p-6">
         <p className="text-sm text-surface-600">
           {isAudio 
             ? "Not applicable for audio-only productions (Podcasts, Audio Stories)." 
@@ -409,9 +409,7 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
   return (
     <div className="space-y-8 text-left select-text">
       {/* Overview Block */}
-      <div className={`rounded-xl border p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
-        d ? 'bg-neutral-50/50 border-neutral-200' : 'bg-[#111111] border-white/[0.04]'
-      }`}>
+      <div className="card-premium p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h4 className={`text-xs font-bold uppercase tracking-[0.15em] ${d ? 'text-neutral-500' : 'text-surface-400'}`}>
             Scene Specs Overview
@@ -434,7 +432,7 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
 
       {/* Warnings Block */}
       {Array.isArray(displayBreakdown.consistency_warnings) && displayBreakdown.consistency_warnings.length > 0 && (
-        <div className="rounded-xl border border-amber-500/10 bg-amber-500/[0.02] p-4">
+        <div className="card-premium p-4 border border-amber-500/10">
           <div className="flex items-center gap-2 text-amber-500 text-xs font-bold uppercase tracking-wider mb-2">
             <FiAlertCircle size={14} />
             <span>Consistency Audit Warnings</span>
@@ -460,16 +458,10 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
           return (
             <div 
               key={idx} 
-              className={`rounded-xl border transition-all duration-300 animate-fade-in ${
-                d 
-                  ? 'bg-white border-neutral-200 shadow-sm hover:border-neutral-300' 
-                  : 'bg-[#0B0B0B] border-white/[0.05] hover:border-white/[0.08]'
-              }`}
+              className="card-premium"
             >
               {/* Scene Header */}
-              <div className={`px-5 py-4 border-b flex flex-wrap justify-between items-center gap-3 ${
-                d ? 'border-neutral-100 bg-neutral-50/30' : 'border-white/[0.04] bg-[#111111]/30'
-              }`}>
+              <div className="card-premium-header px-5 py-4 flex flex-wrap justify-between items-center gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-bold font-mono text-accent">
                     {scene.scene_number || `SCENE ${idx + 1}`}
@@ -618,9 +610,7 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
               </div>
 
               {/* Prompt Generation Section */}
-              <div className={`px-5 py-4 border-t flex flex-col gap-3 rounded-b-xl ${
-                d ? 'border-neutral-100 bg-neutral-50/20' : 'border-white/[0.04] bg-white/[0.005]'
-              }`}>
+              <div className="card-premium-section px-5 py-4 flex flex-col gap-3">
                 {/* AI Visual Prompt */}
                 <div>
                   <div className="flex items-center justify-between gap-3 mb-1.5">
@@ -677,9 +667,7 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
 
       {/* Consolidated Asset Requirements */}
       {displayBreakdown.asset_requirements && (
-        <div className={`rounded-xl border p-5 ${
-          d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-        }`}>
+        <div className="card-premium p-5">
           <div className="flex items-center gap-2.5 border-b pb-3 mb-4 border-white/[0.04]">
             <span className="text-base">📦</span>
             <div>
@@ -782,7 +770,7 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
 function ProductionPlanTab({ plan }) {
   if (!plan) {
     return (
-      <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
+      <div className="flex min-h-[280px] items-center justify-center card-premium p-6">
         <p className="text-sm text-surface-600">Production plan will appear here.</p>
       </div>
     );
@@ -792,7 +780,7 @@ function ProductionPlanTab({ plan }) {
     <div className="space-y-4">
       <h4 className="text-sm font-medium text-surface-200">{plan.title}</h4>
       {Array.isArray(plan.phases) && plan.phases.map((phase) => (
-        <div key={phase.name} className="glass-panel rounded-xl p-4">
+        <div key={phase.name} className="card-premium p-4">
           <div className="mb-3 flex items-center justify-between">
             <h5 className="text-[13px] font-medium text-surface-200">{phase.name}</h5>
             <span
@@ -828,7 +816,7 @@ function ProductionPlanTab({ plan }) {
 function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
   if (!criticReview) {
     return (
-      <div className="flex min-h-[280px] items-center justify-center glass-panel rounded-xl">
+      <div className="flex min-h-[280px] items-center justify-center card-premium p-6">
         <p className="text-sm text-surface-600">Review will appear after the Critic Agent completes its review.</p>
       </div>
     );
@@ -839,7 +827,7 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
   return (
     <div className="space-y-6 select-text">
       {/* Score and Header Card */}
-      <div className="glass-panel rounded-2xl p-6 bg-surface-950/45 border border-white/[0.04] flex items-center justify-between gap-6 flex-wrap">
+      <div className="card-premium p-6 flex items-center justify-between gap-6 flex-wrap">
         <div className="space-y-1">
           <h4 className="text-sm font-semibold tracking-wide text-white">Quality Review Report</h4>
           <p className="text-[11.5px] text-surface-400">Actionable assessment focused on structure, pacing, clarity, and engagement.</p>
@@ -855,7 +843,7 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
       {/* Review Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Strengths */}
-        <div className="glass-panel rounded-xl p-5 border border-emerald-500/10 bg-emerald-500/[0.02]">
+        <div className="card-premium p-5 border border-emerald-500/10">
           <div className="flex items-center gap-2 mb-3.5 text-emerald-400">
             <FiCheckSquare size={14} />
             <h5 className="text-[11px] font-bold uppercase tracking-wider">Strengths</h5>
@@ -874,7 +862,7 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
         </div>
 
         {/* Weaknesses */}
-        <div className="glass-panel rounded-xl p-5 border border-rose-500/10 bg-rose-500/[0.02]">
+        <div className="card-premium p-5 border border-rose-500/10">
           <div className="flex items-center gap-2 mb-3.5 text-rose-400">
             <FiAlertCircle size={14} />
             <h5 className="text-[11px] font-bold uppercase tracking-wider">Weaknesses</h5>
@@ -894,7 +882,7 @@ function ReviewTab({ criticReview, approved, onApprove, onRefine, loading }) {
       </div>
 
       {/* Suggestions */}
-      <div className="glass-panel rounded-xl p-5 border border-white/[0.03] bg-surface-950/20">
+      <div className="card-premium p-5">
         <div className="flex items-center gap-2 mb-3.5 text-accent">
           <FiTrendingUp size={14} />
           <h5 className="text-[11px] font-bold uppercase tracking-wider">Refinement Suggestions</h5>

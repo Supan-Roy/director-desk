@@ -94,6 +94,51 @@
     -webkit-backdrop-filter: none !important;
   }
 
+  /* ── Premium weighted cards for production output ── */
+  .card-premium {
+    position: relative;
+    background: linear-gradient(135deg, #0E0E10 0%, #0A0A0C 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1rem;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+  .card-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 40%, transparent 60%, rgba(255, 255, 255, 0.02) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .card-premium:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.45),
+      0 8px 24px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .card-premium-header {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1rem 1.25rem;
+  }
+
+  .card-premium-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
   /* ── Matte Buttons ── */
   .btn-primary {
     display: inline-flex;
@@ -284,15 +329,36 @@
 
   /* ── Scene cards ── */
   .scene-card {
-    background: rgba(255, 255, 255, 0.015);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 0.75rem;
-    padding: 1rem;
+    position: relative;
+    background: linear-gradient(135deg, #0E0E10 0%, #0A0A0C 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.85rem;
+    padding: 1.125rem;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+  .scene-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 40%, transparent 60%, rgba(255, 255, 255, 0.02) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
   }
   .scene-card:hover {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.45),
+      0 8px 24px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   /* ── Shot badges ── */
@@ -728,6 +794,32 @@
   background: #FFFFFF !important;
   border-color: #E5E7EB !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+}
+
+[data-theme="day"] .card-premium {
+  background: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02) !important;
+}
+[data-theme="day"] .card-premium::before {
+  display: none !important;
+}
+[data-theme="day"] .card-premium:hover {
+  border-color: #D1D5DB !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.03) !important;
+}
+
+[data-theme="day"] .scene-card {
+  background: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02) !important;
+}
+[data-theme="day"] .scene-card::before {
+  display: none !important;
+}
+[data-theme="day"] .scene-card:hover {
+  border-color: #D1D5DB !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.03) !important;
 }
 
 /* Header border */
