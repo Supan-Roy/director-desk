@@ -1281,7 +1281,7 @@ export default function HeroSection({
               <button
                 onClick={handleSubmit}
                 disabled={!prompt.trim() || loading}
-                className={`flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none cursor-pointer ${
+                className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2.5 md:px-6 md:py-3 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none cursor-pointer ${
                   !prompt.trim() || loading
                     ? isDayMode
                       ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
