@@ -8,10 +8,12 @@ import PrivacyPage from './pages/PrivacyPage'
 import AgentsPage from './pages/AgentsPage'
 import TemplatesPage from './pages/TemplatesPage'
 import AssetsPage from './pages/AssetsPage'
+import QuotaOverlay from './components/QuotaOverlay'
 
 function App() {
   return (
     <BrowserRouter>
+      <QuotaOverlay />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects/:id" element={<ProjectPage />} />

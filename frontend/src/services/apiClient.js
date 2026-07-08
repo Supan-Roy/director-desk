@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { triggerQuotaOverlay } from '../components/QuotaOverlay'
 
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
@@ -10,13 +11,29 @@ export const apiClient = axios.create({
   },
 })
 
-// Extract detailed backend error messages for toast presentation
+// Extract detailed backend error messages and detect quota exhaustion
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.data && error.response.data.detail) {
       error.message = error.response.data.detail;
     }
+
+    // Detect Qwen API quota exhaustion from backend error messages
+    const msg = (error.message || '').toLowerCase();
+    const status = error.response?.status;
+    if (
+      status === 402 ||
+      status === 429 ||
+      msg.includes('quota') ||
+      msg.includes('insufficient') ||
+      msg.includes('credit') ||
+      msg.includes('rate limit') ||
+      msg.includes('too many requests')
+    ) {
+      triggerQuotaOverlay();
+    }
+
     return Promise.reject(error);
   }
 )
