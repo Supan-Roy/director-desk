@@ -770,10 +770,12 @@ export default function SettingsPage() {
                       <span className={`font-bold ${d ? 'text-gray-900' : 'text-white'}`}>#089-CD</span>
                     </div>
                     <div className="flex justify-between border-b border-white/[0.03] pb-1.5">
-                      <span>// COMPILATION_ENVIRONMENT</span>
-                      <span className={`font-bold capitalize ${d ? 'text-gray-900' : 'text-white'}`}>
-                        {import.meta.env.MODE || 'development'}
-                      </span>
+                      <span>// DEPLOYMENT</span>
+                      <span className={`font-bold ${d ? 'text-gray-900' : 'text-white'}`}>Alibaba Cloud</span>
+                    </div>
+                    <div className="flex justify-between border-b border-white/[0.03] pb-1.5">
+                      <span>// AI ENGINE</span>
+                      <span className={`font-bold ${d ? 'text-gray-900' : 'text-white'}`}>Qwen (Tongyi Qianwen)</span>
                     </div>
                     <div className="flex justify-between border-b border-white/[0.03] pb-1.5">
                       <span>// RENDER_BACKEND</span>
@@ -788,9 +790,8 @@ export default function SettingsPage() {
                   {/* External Links */}
                   <div className="space-y-2 pt-1 text-left">
                     <p className="text-[9px] font-bold uppercase tracking-wider text-surface-500 font-mono">// Interfaces</p>
-                    <div className="grid grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-2 gap-2.5">
                       {[
-                        { label: 'Documentation', href: '/docs', icon: FiGlobe },
                         { label: 'GitHub Source', href: 'https://github.com/Supan-Roy/director-desk', icon: FiExternalLink },
                         { label: 'Privacy Policy', href: '/privacy', icon: FiGlobe }
                       ].map((link, idx) => {
