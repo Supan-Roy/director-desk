@@ -170,6 +170,14 @@ def list_projects(db: Session = Depends(get_db), current_user: Optional[User] = 
     return project_service.list_projects(db, user_id=user_id)
 
 
+@router.get("/projects/export", response_model=List[ProjectDetail])
+def export_projects(db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+    """Writely export all saved projects with scripts, storyboards, plans for current user."""
+    from app.db.repository import project_repository
+    projects = project_repository.get_all(db, user_id=current_user.id)
+    return [ProjectDetail.model_validate(p) for p in projects]
+
+
 @router.get("/projects/{project_id}", response_model=ProjectDetail)
 def get_project(project_id: int, db: Session = Depends(get_db)):
     """Return the full content of a single saved project."""
@@ -293,14 +301,6 @@ def refine_raw_script(payload: dict):
     from app.agents.editor_agent import editor_agent
     refined_script = editor_agent.refine_script(script, critic_review)
     return {"refined_script": refined_script}
-
-
-@router.get("/projects/export", response_model=List[ProjectDetail])
-def export_projects(db: Session = Depends(get_db), current_user: User = Depends(require_user)):
-    """Writely export all saved projects with scripts, storyboards, plans for current user."""
-    from app.db.repository import project_repository
-    projects = project_repository.get_all(db, user_id=current_user.id)
-    return [ProjectDetail.model_validate(p) for p in projects]
 
 
 @router.delete("/projects", status_code=204)
