@@ -91,17 +91,29 @@ export default function CreativeModes({ onSelectTemplate }) {
   }, []);
 
   const handleMouseEnter = (id) => {
+    if (isMobile) return;
     setHoveredCard(id);
     setZCard(id);
   };
 
   const handleMouseLeave = () => {
+    if (isMobile) return;
     setHoveredCard(null);
     // Keep z elevated briefly so the shrink animation doesn't clip under siblings
     setTimeout(() => setZCard(null), 350);
   };
 
   const handleSelectTemplate = (tmpl) => {
+    if (isMobile) {
+      // Toggle: first tap opens the popout, second tap closes it
+      if (hoveredCard === tmpl.id) {
+        setHoveredCard(null);
+        return;
+      }
+      setHoveredCard(tmpl.id);
+      setZCard(tmpl.id);
+      return;
+    }
     // Pick a random prompt from the pool each time
     const randomPrompt = tmpl.prompts[Math.floor(Math.random() * tmpl.prompts.length)];
     if (onSelectTemplate) {
