@@ -1231,11 +1231,11 @@ export default function HeroSection({
             )}
 
             {/* Action buttons wrapper */}
-            <div className={`flex items-center gap-3 shrink-0 ${
+            <div className={`flex items-center gap-2 md:gap-3 shrink-0 ${
               isMobile && hasProject ? 'w-full justify-between mt-1' : 'ml-auto'
             }`}>
               {prompt.length > 0 && (
-                <span className={`text-[10px] font-mono select-none font-bold mr-1 ${
+                <span className={`text-[10px] font-mono select-none font-bold md:mr-1 ${
                   prompt.length > 1900 
                     ? 'text-red-500' 
                     : prompt.length > 1500 
@@ -1277,7 +1277,7 @@ export default function HeroSection({
                 </button>
               )}
 
-              <div className={`inline-flex relative ${prompt.trim() && !loading ? 'animate-border-run' : ''}`}>
+              <div className={`inline-flex relative ${prompt.trim() && !loading ? 'animate-border-run' : ''} -ml-1 md:ml-0`}>
               <button
                 onClick={handleSubmit}
                 disabled={!prompt.trim() || loading}
