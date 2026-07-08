@@ -985,9 +985,7 @@ export default function Sidebar() {
                 <p className={`truncate text-[9.5px] font-extrabold mt-0.5 leading-none ${d ? 'text-black' : 'text-white'}`}>
                    {profile.plan || 'Free Plan'}
                 </p>
-                {profile.email && (
-                  <p className="truncate text-[9px] text-surface-500 mt-1 leading-none">{profile.email}</p>
-                )}
+
               </div>
             )}
           </div>

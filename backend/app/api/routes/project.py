@@ -171,18 +171,11 @@ def list_projects(db: Session = Depends(get_db), current_user: Optional[User] = 
 
 
 @router.get("/projects/{project_id}", response_model=ProjectDetail)
-def get_project(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
-    """Return the full content of a single saved project, checking ownership."""
+def get_project(project_id: int, db: Session = Depends(get_db)):
+    """Return the full content of a single saved project."""
     project_model = project_service.get_project_model(db, project_id)
     if not project_model:
         raise HTTPException(status_code=404, detail="Project not found.")
-
-    if project_model.user_id is not None:
-        if not current_user or current_user.id != project_model.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to access this project."
-            )
 
     return project_service.get_project(db, project_id)
 
@@ -337,9 +330,8 @@ class SelectVersionRequest(BaseModel):
 
 
 @router.get("/projects/{project_id}/characters")
-def get_project_characters(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
-    """Return all generated character assets for a given project after checking ownership."""
-    _verify_project_ownership(db, project_id, current_user)
+def get_project_characters(project_id: int, db: Session = Depends(get_db)):
+    """Return all generated character assets for a given project."""
     from app.db.models import CharacterAsset
     assets = db.query(CharacterAsset).filter(CharacterAsset.project_id == project_id).all()
     return [
@@ -383,9 +375,8 @@ class SelectEnvironmentVersionRequest(BaseModel):
 
 
 @router.get("/projects/{project_id}/environments")
-def get_project_environments(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
-    """Return all generated environment assets for a given project after checking ownership."""
-    _verify_project_ownership(db, project_id, current_user)
+def get_project_environments(project_id: int, db: Session = Depends(get_db)):
+    """Return all generated environment assets for a given project."""
     from app.db.models import EnvironmentAsset
     assets = db.query(EnvironmentAsset).filter(EnvironmentAsset.project_id == project_id).all()
     return [
@@ -429,9 +420,9 @@ class SelectVoiceVersionRequest(BaseModel):
 
 
 @router.get("/projects/{project_id}/voices")
-def get_project_voices(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
-    """Return all generated voice assets for a given project after checking ownership."""
-    _verify_project_ownership(db, project_id, current_user)
+def get_project_voices(project_id: int, db: Session = Depends(get_db)):
+    """Return all generated voice assets for a given project."""
+
     from app.db.models import VoiceAsset
     assets = db.query(VoiceAsset).filter(VoiceAsset.project_id == project_id).all()
     return [
