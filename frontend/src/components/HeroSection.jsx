@@ -1269,6 +1269,7 @@ export default function HeroSection({
                 </button>
               )}
 
+              <div className={`inline-flex ${prompt.trim() && !loading ? 'animate-border-run' : ''}`}>
               <button
                 onClick={handleSubmit}
                 disabled={!prompt.trim() || loading}
@@ -1298,6 +1299,7 @@ export default function HeroSection({
                   </>
                 )}
               </button>
+              </div>
             </div>
           </div>
         </div>

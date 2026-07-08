@@ -1084,6 +1084,43 @@ aside nav button.bg-accent\/10 .blur-sm {
   color: #ffffff;
 }
 
+/* ── Running gradient border for Initiate Production button ── */
+@keyframes border-run {
+  0% { --border-angle: 0deg; }
+  100% { --border-angle: 360deg; }
+}
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.animate-border-run {
+  --border-angle: 0deg;
+  position: relative;
+  border-radius: 0.5rem;
+}
+.animate-border-run::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--border-angle),
+    #22c55e 0deg,
+    #eab308 120deg,
+    #3b82f6 240deg,
+    #22c55e 360deg
+  );
+  z-index: -1;
+  animation: border-run 1s linear infinite;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  padding: 1.5px;
+}
+
 /* Generate button highlighting animation */
 @keyframes highlight-glow-pulse {
   0% {
