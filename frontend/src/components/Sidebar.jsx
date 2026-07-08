@@ -668,7 +668,10 @@ export default function Sidebar() {
       <div className={`flex shrink-0 select-none relative group transition-all duration-300 ${
         isCollapsed ? 'flex-col items-center gap-3 px-3 py-4' : 'flex-row items-center justify-between px-5 py-4 w-full'
       }`}>
-        <div className="flex items-center gap-3">
+        <button
+          onClick={() => { reset(); navigate('/'); setIsMobileOpen(false); }}
+          className="flex items-center gap-3 text-left cursor-pointer"
+        >
           <img
             src="/logo.svg"
             alt="Director Desk Logo"
@@ -718,7 +721,7 @@ export default function Sidebar() {
               </span>
             </div>
           )}
-        </div>
+        </button>
 
         {/* Mobile Close Button */}
         <button
@@ -772,6 +775,7 @@ export default function Sidebar() {
                 key={item.label}
                 onClick={() => {
                   if (item.path) {
+                    if (item.path === '/' && hasProject) reset();
                     navigate(item.path);
                     setIsMobileOpen(false);
                   }
