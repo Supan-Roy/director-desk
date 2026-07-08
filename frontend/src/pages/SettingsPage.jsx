@@ -154,8 +154,14 @@ export default function SettingsPage() {
   const handleExportData = async () => {
     try {
       setExporting(true)
-      const res = await fetch(`${apiBaseUrl}/api/projects/export`)
-      if (!res.ok) throw new Error("Failed to fetch projects data")
+      const res = await fetch(`${apiBaseUrl}/api/projects/export`, {
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
+      })
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(errText || `Export failed (${res.status})`);
+      }
       const data = await res.json()
       
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
