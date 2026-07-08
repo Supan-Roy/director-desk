@@ -84,7 +84,30 @@ def _run_migrations(engine) -> None:
                 logger.warning(f"Migration skipped for {table}.{col}: {exc}")
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+openapi_tags = [
+    {"name": "health", "description": "Server health check endpoints."},
+    {"name": "script", "description": "Read and update the current working script."},
+    {"name": "storyboard", "description": "Read the current storyboard data."},
+    {"name": "scene_breakdown", "description": "Read the current scene breakdown (per-scene technical specs)."},
+    {"name": "planning", "description": "Read the current production plan."},
+    {"name": "project", "description": "Create, read, update, delete, export, and list saved projects."},
+    {"name": "Showrunner", "description": "Generate stories — synchronous or streaming — and resume interrupted generations."},
+    {"name": "agents", "description": "List available agents and chat with them for modifications."},
+    {"name": "assets", "description": "Browse global generated assets (characters, environments, voices, videos)."},
+    {"name": "editor", "description": "Upload media files, export videos, and check export status."},
+    {"name": "rendering", "description": "List, approve, and delete scene video versions."},
+    {"name": "auth", "description": "User authentication — email/password login, registration, OTP verification, Google OAuth, logout, and session."},
+    {"name": "settings_auth", "description": "Account deletion request and confirmation (OTP-verified)."},
+    {"name": "jobs", "description": "Background job management for asset generation and scene video rendering."},
+]
+
+app = FastAPI(
+    title="Director Desk API",
+    description="AI-powered film production studio API. Orchestrates the entire creative pipeline — from screenwriting and storyboarding to asset generation, scene video rendering, and final video export.\n\n---\n\n### Key Capabilities\n\n- **Story Generation** — Synchronous and streaming generation with Writer, Storyboard, Planner, and Critic agents\n- **Scene Breakdown** — Per-scene technical specs optimized for AI video models (Wan, Veo, HappyHorse, Luma)\n- **Asset Generation** — Character portraits, environment references, voice profiles with version management\n- **Scene Videos** — Generate, approve, version, and delete per-scene AI videos\n- **Video Editor** — Multi-track video assembly with FFmpeg export (subtitles, VFX, filters, audio sync)\n- **User Accounts** — Email/password auth with OTP verification, Google OAuth, profile management\n- **Projects** — Full CRUD with save, archive, pin, export backup as JSON\n",
+    version="1.0.0",
+    lifespan=lifespan,
+    openapi_tags=openapi_tags,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -112,4 +135,5 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def root():
+    """Root health check — returns a cinematic greeting."""
     return {"message": "Lights, Camera, Action!"}

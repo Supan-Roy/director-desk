@@ -30,6 +30,7 @@ router = APIRouter(tags=["project"])
 
 @router.get("/project/status")
 def get_project_status():
+    """Return the current in-memory project state — agents, script, storyboard, plan, and review."""
     agents = [agent.to_dict() for agent in project_state.agents]
     return {
         "id": project_state.id,
@@ -49,6 +50,7 @@ def get_project_status():
 
 @router.post("/project/reset")
 def reset_project():
+    """Reset the in-memory project state to default (clear agents, script, storyboard)."""
     project_state.reset()
     return {"message": "Project reset"}
 
@@ -305,7 +307,7 @@ def refine_raw_script(payload: dict):
 
 @router.delete("/projects", status_code=204)
 def delete_all_projects(db: Session = Depends(get_db), current_user: User = Depends(require_user)):
-    """Permanently delete all saved projects belonging to current user and reset workspace."""
+    """Permanently delete all saved projects belonging to current user and reset in-memory workspace."""
     from app.db.models import Project
     db.query(Project).filter(Project.user_id == current_user.id).delete()
     db.commit()

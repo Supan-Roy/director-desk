@@ -12,7 +12,7 @@ from app.utils.security import RateLimiter
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(tags=["jobs"])
 
 QUEUES = [
     "character_generation_queue",
@@ -49,6 +49,7 @@ async def run_simulated_job(job_id: str, duration_seconds: int = 10):
 
 @router.get("/debug/redis")
 async def get_redis_debug():
+    """Debug endpoint — check Redis connection health, queue sizes, and active job counts."""
     try:
         health = await redis_manager.check_health()
         if not health["connected"]:
@@ -84,6 +85,7 @@ async def get_redis_debug():
 
 @router.post("/debug/test-job")
 async def create_test_job(background_tasks: BackgroundTasks, request: Optional[GenerateJobRequest] = None):
+    """Create a simulated test job for debugging the job queue pipeline."""
     project_id = "test_project"
     if request and request.project_id:
         project_id = request.project_id
@@ -95,6 +97,7 @@ async def create_test_job(background_tasks: BackgroundTasks, request: Optional[G
 
 @router.get("/jobs/stream")
 async def stream_job_updates():
+    """Subscribe to real-time job updates via Server-Sent Events (Redis pub/sub)."""
     async def event_generator():
         client = await redis_manager.get_client()
         pubsub = client.pubsub()
@@ -127,6 +130,7 @@ async def stream_job_updates():
 
 @router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str):
+    """Check the status and progress of a background job by its ID."""
     job = await redis_job_service.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -788,6 +792,7 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
 # Production Studio endpoints
 @router.post("/api/generate/character", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_character(background_tasks: BackgroundTasks, request: GenerateJobRequest):
+    """Queue a character portrait generation job — produces a headshot from the character profile."""
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (character_name) is required")
         
@@ -807,6 +812,7 @@ async def generate_character(background_tasks: BackgroundTasks, request: Generat
 
 @router.post("/api/generate/environment", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_environment(background_tasks: BackgroundTasks, request: GenerateJobRequest):
+    """Queue an environment reference image generation job."""
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (environment_name) is required")
         
@@ -826,6 +832,7 @@ async def generate_environment(background_tasks: BackgroundTasks, request: Gener
 
 @router.post("/api/generate/voice", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJobRequest):
+    """Queue a voice profile generation job — synthesizes a TTS voice signature from character description."""
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (character_name) is required")
         
@@ -846,6 +853,7 @@ async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJob
 
 @router.post("/api/generate/asset", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def generate_asset(background_tasks: BackgroundTasks, request: GenerateJobRequest):
+    """Queue a generic asset generation job (simulated — for testing)."""
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="asset_generation")
     background_tasks.add_task(run_simulated_job, job["job_id"], 8)
     return job
@@ -1199,6 +1207,7 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
 
 @router.post("/api/generate/scene", dependencies=[Depends(RateLimiter(limit=3, window=60))])
 async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJobRequest):
+    """Queue a scene video generation job — renders a per-scene AI video from the production package."""
     if not request.target_id:
         raise HTTPException(status_code=400, detail="target_id (scene_number) is required")
         
@@ -1241,6 +1250,7 @@ async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJob
 
 @router.post("/api/generate/film", dependencies=[Depends(RateLimiter(limit=3, window=60))])
 async def generate_film(background_tasks: BackgroundTasks, request: GenerateJobRequest):
+    """Queue a full film generation job — generates scene videos for all scenes sequentially."""
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="film_generation")
     background_tasks.add_task(run_simulated_job, job["job_id"], 12)
     return job

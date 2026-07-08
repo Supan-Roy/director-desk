@@ -8,6 +8,7 @@ router = APIRouter(tags=['storyboard'])
 
 @router.get("/storyboard")
 def get_storyboard():
+    """Return the current storyboard scenes from in-memory state."""
     scenes = [
         {
             "scene": s.scene_number,

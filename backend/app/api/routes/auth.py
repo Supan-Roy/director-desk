@@ -16,7 +16,7 @@ from app.services.auth_service import hash_password, verify_password, create_acc
 from app.services.email_service import send_otp_email
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(tags=["auth"])
 
 
 # Helper to validate email format

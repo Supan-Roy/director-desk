@@ -7,6 +7,7 @@ router = APIRouter(tags=['planning'])
 
 @router.get("/planning")
 def get_production_plan():
+    """Return the current production plan from in-memory state."""
     plan = project_state.get_production_plan()
     if plan is None:
         return {"hasProject": False, "plan": None}

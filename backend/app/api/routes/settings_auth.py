@@ -15,7 +15,7 @@ from app.services.email_service import send_delete_otp_email
 import random
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(tags=["settings_auth"])
 
 
 class DeleteRequestPayload(BaseModel):

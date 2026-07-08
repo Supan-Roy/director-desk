@@ -34,7 +34,7 @@ def get_project_scene_videos(project_id: int, db: Session = Depends(get_db)):
 
 @router.get("/projects/{project_id}/scenes/status")
 def get_project_scenes_status(project_id: int, db: Session = Depends(get_db)):
-    """Perform dependency validation diagnostics for every scene in the project."""
+    """Validate per-scene dependency readiness — checks characters, environments, voices, and prompts are generated."""
     from app.db.models import Project, CharacterAsset, EnvironmentAsset, VoiceAsset
     from sqlalchemy import func
     

@@ -6,6 +6,7 @@ router = APIRouter(tags=['scene_breakdown'])
 
 @router.get("/scene_breakdown")
 def get_scene_breakdown():
+    """Return the current scene breakdown from in-memory state."""
     breakdown = project_state.scene_breakdown
     if breakdown is None:
         return {"hasProject": False, "scene_breakdown": None}

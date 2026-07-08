@@ -178,7 +178,7 @@ def resolve_filepath(url_or_path: str) -> str:
 
 @router.post("/editor/upload", dependencies=[Depends(RateLimiter(limit=5, window=60))])
 async def upload_file(request: Request, filename: str = Query(...)):
-    """Receives raw binary file payload and saves it to static/uploads."""
+    """Upload a media file to static/uploads — validates magic numbers and enforces 2 GB storage limit."""
     body = await request.body()
     if not body:
         raise HTTPException(status_code=400, detail="Empty file payload")
