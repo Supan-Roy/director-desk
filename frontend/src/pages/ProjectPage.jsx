@@ -1334,7 +1334,7 @@ export default function ProjectPage() {
               </button>
             )}
 
-            {project && !project.approved && (
+            {project && (
               <button
                 onClick={() => setModifyOpen(o => !o)}
                 className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-200 border ${
