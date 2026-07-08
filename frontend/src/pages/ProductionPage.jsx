@@ -1272,9 +1272,7 @@ export default function ProductionPage() {
           {contextLoading ? (
             <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
               <div className="max-w-7xl mx-auto w-full space-y-6 pb-12">
-                <div className={`rounded-xl border p-6 space-y-6 transition-colors duration-500 ${
-                  d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                }`}>
+                <div className="card-premium p-6 space-y-6">
                   <div className="text-center space-y-1 py-4">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-accent">Resuming Pipeline Execution</h3>
                     <p className={`text-[11px] ${d ? 'text-gray-550' : 'text-surface-500'}`}>Orchestrating autonomous agents to build subsequent production phases.</p>
@@ -1482,9 +1480,7 @@ export default function ProductionPage() {
                     </div>
 
                     {/* 3. PRODUCTION PROGRESS PIPELINE */}
-                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                    }`}>
+                    <div className="card-premium p-5">
                       <div className="flex items-center gap-2 border-b pb-3.5 mb-5 border-white/[0.03]">
                         <FiActivity className="text-accent" size={14} />
                         <h3 className="text-xs font-extrabold uppercase tracking-widest text-accent">
@@ -1562,9 +1558,7 @@ export default function ProductionPage() {
                 <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
                   <div className="max-w-7xl mx-auto w-full pb-12">
                     {/* 3. CHARACTER STUDIO (Cast extraction) */}
-                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                    }`}>
+                    <div className="card-premium p-5">
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
                       <div className="flex items-center gap-2">
                         <FiUser className="text-accent" size={14} />
@@ -1613,11 +1607,7 @@ export default function ProductionPage() {
                           return (
                             <div 
                               key={char.name}
-                              className={`rounded-xl border flex flex-col overflow-hidden text-left transition-all duration-300 ${
-                                d 
-                                  ? 'bg-white border-neutral-200 hover:border-neutral-300 shadow-sm' 
-                                  : 'bg-[#0b0b0f] border-white/[0.05] hover:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
-                              }`}
+                              className="card-premium flex flex-col overflow-hidden text-left"
                             >
                               {/* Top Portrait Frame */}
                               <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
@@ -1823,9 +1813,7 @@ export default function ProductionPage() {
                 <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
                   <div className="max-w-7xl mx-auto w-full pb-12">
                     {/* ── ENVIRONMENT STUDIO ── */}
-                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                    }`}>
+                    <div className="card-premium p-5">
                       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
                         <div className="flex items-center gap-2">
                           <FiMapPin className="text-accent" size={14} />
@@ -1872,11 +1860,7 @@ export default function ProductionPage() {
                             return (
                               <div 
                                 key={env.name}
-                                className={`rounded-xl border flex flex-col overflow-hidden text-left transition-all duration-300 ${
-                                  d 
-                                    ? 'bg-white border-neutral-200 hover:border-neutral-300 shadow-sm' 
-                                    : 'bg-[#0b0b0f] border-white/[0.05] hover:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
-                                }`}
+                                className="card-premium flex flex-col overflow-hidden text-left"
                               >
                                 {/* Top Portrait Frame */}
                                 <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-950 flex flex-col justify-center items-center">
@@ -2078,9 +2062,7 @@ export default function ProductionPage() {
                 <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
                   <div className="max-w-7xl mx-auto w-full pb-12">
                     {/* ── VOICE STUDIO ── */}
-                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                    }`}>
+                    <div className="card-premium p-5">
                       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-6 border-white/[0.03]">
                         <div className="flex items-center gap-2">
                           <FiVolume2 className="text-accent" size={14} />
@@ -2131,11 +2113,7 @@ export default function ProductionPage() {
                             return (
                               <div 
                                 key={v.character}
-                                className={`relative rounded-xl border p-5 flex flex-col justify-between overflow-hidden text-left transition-all duration-300 ${
-                                  d 
-                                    ? 'bg-white border-neutral-200 hover:border-neutral-300 shadow-sm' 
-                                    : 'bg-[#0b0b0f] border-white/[0.05] hover:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
-                                }`}
+                                className="card-premium p-5 flex flex-col justify-between overflow-hidden text-left"
                               >
                                 {activeJob && (
                                   <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center select-none rounded-xl">
@@ -2334,9 +2312,7 @@ export default function ProductionPage() {
                 <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col justify-between">
                   <div className="max-w-7xl mx-auto w-full pb-12 space-y-6">
                     {/* Overview Header / Diagnostics */}
-                    <div className={`rounded-xl border p-5 transition-colors duration-500 ${
-                      d ? 'bg-white border-neutral-200 shadow-sm' : 'bg-[#0B0B0B] border-white/[0.05]'
-                    }`}>
+                    <div className="card-premium p-5">
                       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3.5 mb-5 border-white/[0.03]">
                         <div className="flex items-center gap-2">
                           <FiMonitor className="text-accent" size={14} />
@@ -2491,14 +2467,8 @@ export default function ProductionPage() {
                           return (
                             <div 
                               key={scene.scene_number}
-                              className={`rounded-xl border p-6 text-left transition-all duration-300 relative overflow-hidden ${
-                                isUnlocked 
-                                  ? d
-                                    ? 'bg-white border-neutral-200 shadow-sm'
-                                    : 'bg-[#08080c] border-white/[0.04] shadow-[0_4px_25px_rgba(0,0,0,0.25)]'
-                                  : d
-                                    ? 'bg-neutral-50/50 border-neutral-100 opacity-60'
-                                    : 'bg-white/[0.005] border-white/[0.02] opacity-40'
+                              className={`card-premium p-6 text-left relative overflow-hidden ${
+                                !isUnlocked ? 'opacity-40' : ''
                               }`}
                             >
                               {/* Left lock border overlay */}
@@ -2679,31 +2649,40 @@ export default function ProductionPage() {
 
                                   {/* Dependency diagnostic logs */}
                                   {isUnlocked && !scene.package_ready && (
-                                    <div className="p-3 bg-red-950/20 border border-red-500/20 text-red-200 rounded-lg text-[10px] font-mono space-y-1.5">
-                                      <span className="font-bold uppercase tracking-wider block text-red-400 mb-1">✕ Missing Production Assets</span>
-                                      {scene.missing_assets.map((msg, mIdx) => (
-                                        <div key={mIdx} className="flex items-center justify-between gap-2.5 py-0.5 border-b border-white/[0.02] last:border-b-0">
-                                          <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="text-red-400 shrink-0">•</span>
-                                            <span className="truncate" title={msg}>{msg}</span>
-                                          </div>
-                                          <button
-                                            onClick={() => handleGoToAsset(msg)}
-                                            className="shrink-0 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-[8px] text-red-300 font-bold uppercase tracking-wider hover:bg-red-500/25 transition-all flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-none"
-                                            title="Go directly to compile page"
-                                          >
-                                            <span>Go</span>
-                                            <FiArrowRight size={8} />
-                                          </button>
+                                    <div className="card-premium border border-red-500/15">
+                                      <div className="card-premium-header px-4 py-3 flex items-center gap-2.5">
+                                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-500/10 shrink-0">
+                                          <FiAlertTriangle size={11} className="text-red-400" />
                                         </div>
-                                      ))}
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-red-300">Missing Production Assets</span>
+                                      </div>
+                                      <div className="p-3 space-y-1">
+                                        {scene.missing_assets.map((msg, mIdx) => (
+                                          <div key={mIdx} className="flex items-center justify-between gap-2.5 py-1.5 px-2 rounded-lg hover:bg-red-500/[0.03] transition-colors">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <span className="w-1 h-1 rounded-full bg-red-400/50 shrink-0" />
+                                              <span className="truncate text-[11px] font-mono text-red-200/80" title={msg}>{msg}</span>
+                                            </div>
+                                            <button
+                                              onClick={() => handleGoToAsset(msg)}
+                                              className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-[9px] text-red-300 font-bold uppercase tracking-wider hover:bg-red-500/20 hover:border-red-500/30 transition-all active:scale-95 cursor-pointer"
+                                              title="Go directly to compile page"
+                                            >
+                                              <span>Go</span>
+                                              <FiArrowRight size={9} />
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
                                   )}
                                   
                                   {isUnlocked && scene.package_ready && !activeVideo && !activeJob && (
-                                    <div className="p-3 bg-emerald-950/10 border border-emerald-500/15 text-emerald-400 rounded-lg text-[10px] font-mono flex items-center gap-2">
-                                      <FiCheckCircle className="shrink-0" />
-                                      <span>Production Package complete. Ready to compose.</span>
+                                    <div className="card-premium p-3 border border-emerald-500/15 flex items-center gap-2.5">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/10 shrink-0">
+                                        <FiCheckCircle size={11} className="text-emerald-400" />
+                                      </div>
+                                      <span className="text-[11px] font-mono text-emerald-300/80">Production assets ready. Compose scene video.</span>
                                     </div>
                                   )}
                                 </div>
