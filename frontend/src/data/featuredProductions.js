@@ -1,3 +1,103 @@
+const neoStoryboard = [
+  { scene: 1, shot: "ESTABLISHING SHOT - METROPOLIS CANYON", description: "Hovering spinner vehicles pass through towering skyscraper canyons, massive blue holograms flicker in heavy rain.", environment: "EXT. NEO-TOKYO CANYONS", mood: "CYBERPUNK NEON" },
+  { scene: 2, shot: "MEDIUM CLOSE UP - KAELEN", description: "Kaelen looks at the rain running down his high-rise window, green cybernetic lens flares reflecting in his eyes.", environment: "INT. DETECTIVE DECK", mood: "MELANCHOLY" },
+  { scene: 3, shot: "DETAIL INSERT - HOLOGRAPHIC DECK", description: "A gloved finger taps against a glowing glass interface, scrolling through wireframe node nets.", environment: "INT. DETECTIVE DECK", mood: "CRITICAL TECH" }
+];
+
+const quietStoryboard = [
+  { scene: 1, shot: "ESTABLISHING SHOT - SUNLIT STUDIO", description: "Warm morning light pours across a wooden desk, spotlighting an old SLR camera.", environment: "INT. APARTMENT", mood: "NOSTALGIC GOLDEN" },
+  { scene: 2, shot: "CLOSE UP - ELENA'S HANDS", description: "Worn, wrinkled hands gently pick up the mechanical camera and dust the lens.", environment: "INT. APARTMENT", mood: "TENDER & PATIENT" }
+];
+
+const echoesStoryboard = [
+  { scene: 1, shot: "WIDE SHOT - THE LUNAR HORIZON", description: "Astronaut in a bulky suit walking across the grey landscape, Earth tiny in the background.", environment: "EXT. MOON", mood: "DESOLATE VACUUM" },
+  { scene: 2, shot: "EXTREME CLOSE UP - WRIST GAUGE", description: "A small orange needle pulses frantically, reflecting retro HUD graphics on the helmet visor.", environment: "EXT. MOON", mood: "TENSION & MYSTERY" }
+];
+
+const lighthouseStoryboard = [
+  { scene: 1, shot: "ESTABLISHING WIDE - THE LIGHTHOUSE", description: "The tall stone tower stands defiantly against towering storm waves, lighting the dark stormy sea.", environment: "EXT. LIGHTHOUSE CLIFF", mood: "STORMY DRAMA" },
+  { scene: 2, shot: "CLOSE UP - ALISTAIR", description: "Alistair holds a brass lantern, his face lit by the warm flame, screaming into the dark.", environment: "EXT. BALCONY", mood: "DESPERATION" }
+];
+
+const generateLighting = (sceneIdx, totalScenes) => {
+  if (sceneIdx === 0) return "Hard neon backlight from street-level signage, cyan and magenta color casts on rain-slicked surfaces, volumetric beams through smoke haze";
+  if (sceneIdx === totalScenes - 1) return "Mixed practical and bioluminescent key light, soft fill from holographic interface, deep shadows in surrounding machinery";
+  return "Single practical source motivated through windows, warm tungsten key, blue ambient fill from exterior city glow";
+};
+
+const generateCamera = (sceneIdx) => {
+  const setups = ["Arri Alexa 65, 35mm anamorphic", "RED Komodo, 50mm spherical", "Sony Venice, 24mm wide-angle", "Panavision Millennium XL, 85mm portrait"];
+  return setups[sceneIdx % setups.length];
+};
+
+const generateMovement = (sceneIdx) => {
+  const moves = ["Slow descending crane from high establishing position", "Steadicam push-in following character motion", "Whip pan to action then lock-off", "Dolly zoom emphasizing scale and isolation"];
+  return moves[sceneIdx % moves.length];
+};
+
+const generateShotType = (sceneIdx) => {
+  const shots = ["Extreme wide shot", "Medium close-up", "Over-the-shoulder", "Close-up detail insert"];
+  return shots[sceneIdx % shots.length];
+};
+
+const generateTimeOfDay = (text) => {
+  const t = text.toLowerCase();
+  if (t.includes("night") || t.includes("dark")) return "Night";
+  if (t.includes("morning") || t.includes("dawn") || t.includes("sunrise")) return "Dawn / Morning";
+  if (t.includes("dusk") || t.includes("sunset") || t.includes("evening")) return "Dusk / Evening";
+  if (t.includes("golden") || t.includes("afternoon")) return "Golden Hour";
+  return "Variable / Ambient";
+};
+
+const generateWeather = (text) => {
+  const t = text.toLowerCase();
+  if (t.includes("rain") || t.includes("storm") || t.includes("thunder")) return "Heavy rain / Storm";
+  if (t.includes("snow") || t.includes("blizzard")) return "Snowfall";
+  if (t.includes("fog") || t.includes("mist") || t.includes("smog")) return "Fog / Smog";
+  if (t.includes("vacuum") || t.includes("space") || t.includes("lunar")) return "Clear vacuum / Zero precipitation";
+  return "Clear / Overcast";
+};
+
+const buildBreakdown = (storyboard) => {
+  const combinedText = JSON.stringify(storyboard);
+  const timeOfDay = generateTimeOfDay(combinedText);
+  const weather = generateWeather(combinedText);
+  const scenes = storyboard.map((s, idx) => ({
+    scene_number: `SCENE ${String(s.scene || idx + 1).padStart(2, '0')}`,
+    title: s.shot || "Untitled Scene",
+    duration: `${8 + idx * 2} seconds`,
+    location: s.environment?.replace("INT. ", "").replace("EXT. ", "").replace(" - ", ", ") || "Set",
+    environment: s.environment || "Set",
+    time_of_day: timeOfDay,
+    weather: weather,
+    characters: [],
+    character_descriptions: "Refer to script for character direction",
+    wardrobe: "Refer to script for costume direction",
+    props: [],
+    visual_style: "Cinematic",
+    mood: s.mood || "Atmospheric",
+    camera_setup: generateCamera(idx),
+    camera_movement: generateMovement(idx),
+    shot_type: generateShotType(idx),
+    lighting_design: generateLighting(idx, storyboard.length),
+    audio_notes: idx === 0 ? "Ambient room tone, distant environmental sounds" : (idx === storyboard.length - 1 ? "Fade to silence, end credit music swell" : "Dialogue sync, subtle atmospheric layers"),
+    ai_generation_prompt: `${s.mood ? s.mood + ". " : ""}${s.description || ""}`.trim()
+  }));
+
+  return {
+    total_runtime: `${scenes.length * 10} seconds`,
+    consistency_warnings: ["Ensure consistent character appearance across all scenes", "Verify environment continuity between scene transitions"],
+    scenes,
+    asset_requirements: {
+      characters_needed: [],
+      locations_needed: [...new Set(storyboard.map(s => s.environment).filter(Boolean))],
+      props_needed: [],
+      sound_requirements: ["Ambient score", "Dialogue audio tracks", "SFX library"],
+      vfx_requirements: ["Color grading pass", "Atmospheric overlays"]
+    }
+  };
+};
+
 export const featuredProductions = {
   'neo-tokyo': {
     title: 'Neo-Tokyo 2099',
@@ -43,6 +143,7 @@ FADE OUT.`,
         mood: "CRITICAL TECH"
       }
     ],
+    sceneBreakdown: buildBreakdown(neoStoryboard),
     productionPlan: {
       title: "Neo-Tokyo 2099 - Production Plan",
       phases: [
@@ -124,6 +225,7 @@ FADE OUT.`,
         mood: "TENDER & PATIENT"
       }
     ],
+    sceneBreakdown: buildBreakdown(quietStoryboard),
     productionPlan: {
       title: "The Quiet Camera - Production Plan",
       phases: [
@@ -202,6 +304,7 @@ FADE OUT.`,
         mood: "TENSION & MYSTERY"
       }
     ],
+    sceneBreakdown: buildBreakdown(echoesStoryboard),
     productionPlan: {
       title: "Echoes of Apollo - Production Plan",
       phases: [
@@ -280,6 +383,7 @@ FADE OUT.`,
         mood: "DESPERATION"
       }
     ],
+    sceneBreakdown: buildBreakdown(lighthouseStoryboard),
     productionPlan: {
       title: "The Last Lighthouse - Production Plan",
       phases: [
