@@ -1231,7 +1231,7 @@ export default function HeroSection({
             )}
 
             {/* Action buttons wrapper */}
-            <div className={`flex items-center gap-2 md:gap-3 shrink-0 ${
+            <div className={`flex items-center gap-2 md:gap-3 shrink-0 pr-4 md:pr-0 mr-0.5 ${
               isMobile && hasProject ? 'w-full justify-between mt-1' : 'ml-auto'
             }`}>
               {prompt.length > 0 && (
@@ -1277,11 +1277,11 @@ export default function HeroSection({
                 </button>
               )}
 
-              <div className={`inline-flex relative ${prompt.trim() && !loading ? 'animate-border-run' : ''} -ml-1 md:ml-0`}>
+              <div className={`inline-flex relative ${prompt.trim() && !loading ? 'animate-border-run' : ''}`}>
               <button
                 onClick={handleSubmit}
                 disabled={!prompt.trim() || loading}
-                className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2.5 md:px-6 md:py-3 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none cursor-pointer ${
+                className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-5 py-2 md:py-3 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-[0.25em] transition-all duration-200 focus:outline-none cursor-pointer ${
                   !prompt.trim() || loading
                     ? isDayMode
                       ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
