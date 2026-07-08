@@ -1277,7 +1277,7 @@ export default function HeroSection({
                 </button>
               )}
 
-              <div className={`inline-flex ${prompt.trim() && !loading ? 'animate-border-run' : ''}`}>
+              <div className={`inline-flex relative ${prompt.trim() && !loading ? 'animate-border-run' : ''}`}>
               <button
                 onClick={handleSubmit}
                 disabled={!prompt.trim() || loading}
@@ -1287,9 +1287,10 @@ export default function HeroSection({
                       ? 'opacity-40 cursor-not-allowed border-transparent bg-neutral-200 text-neutral-400'
                       : 'cursor-not-allowed border border-[#2A2A2A] bg-[#1A1A1A] text-[#666666]'
                     : isDayMode
-                      ? 'bg-accent border border-accent text-white-force hover:bg-accent-dim hover:shadow-[0_4px_12px_rgba(139,92,246,0.25)]'
-                      : 'bg-surface-950 border border-accent text-white hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
+                      ? 'bg-accent text-white-force hover:bg-accent-dim hover:shadow-[0_4px_12px_rgba(139,92,246,0.25)]'
+                      : 'bg-surface-950 text-white hover:bg-accent/10 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)]'
                 }`}
+                style={prompt.trim() && !loading ? { border: 0 } : undefined}
               >
                 {loading ? (
                   <>
