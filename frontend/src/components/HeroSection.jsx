@@ -97,28 +97,34 @@ function CustomSelect({ label, value, onChange, options, icon: Icon, disabled })
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 md:gap-3 rounded-lg px-2.5 py-1.5 border text-left transition-all duration-150 cursor-pointer focus:outline-none w-full min-w-[120px] md:min-w-[155px] ${
+        className={`flex items-center gap-2 md:gap-3 rounded-lg px-2.5 py-1.5 border text-left transition-all duration-150 cursor-pointer focus:outline-none w-full min-w-[120px] md:min-w-[155px] select-trigger ${
           disabled ? 'opacity-40 cursor-not-allowed' : ''
         } ${
+          isOpen ? 'select-open' : ''
+        } ${
           isDayMode
-            ? 'bg-neutral-50 text-neutral-800 border-neutral-200 hover:bg-neutral-100 shadow-sm'
-            : 'bg-surface-900 text-white border-surface-700 hover:bg-surface-800 hover:border-surface-600'
+            ? 'bg-gradient-to-b from-neutral-50 to-neutral-100 text-neutral-800 border-neutral-200 hover:border-neutral-300 hover:shadow-md shadow-sm'
+            : 'bg-gradient-to-b from-[#141418] to-[#0E0E12] text-white border-[#252530] hover:border-[#353540] hover:shadow-[0_2px_8px_rgba(0,0,0,0.4)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_1px_3px_rgba(0,0,0,0.3)]'
         }`}
         disabled={disabled}
       >
-        <div className={`p-1 md:p-1.5 rounded shrink-0 ${isDayMode ? 'bg-neutral-200 border border-neutral-300 text-neutral-600' : 'bg-surface-800 border border-surface-700 text-surface-300'}`}>
+        <div className={`p-1 md:p-1.5 rounded shrink-0 ${
+          isDayMode
+            ? 'bg-gradient-to-b from-neutral-100 to-neutral-200 border border-neutral-300 text-neutral-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]'
+            : 'bg-gradient-to-b from-[#1C1C24] to-[#16161E] border border-[#2A2A35] text-surface-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+        }`}>
           <Icon size={12} />
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <span className={`text-[8px] font-bold uppercase tracking-wider leading-none ${isDayMode ? 'text-neutral-400' : 'text-surface-500'}`}>
+          <span className={`text-[7px] font-bold uppercase tracking-[0.12em] leading-none ${isDayMode ? 'text-neutral-500' : 'text-surface-500'}`}>
             {label}
           </span>
-          <span className={`text-[10px] md:text-[11px] font-bold truncate mt-0.5 md:mt-1 leading-tight ${isDayMode ? 'text-neutral-800' : 'text-surface-100'}`}>
+          <span className={`text-[10px] md:text-[11px] font-bold truncate mt-0.5 md:mt-1 leading-tight ${isDayMode ? 'text-neutral-900' : 'text-white'}`}>
             {activeOption.value || activeOption.label}
           </span>
         </div>
         <span 
-          className={`text-[8.5px] ml-1 shrink-0 transition-transform duration-200 ${isDayMode ? 'text-neutral-400' : 'text-surface-400'}`} 
+          className={`text-[7.5px] ml-1 shrink-0 transition-all duration-250 ${isDayMode ? 'text-neutral-400' : 'text-surface-500'}`} 
           style={{ transform: isOpen ? 'rotate(180deg)' : 'none', display: 'inline-block' }}
         >
           ▼
@@ -128,8 +134,8 @@ function CustomSelect({ label, value, onChange, options, icon: Icon, disabled })
       {isOpen && (
         <div className={`absolute left-0 right-0 mt-1.5 z-55 min-w-[140px] max-md:w-full rounded-lg border p-1 shadow-2xl space-y-0.5 ${
           isDayMode
-            ? 'bg-white border-neutral-200 text-neutral-800 shadow-xl'
-            : 'bg-surface-800 border-surface-600 text-surface-200 shadow-black/85'
+            ? 'bg-white border-neutral-200/80 text-neutral-800 shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]'
+            : 'bg-[#121218] border-[#202028] text-surface-200 shadow-[0_8px_32px_rgba(0,0,0,0.6),0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.03)]'
         }`}>
           {options.map((opt) => {
             const isSelected = opt.id === value;
@@ -141,18 +147,20 @@ function CustomSelect({ label, value, onChange, options, icon: Icon, disabled })
                   onChange(opt.id);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 rounded text-[11px] transition-all flex items-center justify-between cursor-pointer ${
+                className={`w-full text-left px-3 py-2 rounded text-[11px] transition-all flex items-center justify-between cursor-pointer select-option ${
                   isSelected
                     ? isDayMode
-                      ? 'bg-neutral-100 text-neutral-900 font-bold'
-                      : 'bg-accent/10 border border-accent/20 text-white font-bold'
+                      ? 'bg-gradient-to-r from-neutral-100 to-neutral-50 text-neutral-900 font-bold border border-neutral-200/60'
+                      : 'bg-gradient-to-r from-accent/8 to-accent/3 border border-accent/12 text-white font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
                     : isDayMode
                       ? 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
-                      : 'text-surface-300 hover:bg-surface-700 hover:text-white'
+                      : 'text-surface-400 hover:bg-[#1A1A24] hover:text-white border border-transparent hover:border-[#2A2A35]'
                 }`}
               >
                 <span>{opt.label}</span>
-                {isSelected && <span className="text-[6px] text-accent">●</span>}
+                {isSelected && (
+                  <span className="w-1 h-1 rounded-full bg-accent" />
+                )}
               </button>
             );
           })}

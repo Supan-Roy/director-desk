@@ -1121,6 +1121,22 @@ aside nav button.bg-accent\/10 .blur-sm {
   padding: 1.5px;
 }
 
+/* ── Custom Select Premium Interactivity ── */
+.select-trigger {
+  position: relative;
+  overflow: hidden;
+}
+.select-trigger:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.select-trigger.select-open {
+  border-color: #6d28d9 !important;
+  box-shadow: 0 0 0 1px rgba(109, 40, 217, 0.2), 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+}
+.select-option:active {
+  transform: scale(0.98);
+}
+
 /* Generate button highlighting animation */
 @keyframes highlight-glow-pulse {
   0% {
