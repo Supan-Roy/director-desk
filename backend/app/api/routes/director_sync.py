@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db
+from app.db.repository import get_db
 from app.services.production_graph_service import production_graph_service
 
 logger = logging.getLogger(__name__)
