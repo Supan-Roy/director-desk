@@ -806,6 +806,18 @@ export function EditorProvider({ children }) {
     }
   }, [])
 
+  // Fetch global assets from the backend database
+  const fetchGlobalAssets = useCallback(async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/assets/global`)
+      if (!response.ok) throw new Error('Failed to fetch assets')
+      return await response.json()
+    } catch (err) {
+      console.error('Failed to fetch global assets:', err)
+      return { characters: [], environments: [], voices: [], videos: [] }
+    }
+  }, [])
+
   // Load active assets automatically from Storyboard & script
   const loadDirectorDeskAssets = useCallback((storyboardScenes, scriptContent) => {
     // Parse any video items or presets corresponding to storyboard
@@ -1037,6 +1049,7 @@ export function EditorProvider({ children }) {
     triggerExport,
     loadDirectorDeskAssets,
     loadProjectGeneratedClips,
+    fetchGlobalAssets,
     resetExport,
     cancelExport,
     undo,

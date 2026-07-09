@@ -691,6 +691,7 @@ export default function EditorPage() {
     addTextOverlay,
     triggerExport,
     loadDirectorDeskAssets,
+    fetchGlobalAssets,
     resetExport,
     cancelExport,
     undo,
@@ -726,8 +727,18 @@ export default function EditorPage() {
     }
     const ratio = ratioMap[ar] || (16 / 9)
     const isMobileSize = window.innerWidth < 768
-    const maxW = isMobileSize ? Math.min(480, window.innerWidth - 32) : 480
-    const maxH = isMobileSize ? Math.round(maxW / (16 / 9)) : 270
+    
+    if (isMobileSize) {
+      return {
+        width: '100%',
+        height: 'auto',
+        aspectRatio: getAspectRatioCSS(ar),
+        maxHeight: '35vh'
+      }
+    }
+    
+    const maxW = 480
+    const maxH = 270
     
     if (ratio >= (16 / 9)) {
       return {
@@ -839,6 +850,11 @@ export default function EditorPage() {
   const [confirmClearAllVfx, setConfirmClearAllVfx] = useState(false)
   const [confirmClearAllAssets, setConfirmClearAllAssets] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [showAssetBrowser, setShowAssetBrowser] = useState(false)
+  const [globalAssets, setGlobalAssets] = useState(null)
+  const [selectedAssets, setSelectedAssets] = useState(new Set())
+  const [importingAssets, setImportingAssets] = useState(false)
+  const [assetBrowserCategory, setAssetBrowserCategory] = useState('videos')
   const [timelineHeight, setTimelineHeight] = useState(288) // default height 288px
   const [isMuted, setIsMuted] = useState(false)
   const [playerVolume, setPlayerVolume] = useState(1.0)
@@ -848,7 +864,7 @@ export default function EditorPage() {
   const [activeMobileView, setActiveMobileView] = useState('player') // library, player, inspector, timeline
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 1024)
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
     handleResize()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
@@ -1360,6 +1376,7 @@ export default function EditorPage() {
     
     setSelectedClipId(txt.id)
     setSelectedTrackType('text')
+    if (isMobile) setActiveMobileView('inspector')
     
     const container = e.currentTarget.parentElement
     if (!container) return
@@ -1593,25 +1610,27 @@ export default function EditorPage() {
       <div className="flex-1 flex flex-col min-w-0 h-screen relative z-20">
         
         {/* Editor Top Control Bar */}
-        <header className="h-14 border-b flex items-center justify-between px-6 shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216]">
+        <header className={`border-b flex items-center justify-between shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216] ${
+          isMobile ? 'h-10 px-3' : 'h-14 px-6'
+        }`}>
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-extrabold tracking-[0.25em] uppercase text-surface-500">
-              Studio Post-Production
+              {isMobile ? 'Studio' : 'Studio Post-Production'}
             </span>
             {hasProject && projectTitle && (
               <>
                 <span className="text-surface-700">/</span>
-                <span className="text-[11.5px] font-bold text-accent truncate max-w-[200px]">
+                <span className="text-[11.5px] font-bold text-accent truncate max-w-[120px] sm:max-w-[200px]">
                   {projectTitle}
                 </span>
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-4'}`}>
             {/* Aspect Ratio Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Aspect Ratio</span>
+            <div className="flex items-center gap-1.5">
+              {!isMobile && <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Aspect Ratio</span>}
               <NLEDropdown
                 value={aspectRatio}
                 onChange={setAspectRatio}
@@ -1624,12 +1643,13 @@ export default function EditorPage() {
                   { value: '1.43:1', label: '1.43:1 (IMAX Film)' },
                   { value: '1.90:1', label: '1.90:1 (IMAX Digital)' },
                 ]}
+                className={isMobile ? 'text-[10px] px-1.5' : ''}
               />
             </div>
 
             {/* Resolution Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Resolution</span>
+            <div className="flex items-center gap-1.5">
+              {!isMobile && <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Resolution</span>}
               <NLEDropdown
                 value={resolution}
                 onChange={setResolution}
@@ -1639,12 +1659,13 @@ export default function EditorPage() {
                   { value: '480p',  label: '480p (SD)' },
                   { value: '360p',  label: '360p (Low)' },
                 ]}
+                className={isMobile ? 'text-[10px] px-1.5' : ''}
               />
             </div>
 
             {/* Format Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Format</span>
+            <div className="flex items-center gap-1.5">
+              {!isMobile && <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Format</span>}
               <NLEDropdown
                 value={exportFormat}
                 onChange={setExportFormat}
@@ -1654,6 +1675,7 @@ export default function EditorPage() {
                   { value: 'mov', label: 'MOV' },
                   { value: 'avi', label: 'AVI' },
                 ]}
+                className={isMobile ? 'text-[10px] px-1.5' : ''}
               />
             </div>
 
@@ -1661,82 +1683,88 @@ export default function EditorPage() {
             <button
               onClick={triggerExport}
               disabled={isExporting || videoTrack.length === 0}
-              className="bg-gradient-to-b from-[#ffffff] to-[#d6d6db] text-black font-extrabold uppercase text-[9.5px] tracking-wider rounded-sm px-4 py-1.5 disabled:opacity-30 flex items-center gap-2 cursor-pointer transition-all border border-[#ffffff] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(0,0,0,0.4)] active:translate-y-[0.5px]"
+              className={`bg-gradient-to-b from-[#ffffff] to-[#d6d6db] text-black font-extrabold uppercase tracking-wider rounded-sm disabled:opacity-30 flex items-center gap-2 cursor-pointer transition-all border border-[#ffffff] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(0,0,0,0.4)] active:translate-y-[0.5px] ${
+                isMobile ? 'text-[9px] px-2 py-1' : 'text-[9.5px] px-4 py-1.5'
+              }`}
             >
               {isExporting ? (
                 <>
-                  <FiLoader size={12} className="animate-spin" />
-                  <span>Exporting</span>
+                  <FiLoader size={isMobile ? 10 : 12} className="animate-spin" />
+                  <span>{isMobile ? '' : 'Exporting'}</span>
                 </>
               ) : (
                 <>
-                  <FiDownload size={12} />
-                  <span>Export</span>
+                  <FiDownload size={isMobile ? 10 : 12} />
+                  <span>{isMobile ? '' : 'Export'}</span>
                 </>
               )}
             </button>
           </div>
         </header>
 
-        {/* Mobile View Switcher Bar */}
+          {/* Mobile View Switcher Bar */}
         {isMobile && (
           <div className="flex border-b border-[#212128] bg-[#16161c] shrink-0 select-none z-20">
             <button
               onClick={() => setActiveMobileView('library')}
-              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2.5 text-[9px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeMobileView === 'library'
                   ? 'bg-accent/10 text-accent border-b-2 border-accent'
-                  : 'text-neutral-505 hover:text-neutral-300'
+                  : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <span>📁</span>
-              <span>Library</span>
+              <FiGrid size={13} />
+              <span className="hidden sm:inline">Library</span>
             </button>
             <button
               onClick={() => setActiveMobileView('player')}
-              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2.5 text-[9px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeMobileView === 'player'
                   ? 'bg-accent/10 text-accent border-b-2 border-accent'
-                  : 'text-neutral-505 hover:text-neutral-300'
+                  : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <span>📺</span>
-              <span>Player</span>
+              <FiPlay size={13} />
+              <span className="hidden sm:inline">Player</span>
             </button>
             <button
               onClick={() => setActiveMobileView('inspector')}
-              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2.5 text-[9px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeMobileView === 'inspector'
                   ? 'bg-accent/10 text-accent border-b-2 border-accent'
-                  : 'text-neutral-505 hover:text-neutral-300'
+                  : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <span>⚙️</span>
-              <span>Inspector</span>
+              <FiSliders size={13} />
+              <span className="hidden sm:inline">Inspector</span>
             </button>
             <button
               onClick={() => setActiveMobileView('timeline')}
-              className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2.5 text-[9px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeMobileView === 'timeline'
                   ? 'bg-accent/10 text-accent border-b-2 border-accent'
-                  : 'text-neutral-505 hover:text-neutral-300'
+                  : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <span>🎞️</span>
-              <span>Timeline</span>
+              <FiScissors size={13} />
+              <span className="hidden sm:inline">Timeline</span>
             </button>
           </div>
         )}
 
         {/* Multi-Panel Editor Layout (Library, Player, Properties) */}
-        <div className={`flex-1 flex overflow-hidden min-h-0 ${
-          isMobile ? (activeMobileView === 'timeline' ? 'hidden' : 'flex') : ''
+        <div className={`overflow-hidden min-h-0 ${
+          isMobile
+            ? `flex flex-col ${activeMobileView === 'timeline' ? 'hidden' : 'flex-1'}`
+            : 'flex-1 flex'
         }`}>
           
           {/* Left Panel: Media Library & Context Loader */}
-          <div className={`w-80 border-r flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216] ${
-            isMobile ? (activeMobileView === 'library' ? 'w-full' : 'hidden') : ''
-          }`}>
+          <div className={`${
+            isMobile ? 'w-full' : 'w-80'
+          } border-r flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216] ${
+            isMobile ? (activeMobileView === 'library' ? 'flex' : 'hidden') : ''
+          } ${isMobile ? 'overflow-y-auto flex-1' : ''}`}>
             {/* Tabs selector */}
             <div className="flex border-b border-[#212128] bg-[#16161c] select-none">
               <button
@@ -1801,21 +1829,35 @@ export default function EditorPage() {
                   )}
 
                   {/* Upload Block */}
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border border-dashed border-[#252530] hover:border-accent/40 rounded-sm p-5 text-center cursor-pointer transition-colors bg-[#15151b] hover:bg-[#1a1a22]"
-                  >
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      multiple
-                      accept="video/*,audio/*,image/*"
-                      className="hidden"
-                    />
-                    <FiUploadCloud size={22} className="mx-auto mb-1.5 text-surface-500" />
-                    <p className="text-[10px] font-bold text-surface-300">Import Media Assets</p>
-                    <p className="text-[8.5px] text-surface-500 mt-0.5">Video, audio, images, or branding assets</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border border-dashed border-[#252530] hover:border-accent/40 rounded-sm p-4 text-center cursor-pointer transition-colors bg-[#15151b] hover:bg-[#1a1a22]"
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        multiple
+                        accept="video/*,audio/*,image/*"
+                        className="hidden"
+                      />
+                      <FiUploadCloud size={18} className="mx-auto mb-1 text-surface-500" />
+                      <p className="text-[9.5px] font-bold text-surface-300">Upload from Device</p>
+                    </div>
+                    <div
+                      onClick={async () => {
+                        setShowAssetBrowser(true)
+                        setSelectedAssets(new Set())
+                        setAssetBrowserCategory('videos')
+                        const data = await fetchGlobalAssets()
+                        setGlobalAssets(data)
+                      }}
+                      className="border border-dashed border-[#252530] hover:border-accent/40 rounded-sm p-4 text-center cursor-pointer transition-colors bg-[#15151b] hover:bg-[#1a1a22]"
+                    >
+                      <FiDisc size={18} className="mx-auto mb-1 text-surface-500" />
+                      <p className="text-[9.5px] font-bold text-surface-300">Import from Assets</p>
+                    </div>
                   </div>
 
                   {/* Assets Grid */}
@@ -1877,7 +1919,10 @@ export default function EditorPage() {
 
                           <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => addAssetToTimeline(asset, asset.type === 'audio' ? 'audio' : 'video', currentTime)}
+                              onClick={() => {
+                                addAssetToTimeline(asset, asset.type === 'audio' ? 'audio' : 'video', currentTime)
+                                if (isMobile) setActiveMobileView('timeline')
+                              }}
                               title="Add to Timeline"
                               className="w-7 h-7 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-[#e57e25] hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all active:translate-y-[0.5px]"
                             >
@@ -2290,10 +2335,16 @@ export default function EditorPage() {
           </div>
 
           {/* Center Column: Real-time Video Preview Player */}
-          <div className={`flex-1 flex flex-col bg-black/40 relative ${
-            isMobile ? (activeMobileView === 'player' ? 'flex' : 'hidden') : ''
+          <div className={`${
+            isMobile
+              ? 'w-full shrink-0 border-b border-[#212128]'
+              : 'flex-1 flex flex-col bg-black/40 relative'
           }`}>
-            <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+            <div className={`${
+              isMobile
+                ? 'flex items-center justify-center bg-black/40 h-[30vh] min-h-[160px]'
+                : 'flex-1 flex flex-col items-center justify-center relative overflow-hidden'
+            }`}>
                   {/* Preview Window Monitor */}
               <div 
                 ref={previewContainerRef}
@@ -2304,7 +2355,7 @@ export default function EditorPage() {
                   isFullscreen 
                     ? 'w-screen h-screen max-w-none rounded-none border-none' 
                     : 'border border-white/[0.04] rounded-none'
-                }`}
+                } ${isMobile ? 'w-full max-h-[35vh]' : ''}`}
                 style={isFullscreen ? {} : getPreviewDimensions(aspectRatio)}
               >
                 {/* Cinematic camera movement and post-processing wrapper */}
@@ -2546,7 +2597,10 @@ export default function EditorPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <button
-                         onClick={() => setIsPlaying(!isPlaying)}
+                         onClick={() => {
+                           setIsPlaying(!isPlaying)
+                           if (isMobile && !isPlaying) setActiveMobileView('player')
+                         }}
                          className="text-white hover:text-accent transition-colors p-1.5 flex items-center justify-center cursor-pointer"
                          title={isPlaying ? "Pause" : "Play"}
                       >
@@ -2603,8 +2657,10 @@ export default function EditorPage() {
           </div>
 
           {/* Right Panel: Properties & Effects controls */}
-          <div className={`w-80 border-l flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216] ${
-            isMobile ? (activeMobileView === 'inspector' ? 'w-full' : 'hidden') : ''
+          <div className={`${
+            isMobile ? 'w-full flex-1 overflow-y-auto' : 'w-80'
+          } border-l flex flex-col shrink-0 border-[#212128] [data-theme='day']_&:border-black/[0.06] bg-[#121216] ${
+            isMobile ? (activeMobileView === 'inspector' ? 'flex' : 'hidden') : ''
           }`}>
             <div className="p-4 border-b border-[#212128] [data-theme='day']_&:border-black/[0.05] flex items-center gap-2 text-neutral-300 bg-[#16161c] shrink-0">
               <FiSliders size={13} className="text-accent" />
@@ -3687,14 +3743,18 @@ export default function EditorPage() {
           />
           
           {/* Timeline Toolbar */}
-          <div className="h-10 border-b border-[#212128] [data-theme='day']_&:border-black/[0.05] flex items-center justify-between px-6 shrink-0 bg-[#16161c]">
-            <div className="flex items-center gap-3">
+          <div className={`h-10 border-b border-[#212128] [data-theme='day']_&:border-black/[0.05] flex items-center justify-between shrink-0 bg-[#16161c] ${
+            isMobile ? 'px-2' : 'px-6'
+          }`}>
+            <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-3'}`}>
               <button
                 onClick={() => addTextOverlay("New Text overlay", currentTime, currentTime + 4.0)}
                 title="Add Text Overlay"
-                className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
+                className={`rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none ${
+                  isMobile ? 'w-7 h-7' : 'w-8 h-8'
+                }`}
               >
-                <FiType size={14} />
+                <FiType size={isMobile ? 12 : 14} />
               </button>
 
               <div className="h-4 w-px bg-[#252530]" />
@@ -3705,17 +3765,21 @@ export default function EditorPage() {
                   onClick={undo}
                   disabled={!canUndo}
                   title="Undo"
-                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
+                  className={`rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none ${
+                    isMobile ? 'w-7 h-7' : 'w-8 h-8'
+                  }`}
                 >
-                  <FiCornerUpLeft size={14} />
+                  <FiCornerUpLeft size={isMobile ? 12 : 14} />
                 </button>
                 <button
                   onClick={redo}
                   disabled={!canRedo}
                   title="Redo"
-                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
+                  className={`rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none ${
+                    isMobile ? 'w-7 h-7' : 'w-8 h-8'
+                  }`}
                 >
-                  <FiCornerUpRight size={14} />
+                  <FiCornerUpRight size={isMobile ? 12 : 14} />
                 </button>
               </div>
 
@@ -3727,9 +3791,11 @@ export default function EditorPage() {
                   onClick={splitLeft}
                   disabled={!selectedClipId || selectedTrackType === 'text'}
                   title="Split Left (Trim start to playhead)"
-                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
+                  className={`rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none ${
+                    isMobile ? 'w-7 h-7' : 'w-8 h-8'
+                  }`}
                 >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width={isMobile ? 12 : 14} height={isMobile ? 12 : 14} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="3" x2="12" y2="21" />
                     <path d="M 7 5 H 4 V 19 H 7" strokeDasharray="3 2" opacity="0.35" />
                     <path d="M 17 5 H 20 V 19 H 17" />
@@ -3740,18 +3806,22 @@ export default function EditorPage() {
                   onClick={splitClipAtPlayhead}
                   disabled={!selectedClipId || selectedTrackType === 'text'}
                   title="Split Clip at Playhead"
-                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
+                  className={`rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none ${
+                    isMobile ? 'w-7 h-7' : 'w-8 h-8'
+                  }`}
                 >
-                  <FiScissors size={14} />
+                  <FiScissors size={isMobile ? 12 : 14} />
                 </button>
 
                 <button
                   onClick={splitRight}
                   disabled={!selectedClipId || selectedTrackType === 'text'}
                   title="Split Right (Trim playhead to end)"
-                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
+                  className={`rounded-sm bg-gradient-to-b from-[#2a2a35] to-[#1f1f26] border border-[#363644] text-neutral-200 hover:from-[#323240] hover:to-[#252530] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none ${
+                    isMobile ? 'w-7 h-7' : 'w-8 h-8'
+                  }`}
                 >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width={isMobile ? 12 : 14} height={isMobile ? 12 : 14} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="3" x2="12" y2="21" />
                     <path d="M 7 5 H 4 V 19 H 7" />
                     <path d="M 17 5 H 20 V 19 H 17" strokeDasharray="3 2" opacity="0.35" />
@@ -3764,9 +3834,11 @@ export default function EditorPage() {
                   onClick={() => deleteClip(selectedClipId, selectedTrackType)}
                   disabled={!selectedClipId}
                   title="Delete Selected Clip"
-                  className="w-8 h-8 rounded-sm bg-gradient-to-b from-[#5c1e1e] to-[#401313] border border-[#7a2828] text-red-200 hover:from-[#6b2323] hover:to-[#4d1616] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none"
+                  className={`rounded-sm bg-gradient-to-b from-[#5c1e1e] to-[#401313] border border-[#7a2828] text-red-200 hover:from-[#6b2323] hover:to-[#4d1616] flex items-center justify-center cursor-pointer transition-all active:translate-y-[0.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_1px_2px_rgba(0,0,0,0.4)] disabled:opacity-25 disabled:pointer-events-none ${
+                    isMobile ? 'w-7 h-7' : 'w-8 h-8'
+                  }`}
                 >
-                  <FiTrash2 size={14} />
+                  <FiTrash2 size={isMobile ? 12 : 14} />
                 </button>
               </div>
 
@@ -3781,26 +3853,30 @@ export default function EditorPage() {
                   onChange={(e) => setSnapEnabled(e.target.checked)}
                   className="accent-accent cursor-pointer"
                 />
-                <label htmlFor="snap-chk" className="text-[10px] font-bold uppercase tracking-wider text-surface-400 cursor-pointer select-none">
-                  Snap Edges
-                </label>
+                {!isMobile && (
+                  <label htmlFor="snap-chk" className="text-[10px] font-bold uppercase tracking-wider text-surface-400 cursor-pointer select-none">
+                    Snap Edges
+                  </label>
+                )}
               </div>
             </div>
 
             {/* Zoom Controls */}
-            <div className="flex items-center gap-3">
+            <div className={`flex items-center ${isMobile ? 'gap-1.5' : 'gap-3'}`}>
               <button
                 onClick={() => setZoom(Math.max(5, zoom - 5))}
                 className="p-1 rounded-sm text-neutral-400 hover:text-white hover:bg-[#252530] transition-colors cursor-pointer"
               >
-                <FiZoomOut size={12} />
+                <FiZoomOut size={isMobile ? 10 : 12} />
               </button>
-              <span className="text-[8.5px] font-mono text-neutral-500 select-none">Zoom: {zoom}px/s</span>
+              {!isMobile && (
+                <span className="text-[8.5px] font-mono text-neutral-500 select-none">Zoom: {zoom}px/s</span>
+              )}
               <button
                 onClick={() => setZoom(Math.min(50, zoom + 5))}
                 className="p-1 rounded-sm text-neutral-400 hover:text-white hover:bg-[#252530] transition-colors cursor-pointer"
               >
-                <FiZoomIn size={12} />
+                <FiZoomIn size={isMobile ? 10 : 12} />
               </button>
             </div>
           </div>
@@ -3883,6 +3959,7 @@ export default function EditorPage() {
                           e.stopPropagation()
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('video')
+                          if (isMobile) setActiveMobileView('inspector')
                         }}
                         className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
@@ -3922,6 +3999,7 @@ export default function EditorPage() {
                           e.stopPropagation()
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('audio')
+                          if (isMobile) setActiveMobileView('inspector')
                         }}
                         className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
@@ -3961,6 +4039,7 @@ export default function EditorPage() {
                           e.stopPropagation()
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('text')
+                          if (isMobile) setActiveMobileView('inspector')
                         }}
                         className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
@@ -4000,6 +4079,7 @@ export default function EditorPage() {
                           e.stopPropagation()
                           setSelectedClipId(clip.id)
                           setSelectedTrackType('vfx')
+                          if (isMobile) setActiveMobileView('inspector')
                         }}
                         className={`absolute h-12 rounded-sm flex items-center px-3 font-semibold text-[10.5px] cursor-pointer shadow-lg group select-none border transition-all ${
                           isSelected
@@ -4043,6 +4123,179 @@ export default function EditorPage() {
         </div>
 
       </div>
+
+      {/* Asset Browser Modal */}
+      {showAssetBrowser && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0a0a14] border border-white/[0.08] rounded-xl w-[640px] max-w-full max-h-[80vh] flex flex-col shadow-[0_24px_60px_rgba(0,0,0,0.8)]">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#212128] shrink-0">
+              <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-white">Import from Assets</h2>
+              <button
+                onClick={() => setShowAssetBrowser(false)}
+                className="p-1 rounded-sm text-neutral-500 hover:text-white hover:bg-[#252530] transition-colors cursor-pointer"
+              >
+                <FiX size={14} />
+              </button>
+            </div>
+
+            {globalAssets ? (
+              <>
+                {/* Category tabs */}
+                <div className="flex border-b border-[#212128] bg-[#12121a] shrink-0">
+                  {[
+                    { key: 'videos', label: 'Videos', count: globalAssets.videos?.length || 0 },
+                    { key: 'characters', label: 'Characters', count: globalAssets.characters?.length || 0 },
+                    { key: 'environments', label: 'Environments', count: globalAssets.environments?.length || 0 },
+                    { key: 'voices', label: 'Voices', count: globalAssets.voices?.length || 0 },
+                  ].map((cat) => (
+                    <button
+                      key={cat.key}
+                      onClick={() => {
+                        setAssetBrowserCategory(cat.key)
+                        setSelectedAssets(new Set())
+                      }}
+                      className={`flex-1 py-2.5 text-[9px] font-extrabold uppercase tracking-wider transition-all text-center cursor-pointer border-b-2 ${
+                        assetBrowserCategory === cat.key
+                          ? 'border-[#e57e25] text-white bg-gradient-to-b from-[#1c1c24] to-[#121216]'
+                          : 'border-transparent text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      {cat.label} ({cat.count})
+                    </button>
+                  ))}
+                </div>
+
+                {/* Scrollable asset grid */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {(() => {
+                    const allEmpty = !globalAssets.videos?.length && !globalAssets.characters?.length && !globalAssets.environments?.length && !globalAssets.voices?.length
+                    if (allEmpty) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <FiDisc size={24} className="text-neutral-600 mb-2" />
+                          <p className="text-[10px] font-bold text-neutral-500">No assets found</p>
+                          <p className="text-[8.5px] text-neutral-700 mt-1">Create characters, environments, or generate videos first.</p>
+                        </div>
+                      )
+                    }
+                    const items = globalAssets[assetBrowserCategory] || []
+                    if (items.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <FiDisc size={24} className="text-neutral-600 mb-2" />
+                          <p className="text-[10px] font-bold text-neutral-500">No {assetBrowserCategory} found</p>
+                          <p className="text-[8.5px] text-neutral-700 mt-1">Create {assetBrowserCategory} first in your project.</p>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {items.map((item) => {
+                          const assetKey = `${assetBrowserCategory}_${item.id}`
+                          const isSelected = selectedAssets.has(assetKey)
+                          const name = item.character_name || item.environment_name || item.name || `Scene ${item.scene_number}` || 'Asset'
+                          const thumbUrl = item.image_url || item.thumbnail_url || item.preview_url
+                          const type = assetBrowserCategory === 'voices' ? 'audio' : assetBrowserCategory === 'videos' ? 'video' : 'image'
+                          return (
+                            <div
+                              key={assetKey}
+                              onClick={() => {
+                                const next = new Set(selectedAssets)
+                                if (isSelected) next.delete(assetKey)
+                                else next.add(assetKey)
+                                setSelectedAssets(next)
+                              }}
+                              className={`relative rounded-sm border cursor-pointer transition-all overflow-hidden group ${
+                                isSelected
+                                  ? 'border-[#e57e25] ring-1 ring-[#e57e25]/50'
+                                  : 'border-[#212128] hover:border-[#363644]'
+                              }`}
+                            >
+                              <div className="aspect-video bg-[#12121a] flex items-center justify-center overflow-hidden">
+                                {thumbUrl ? (
+                                  <img src={resolveUrl(thumbUrl)} alt={name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-2xl text-neutral-600">
+                                    {type === 'video' ? '🎬' : type === 'audio' ? '🎵' : '🖼️'}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="p-2">
+                                <p className="text-[9px] font-bold text-neutral-300 truncate">{name}</p>
+                                <p className="text-[8px] text-neutral-600 uppercase mt-0.5">{type}</p>
+                              </div>
+                              {isSelected && (
+                                <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#e57e25] flex items-center justify-center">
+                                  <FiCheckCircle size={10} className="text-white" />
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {/* Footer with import button */}
+                <div className="flex items-center justify-between px-5 py-3 border-t border-[#212128] bg-[#12121a] shrink-0">
+                  <span className="text-[9.5px] text-neutral-500">
+                    {selectedAssets.size > 0 ? `${selectedAssets.size} asset${selectedAssets.size > 1 ? 's' : ''} selected` : 'Select assets to import'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (selectedAssets.size === 0) return
+                      setImportingAssets(true)
+                      const newAssets = []
+                      selectedAssets.forEach((assetKey) => {
+                        const [catKey, idStr] = assetKey.split('_')
+                        const id = Number(idStr)
+                        const item = (globalAssets[catKey] || []).find((a) => a.id === id)
+                        if (!item) return
+                        const type = catKey === 'voices' ? 'audio' : catKey === 'videos' ? 'video' : 'image'
+                        const name = item.character_name || item.environment_name || `Scene ${item.scene_number}` || `Asset ${item.id}`
+                        const url = (catKey === 'videos' ? item.video_url : null)
+                          || item.image_url
+                          || item.preview_url
+                          || ''
+                        newAssets.push({
+                          id: `global_${catKey}_${item.id}_${Date.now()}`,
+                          name,
+                          url: resolveUrl(url),
+                          type,
+                          duration: item.duration || 5.0,
+                          thumbnail: item.thumbnail_url || item.image_url || null
+                        })
+                      })
+                      setAssets((prev) => [...prev, ...newAssets])
+                      setShowAssetBrowser(false)
+                      setImportingAssets(false)
+                      setSelectedAssets(new Set())
+                    }}
+                    disabled={selectedAssets.size === 0 || importingAssets}
+                    className={`px-4 py-2 rounded-sm text-[9.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                      selectedAssets.size > 0
+                        ? 'bg-gradient-to-b from-[#e57e25] to-[#c96a1a] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_1px_3px_rgba(0,0,0,0.4)] hover:from-[#f08c30] hover:to-[#d4731e] active:translate-y-[0.5px]'
+                        : 'bg-[#252530] text-neutral-600 cursor-not-allowed'
+                    }`}
+                  >
+                    {importingAssets ? (
+                      <><FiLoader size={12} className="animate-spin mr-1.5" />Importing</>
+                    ) : (
+                      `Import ${selectedAssets.size > 0 ? `(${selectedAssets.size})` : ''}`
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center py-16">
+                <FiLoader size={20} className="animate-spin text-accent" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Export Process Overlay Modal */}
       {isExporting && (

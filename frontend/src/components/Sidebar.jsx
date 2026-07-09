@@ -621,10 +621,6 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Active indicator bar */}
-        {isActive && (
-          <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${d ? 'bg-black' : 'bg-white'}`} />
-        )}
       </div>
     );
   };
@@ -786,8 +782,8 @@ export default function Sidebar() {
                 } ${
                   isActive
                     ? d
-                      ? 'bg-black/[0.06] text-black border-l-2 border-black'
-                      : 'bg-surface-800 text-white border-l-2 border-white'
+                      ? 'bg-black/[0.06] text-black'
+                      : 'bg-surface-800 text-white'
                     : d
                       ? 'text-gray-500 hover:bg-black/[0.04] hover:text-gray-800'
                       : 'text-surface-400 hover:bg-white/[0.02] hover:text-surface-200'
