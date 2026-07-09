@@ -1627,7 +1627,7 @@ export default function EditorPage() {
             )}
           </div>
 
-          <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-4'}`}>
+          <div className={`flex items-center ${isMobile ? 'gap-1 overflow-x-auto overflow-y-hidden scrollbar-none snap-x snap-mandatory' : 'gap-4'}`}>
             {/* Aspect Ratio Selector */}
             <div className="flex items-center gap-1.5">
               {!isMobile && <span className="text-[9px] uppercase font-extrabold tracking-wider text-surface-500 select-none">Aspect Ratio</span>}
