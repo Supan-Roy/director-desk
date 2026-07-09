@@ -8,6 +8,7 @@ import TabbedContent from '../components/TabbedContent';
 import AgentActivityPanel from '../components/AgentActivityPanel';
 import CreditUsageCard from '../components/CreditUsageCard';
 import { useProjectData } from '../hooks/useProjectData';
+import ProductionHealthWidget from '../components/ProductionHealthWidget';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import Footer from '../components/Footer';
@@ -76,7 +77,7 @@ function DustParticles() {
 }
 
 export default function Dashboard() {
-  const { hasProject, loading } = useProjectData();
+  const { hasProject, loading, activeProjectId } = useProjectData();
   const { isDayMode } = useTheme();
   const { user, openLoginModal } = useAuth();
   const containerRef = useRef(null);
@@ -326,6 +327,10 @@ export default function Dashboard() {
                   <div className="hidden lg:block w-80 shrink-0 space-y-6">
                     <AgentActivityPanel />
                     <CreditUsageCard />
+                    {/* Director Sync™ Production Health */}
+                    {activeProjectId && (
+                      <ProductionHealthWidget projectId={activeProjectId} />
+                    )}
                   </div>
                 </div>
               </div>

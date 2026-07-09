@@ -240,6 +240,48 @@ export async function deleteSceneVideo(projectId, videoId) {
   return response.data
 }
 
+// ─── Director Sync™ ──────────────────────────────────────────────────────────
 
+/**
+ * Get the production sync status for a project.
+ * Returns per-category health (characters, voices, environments, scenes, poster, trailer).
+ */
+export async function getSyncStatus(projectId) {
+  const response = await apiClient.get(`/api/projects/${projectId}/sync/status`)
+  return response.data
+}
 
+/**
+ * Analyze the downstream impact of changing an asset.
+ * Returns affected nodes, total credits, and formatted time estimate.
+ */
+export async function analyzeImpact(projectId, assetType, assetName) {
+  const response = await apiClient.post(`/api/projects/${projectId}/sync/analyze`, {
+    asset_type: assetType,
+    asset_name: assetName,
+  })
+  return response.data
+}
 
+/**
+ * Mark an asset as stale (out-of-sync) after it is saved/updated.
+ * Triggers a Redis stale key with 5-minute TTL.
+ */
+export async function markStale(projectId, assetType, assetName) {
+  const response = await apiClient.post(`/api/projects/${projectId}/sync/mark-stale`, {
+    asset_type: assetType,
+    asset_name: assetName,
+  })
+  return response.data
+}
+
+/**
+ * Trigger Director Sync™ propagation — clears stale state for a project.
+ * Pass affectedNodeIds to limit scope, or omit to clear all stale nodes.
+ */
+export async function propagateSync(projectId, affectedNodeIds = null) {
+  const response = await apiClient.post(`/api/projects/${projectId}/sync/propagate`, {
+    affected_node_ids: affectedNodeIds,
+  })
+  return response.data
+}

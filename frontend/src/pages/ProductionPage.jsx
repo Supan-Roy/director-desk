@@ -23,8 +23,12 @@ import {
   generateSceneVideo,
   approveSceneVideo,
   deleteSceneVideo,
+  analyzeImpact,
+  markStale,
+  getSyncStatus,
   apiBaseUrl 
 } from '../services/apiClient';
+import DirectorSyncCard from '../components/DirectorSyncCard';
 import Sidebar from '../components/Sidebar';
 import ProjectIcon from '../components/ProjectIcon';
 import AgentActivityPanel from '../components/AgentActivityPanel';
@@ -309,6 +313,28 @@ export default function ProductionPage() {
   const [generatedVoiceAssets, setGeneratedVoiceAssets] = useState([]);
   const [runningJobs, setRunningJobs] = useState({});
 
+  // ── Director Sync™ State ──────────────────────────────────────────────────
+  const [syncCardData, setSyncCardData] = useState(null); // impactData from analyzeImpact()
+  const [syncStatus, setSyncStatus] = useState(null);    // from getSyncStatus()
+
+  // Trigger Director Sync analysis and show floating card
+  const triggerDirectorSync = useCallback(async (assetType, assetName) => {
+    const numericId = decodeProjectRouteId(id);
+    try {
+      // Mark the asset as stale in Redis
+      await markStale(numericId, assetType, assetName);
+      // Get downstream impact for the floating card
+      const impact = await analyzeImpact(numericId, assetType, assetName);
+      if (impact && impact.affected_nodes && impact.affected_nodes.length > 0) {
+        setSyncCardData(impact);
+      }
+      // Refresh sync status badge
+      getSyncStatus(numericId).then(s => setSyncStatus(s)).catch(() => {});
+    } catch (err) {
+      console.warn('Director Sync: failed to analyze impact', err);
+    }
+  }, [id]);
+
   const fetchCharactersList = useCallback(() => {
     const numericId = decodeProjectRouteId(id);
     getProjectCharacters(numericId)
@@ -511,6 +537,8 @@ export default function ProductionPage() {
     try {
       await selectCharacterVersion(numericId, characterName, preferredAssetId);
       await fetchCharactersList();
+      // Director Sync™: detect downstream impact
+      triggerDirectorSync('character', characterName);
     } catch (err) {
       console.error("Failed to select character version:", err);
       showToast("Failed to switch version: " + err.message, 'error');
@@ -545,6 +573,8 @@ export default function ProductionPage() {
     try {
       await selectEnvironmentVersion(numericId, envName, preferredAssetId);
       await fetchEnvironmentsList();
+      // Director Sync™: detect downstream impact
+      triggerDirectorSync('environment', envName);
     } catch (err) {
       console.error("Failed to select environment version:", err);
       showToast("Failed to switch version: " + err.message, 'error');
@@ -579,6 +609,8 @@ export default function ProductionPage() {
     try {
       await selectVoiceVersion(numericId, characterName, preferredAssetId);
       await fetchVoicesList();
+      // Director Sync™: detect downstream impact
+      triggerDirectorSync('voice', characterName);
     } catch (err) {
       console.error("Failed to select voice version:", err);
       showToast("Failed to switch version: " + err.message, 'error');
@@ -2800,6 +2832,19 @@ export default function ProductionPage() {
           )}
         </div>
       </div>
+
+      {/* Director Sync™ Floating Card — auto-appears after any asset change */}
+      {syncCardData && (
+        <DirectorSyncCard
+          projectId={decodeProjectRouteId(id)}
+          impactData={syncCardData}
+          onDismiss={() => setSyncCardData(null)}
+          onSynced={() => {
+            setSyncCardData(null);
+            getSyncStatus(decodeProjectRouteId(id)).then(s => setSyncStatus(s)).catch(() => {});
+          }}
+        />
+      )}
     </div>
   );
 }
