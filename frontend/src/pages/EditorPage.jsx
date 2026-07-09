@@ -1614,12 +1614,14 @@ export default function EditorPage() {
           isMobile ? 'h-10 px-3' : 'h-14 px-6'
         }`}>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-extrabold tracking-[0.25em] uppercase text-surface-500">
-              {isMobile ? 'Studio' : 'Studio Post-Production'}
-            </span>
+            {!isMobile && (
+              <span className="text-[10px] font-extrabold tracking-[0.25em] uppercase text-surface-500">
+                Studio Post-Production
+              </span>
+            )}
             {hasProject && projectTitle && (
               <>
-                <span className="text-surface-700">/</span>
+                {!isMobile && <span className="text-surface-700">/</span>}
                 <span className="text-[11.5px] font-bold text-accent truncate max-w-[120px] sm:max-w-[200px]">
                   {projectTitle}
                 </span>
