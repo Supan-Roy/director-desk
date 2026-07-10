@@ -135,7 +135,7 @@ function DeleteButton({ assetType, assetId, onDeleted, d }) {
         onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
         disabled={deleting}
         className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${
-          d ? 'bg-red-600 text-white border-black/20 hover:bg-red-500' : 'bg-red-600 text-white border-white/20 hover:bg-red-500'
+          d ? 'bg-black text-white border-black/30 hover:bg-gray-800' : 'bg-white text-black border-white/20 hover:bg-gray-100'
         } ${deleting ? 'opacity-40 cursor-not-allowed' : ''}`}
         title="Delete asset"
       >

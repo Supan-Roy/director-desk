@@ -2777,7 +2777,7 @@ export default function ProductionPage() {
                                     </button>
                                     <button
                                       onClick={() => setDeleteTarget({ videoId: activeVideo.id })}
-                                      className="flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border bg-red-600 text-white border-white/20 hover:bg-red-500"
+                                      className="flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border bg-white text-black border-white/20 hover:bg-gray-100"
                                       title="Delete scene video"
                                     >
                                       <FiTrash2 size={14} />
