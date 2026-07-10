@@ -634,36 +634,6 @@ def _bg_generate_banner(project_id: int):
         db.close()
 
 
-def _bg_generate_credits(project_id: int, user_id: Optional[int] = None):
-    """Background task wrapper for credits generation."""
-    db = SessionLocal()
-    try:
-        project = project_repository.get_by_id(db, project_id)
-        if not project:
-            return
-        user = user_repository.get_by_id(db, user_id) if user_id else None
-        _update_release_asset(project, "credits", status="generating", db=db)
-        try:
-            credits = build_credits(project, user)
-            db.refresh(project)
-            entry_status = (project.release_assets or {}).get("credits", {}).get("status")
-            if entry_status == "cancelled":
-                url = _asset_url(project_id, "credits.json")
-                _update_release_asset(project, "credits", url=url, status="cancelled", db=db)
-                return
-            credits_path = _asset_path(project_id, "credits.json")
-            with open(credits_path, "w", encoding="utf-8") as f:
-                json.dump(credits, f, indent=2, ensure_ascii=False)
-            url = _asset_url(project_id, "credits.json")
-            _update_release_asset(project, "credits", url=url, status="completed", db=db)
-        except Exception as e:
-            db.refresh(project)
-            if (project.release_assets or {}).get("credits", {}).get("status") != "cancelled":
-                _update_release_asset(project, "credits", status="failed", error=str(e), db=db)
-    finally:
-        db.close()
-
-
 def _bg_generate_trailer(project_id: int, target_duration: int = 30):
     """Background task wrapper for trailer generation."""
     db = SessionLocal()
@@ -706,7 +676,24 @@ def _bg_generate_all(project_id: int, trailer_duration: int = 30, user_id: Optio
         _bg_generate_thumbnail(project_id)
         _bg_generate_poster_vertical(project_id)
         _bg_generate_banner(project_id)
-        _bg_generate_credits(project_id, user_id)
+        try:
+            db_local2 = SessionLocal()
+            try:
+                project2 = project_repository.get_by_id(db_local2, project_id)
+                if project2:
+                    user = user_repository.get_by_id(db_local2, user_id) if user_id else None
+                    credits = build_credits(project2, user)
+                    credits_path = _asset_path(project_id, "credits.json")
+                    with open(credits_path, "w", encoding="utf-8") as f:
+                        json.dump(credits, f, indent=2, ensure_ascii=False)
+                    url = _asset_url(project_id, "credits.json")
+                    _update_release_asset(project2, "credits", url=url, status="completed", db=db_local2)
+            except Exception as e:
+                logger.error(f"Credits generation failed in _bg_generate_all: {e}")
+            finally:
+                db_local2.close()
+        except Exception as e:
+            logger.error(f"Credits generation failed: {e}")
         try:
             _bg_generate_trailer(project_id, trailer_duration)
         except Exception as e:

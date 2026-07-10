@@ -11,6 +11,7 @@ Generates promotional and release assets for a completed project:
   - Release Package (ZIP download)
 """
 import os
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -216,24 +217,6 @@ def generate_trailer(
     )
 
 
-@router.post("/{project_id}/release/generate/credits")
-def generate_credits(
-    project_id: int,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
-):
-    """Generate movie credits from project metadata."""
-    _get_project_or_404(project_id, db)
-    user_id = current_user.id if current_user else None
-    background_tasks.add_task(release_service._bg_generate_credits, project_id, user_id)
-    return GenerateAssetResponse(
-        asset_type="credits",
-        status="generating",
-        message="Credits generation started",
-    )
-
-
 @router.post("/{project_id}/release/generate/all")
 def generate_all(
     project_id: int,
@@ -253,6 +236,83 @@ def generate_all(
         status="generating",
         message="All assets generation started",
     )
+
+
+# ── Credits Endpoints ────────────────────────────────────────────────────────
+
+
+@router.post("/{project_id}/release/generate/credits")
+def generate_credits(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    """Generate movie credits from project metadata (synchronous — pure text, instant)."""
+    project = _get_project_or_404(project_id, db)
+    user = current_user
+
+    try:
+        credits = release_service.build_credits(project, user)
+        credits_path = os.path.join("static", "release-assets", str(project_id), "credits.json")
+        os.makedirs(os.path.dirname(credits_path), exist_ok=True)
+        with open(credits_path, "w", encoding="utf-8") as f:
+            json.dump(credits, f, indent=2, ensure_ascii=False)
+
+        url = f"/static/release-assets/{project_id}/credits.json"
+        assets = dict(project.release_assets or {})
+        assets["credits"] = {
+            "url": url,
+            "status": "completed",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "credit_data": credits,
+        }
+        project.release_assets = assets
+        db.commit()
+
+        return {
+            "asset_type": "credits",
+            "status": "completed",
+            "message": "Credits generated",
+            "credits": credits,
+        }
+    except Exception as e:
+        logger.error(f"Credits generation failed: {e}")
+        assets = dict(project.release_assets or {})
+        assets["credits"] = {"status": "failed", "error": str(e)}
+        project.release_assets = assets
+        db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/{project_id}/release/credits")
+def update_credits(
+    project_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    """Update credits text data and save to JSON file."""
+    project = _get_project_or_404(project_id, db)
+    assets = dict(project.release_assets or {})
+
+    existing = (assets.get("credits") or {}).get("credit_data") or {}
+    existing.update(body)
+
+    credits_path = os.path.join("static", "release-assets", str(project_id), "credits.json")
+    os.makedirs(os.path.dirname(credits_path), exist_ok=True)
+    with open(credits_path, "w", encoding="utf-8") as f:
+        json.dump(existing, f, indent=2, ensure_ascii=False)
+
+    assets["credits"] = {
+        "url": f"/static/release-assets/{project_id}/credits.json",
+        "status": "completed",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "credit_data": existing,
+    }
+    project.release_assets = assets
+    db.commit()
+
+    return {"status": "ok", "credits": existing}
 
 
 # ── Cancel ───────────────────────────────────────────────────────────────────
