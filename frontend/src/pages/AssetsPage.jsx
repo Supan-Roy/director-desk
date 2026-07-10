@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   FiArrowLeft, FiDatabase, FiSearch, FiSliders, FiDownload, FiPlay,
   FiX, FiVolume2, FiImage, FiVideo, FiUser, FiLoader, FiExternalLink,
-  FiChevronDown, FiTrash2, FiAward, FiFileText, FiClock, FiChevronRight
+  FiChevronDown, FiTrash2, FiAward, FiFileText, FiClock, FiChevronRight, FiChevronLeft
 } from 'react-icons/fi'
 import Sidebar from '../components/Sidebar'
 import { useTheme } from '../context/ThemeContext'
@@ -113,12 +113,12 @@ function DeleteButton({ assetType, assetId, onDeleted, d }) {
       <button
         onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
         disabled={deleting}
-        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all cursor-pointer ${
-          d ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'text-white/40 hover:text-white/80 hover:bg-white/10'
+        className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${
+          d ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
         } ${deleting ? 'opacity-40 cursor-not-allowed' : ''}`}
         title="Delete asset"
       >
-        {deleting ? <FiLoader size={11} className="animate-spin" /> : <FiTrash2 size={11} />}
+        {deleting ? <FiLoader size={14} className="animate-spin" /> : <FiTrash2 size={14} />}
       </button>
       <ConfirmModal show={showConfirm} onConfirm={handleDelete} onCancel={() => setShowConfirm(false)} d={d} />
     </>
@@ -300,8 +300,22 @@ export default function AssetsPage() {
           </div>
 
           {/* Sub tabs filtering */}
-          <div className="relative w-full sm:w-auto flex items-center gap-0">
-            <div ref={tabScrollRef} className="flex overflow-x-auto gap-2 scrollbar-none w-full sm:max-w-[600px]">
+          <div className="relative w-full sm:w-auto flex items-center gap-1">
+            <button
+              onClick={() => {
+                const el = tabScrollRef.current;
+                if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
+              }}
+              className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-xl border transition-all cursor-pointer ${
+                d
+                  ? 'bg-white border-neutral-200 text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                  : 'bg-black/30 border-white/10 text-surface-450 hover:bg-white/5 hover:text-white'
+              }`}
+              title="Scroll tabs left"
+            >
+              <FiChevronLeft size={14} />
+            </button>
+            <div ref={tabScrollRef} className="flex overflow-x-auto gap-2 scrollbar-none w-full sm:max-w-[520px]">
               {TABS.map(tab => {
                 const isActive = activeTab === tab.id
                 return (
