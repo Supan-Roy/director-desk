@@ -45,3 +45,4 @@ pnpm-debug.log*
 # Backend Media Storage
 backend/static/uploads/
 backend/static/exports/
+backend/static/release-assets/

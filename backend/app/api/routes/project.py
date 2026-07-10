@@ -191,13 +191,14 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/projects/{project_id}", status_code=204)
-def delete_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+def delete_project(project_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
     """Permanently delete a saved project after verifying ownership."""
     project_model = project_service.get_project_model(db, project_id)
     if not project_model:
         raise HTTPException(status_code=404, detail="Project not found.")
 
-    if project_model.user_id != current_user.id:
+    # Allow if project is unowned (legacy/guest) or belongs to the authenticated user
+    if project_model.user_id is not None and (not current_user or project_model.user_id != current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to delete this project."
@@ -247,13 +248,14 @@ def save_current_project(db: Session = Depends(get_db), current_user: User = Dep
 
 
 @router.patch("/projects/{project_id}", response_model=ProjectDetail)
-def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_user)):
+def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
     """Update a saved project's fields after verifying ownership."""
     project_model = project_service.get_project_model(db, project_id)
     if not project_model:
         raise HTTPException(status_code=404, detail="Project not found.")
 
-    if project_model.user_id != current_user.id:
+    # Allow if project is unowned (legacy/guest) or belongs to the authenticated user
+    if project_model.user_id is not None and (not current_user or project_model.user_id != current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify this project."

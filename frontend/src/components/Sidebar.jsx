@@ -23,6 +23,7 @@ import {
   FiCalendar,
   FiCamera,
   FiX,
+  FiAward,
   FiCheck,
   FiMenu,
 } from 'react-icons/fi';
@@ -161,7 +162,7 @@ export default function Sidebar() {
   const { isDayMode: d } = useTheme();
 
   const activeProjectId = (() => {
-    const match = location.pathname.match(/^\/projects\/([a-z0-9]+)(?:\/production)?$/);
+    const match = location.pathname.match(/^\/projects\/([a-z0-9]+)(?:\/(?:production|release))?$/);
     return match ? decodeId(match[1]) : null;
   })();
 
@@ -758,23 +759,37 @@ export default function Sidebar() {
 
         <nav className={`space-y-1 w-full ${isCollapsed ? 'px-2 flex flex-col items-center' : 'px-3'}`}>
           {[
-            { icon: FiGrid,      label: 'Studio',      path: '/' },
-            { icon: FiFilm,      label: 'Studio Editor', path: '/editor' },
-            { icon: PiRobotBold, label: 'Agents',      path: '/agents' },
-            { icon: FiLayers,    label: 'Templates',   path: '/templates' },
-            { icon: FiDatabase,  label: 'Assets',      path: '/assets' },
-            { icon: FiSettings,  label: 'Settings',    path: '/settings' },
+            { icon: FiGrid,      label: 'Studio',        path: '/' },
+            { icon: FiFilm,      label: 'Studio Editor',  path: '/editor' },
+            { icon: FiAward,     label: 'Release Studio', path: null, dynamic: true },
+            { icon: PiRobotBold, label: 'Agents',         path: '/agents' },
+            { icon: FiLayers,    label: 'Templates',      path: '/templates' },
+            { icon: FiDatabase,  label: 'Assets',         path: '/assets' },
+            { icon: FiSettings,  label: 'Settings',       path: '/settings' },
           ].map((item) => {
-            const isActive = item.path ? location.pathname === item.path : false;
+            const isReleaseStudio = item.dynamic;
+            const activeProjectMatch = location.pathname.match(/^\/projects\/([a-z0-9]+)/);
+            const activeProjectEncodedId = activeProjectMatch?.[1] || null;
+
+            const isActive = isReleaseStudio
+              ? location.pathname.startsWith(`/projects/${activeProjectEncodedId}/release`)
+              : item.path ? location.pathname === item.path : false;
+
             return (
               <button
                 key={item.label}
                 onClick={() => {
-                  if (item.path) {
+                  if (isReleaseStudio) {
+                    if (activeProjectEncodedId) {
+                      navigate(`/projects/${activeProjectEncodedId}/release`);
+                    } else {
+                      navigate('/release');
+                    }
+                  } else {
                     if (item.path === '/' && hasProject) reset();
                     navigate(item.path);
-                    setIsMobileOpen(false);
                   }
+                  setIsMobileOpen(false);
                 }}
                 title={isCollapsed ? item.label : undefined}
                 className={`flex items-center rounded-lg transition-all duration-300 relative group ${
@@ -787,7 +802,7 @@ export default function Sidebar() {
                     : d
                       ? 'text-gray-500 hover:bg-black/[0.04] hover:text-gray-800'
                       : 'text-surface-400 hover:bg-white/[0.02] hover:text-surface-200'
-                }`}
+                } cursor-pointer`}
               >
                 <item.icon
                   size={isCollapsed ? 18 : 15}

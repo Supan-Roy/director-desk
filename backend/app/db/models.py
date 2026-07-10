@@ -83,6 +83,7 @@ class Project(Base):
 
     environments = Column(JSONType, nullable=True)     # list of environment dicts
     voices = Column(JSONType, nullable=True)           # list of voice dicts
+    release_assets = Column(JSONType, nullable=True)   # release studio generated assets
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 

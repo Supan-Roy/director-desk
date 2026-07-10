@@ -67,6 +67,7 @@ def _run_migrations(engine) -> None:
         ("projects", "environments", "TEXT"),
         ("projects", "voices", "TEXT"),
         ("projects", "user_id", "INTEGER REFERENCES users(id) ON DELETE CASCADE"),
+        ("projects", "release_assets", "TEXT"),
     ]
 
     with engine.connect() as conn:
@@ -99,6 +100,7 @@ openapi_tags = [
     {"name": "auth", "description": "User authentication — email/password login, registration, OTP verification, Google OAuth, logout, and session."},
     {"name": "settings_auth", "description": "Account deletion request and confirmation (OTP-verified)."},
     {"name": "jobs", "description": "Background job management for asset generation and scene video rendering."},
+    {"name": "release", "description": "Release Studio — generate promotional assets (poster, thumbnail, trailer, credits) and download release packages."},
 ]
 
 app = FastAPI(
@@ -130,6 +132,7 @@ import os
 
 os.makedirs("static/uploads", exist_ok=True)
 os.makedirs("static/exports", exist_ok=True)
+os.makedirs("static/release-assets", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

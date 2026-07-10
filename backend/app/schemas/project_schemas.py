@@ -38,6 +38,7 @@ class ProjectDetail(BaseModel):
     scene_breakdown: Optional[Dict[str, Any]] = None
     environments: Optional[List[Dict[str, Any]]] = None
     voices: Optional[List[Dict[str, Any]]] = None
+    release_assets: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
 
