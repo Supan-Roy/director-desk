@@ -396,10 +396,10 @@ export default function AssetsPage() {
                                   e.stopPropagation()
                                   navigate(`/projects/${char.project_id}`)
                                 }}
-                                className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0"
-                                title="Go to project"
+                                className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0 min-w-0"
+                                title={char.project_title}
                               >
-                                {char.project_title} <FiExternalLink size={10} />
+                                <span className="truncate max-w-[100px]">{char.project_title}</span> <FiExternalLink size={10} />
                               </button>
                             </div>
                             <p className={`text-[10.5px] leading-relaxed mt-1.5 ${isExpanded ? '' : 'line-clamp-2'} ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
@@ -500,8 +500,8 @@ export default function AssetsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <h4 className={`text-[13.5px] font-black tracking-wide truncate ${d ? 'text-neutral-900' : 'text-white'}`}>{env.environment_name}</h4>
-                              <button onClick={(e) => { e.stopPropagation(); navigate(`/projects/${env.project_id}`); }} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0">
-                                {env.project_title} <FiExternalLink size={10} />
+                              <button onClick={(e) => { e.stopPropagation(); navigate(`/projects/${env.project_id}`); }} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0 min-w-0" title={env.project_title}>
+                                <span className="truncate max-w-[100px]">{env.project_title}</span> <FiExternalLink size={10} />
                               </button>
                             </div>
                             <p className={`text-[10.5px] leading-relaxed mt-1.5 ${isExpanded ? '' : 'line-clamp-2'} ${d ? 'text-neutral-600' : 'text-neutral-400'}`}>
@@ -575,8 +575,8 @@ export default function AssetsPage() {
                               SIG: {voice.voice_signature || 'QwenTTS-Male'}
                             </span>
                           </div>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/projects/${voice.project_id}`); }} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0">
-                            {voice.project_title} <FiExternalLink size={10} />
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/projects/${voice.project_id}`); }} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0 min-w-0" title={voice.project_title}>
+                                <span className="truncate max-w-[100px]">{voice.project_title}</span> <FiExternalLink size={10} />
                           </button>
                         </div>
 
@@ -648,7 +648,9 @@ export default function AssetsPage() {
                           <div>
                             <div className="flex items-center justify-between">
                               <span className={`text-[9px] uppercase font-bold tracking-wider ${d ? 'text-gray-400' : 'text-surface-550'}`}>Model: {video.generation_model}</span>
-                              <button onClick={() => navigate(`/projects/${video.project_id}`)} className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold">{video.project_title} <FiExternalLink size={10} /></button>
+                              <button onClick={() => navigate(`/projects/${video.project_id}`)} className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold min-w-0" title={video.project_title}>
+                                <span className="truncate max-w-[100px]">{video.project_title}</span> <FiExternalLink size={10} />
+                              </button>
                             </div>
                             <p className={`text-[10.5px] leading-relaxed mt-2 font-mono line-clamp-2 ${d ? 'text-neutral-700' : 'text-neutral-350'}`}>"{video.prompt_used}"</p>
                           </div>
@@ -687,7 +689,9 @@ export default function AssetsPage() {
                         <div>
                           <div className="flex items-center justify-between">
                             <h4 className={`text-[12px] font-black tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>{poster.label}</h4>
-                            <button onClick={() => navigate(`/projects/${poster.project_id}`)} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0">{poster.project_title} <FiExternalLink size={10} /></button>
+                            <button onClick={() => navigate(`/projects/${poster.project_id}`)} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0 min-w-0" title={poster.project_title}>
+                                <span className="truncate max-w-[100px]">{poster.project_title}</span> <FiExternalLink size={10} />
+                              </button>
                           </div>
                           <p className={`text-[9px] font-mono mt-1 ${d ? 'text-neutral-500' : 'text-surface-500'}`}>{poster.asset_key}</p>
                         </div>
@@ -722,7 +726,9 @@ export default function AssetsPage() {
                         <div>
                           <div className="flex items-center justify-between">
                             <h4 className={`text-[12px] font-black tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>{promo.label}</h4>
-                            <button onClick={() => navigate(`/projects/${promo.project_id}`)} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0">{promo.project_title} <FiExternalLink size={10} /></button>
+                            <button onClick={() => navigate(`/projects/${promo.project_id}`)} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0 min-w-0" title={promo.project_title}>
+                                <span className="truncate max-w-[100px]">{promo.project_title}</span> <FiExternalLink size={10} />
+                            </button>
                           </div>
                           {promo.duration && <p className={`text-[9px] font-mono mt-1 ${d ? 'text-neutral-500' : 'text-surface-500'}`}>Duration: {promo.duration}s</p>}
                         </div>
@@ -760,7 +766,9 @@ export default function AssetsPage() {
                         <div>
                           <div className="flex items-center justify-between">
                             <h4 className={`text-[12px] font-black tracking-wide ${d ? 'text-neutral-900' : 'text-white'}`}>End Credits</h4>
-                            <button onClick={() => navigate(`/projects/${credit.project_id}`)} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0">{credit.project_title} <FiExternalLink size={10} /></button>
+                            <button onClick={() => navigate(`/projects/${credit.project_id}`)} className="text-[9.5px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold cursor-pointer shrink-0 min-w-0" title={credit.project_title}>
+                                <span className="truncate max-w-[100px]">{credit.project_title}</span> <FiExternalLink size={10} />
+                            </button>
                           </div>
                           <p className={`text-[9px] font-mono mt-1 ${d ? 'text-neutral-500' : 'text-surface-500'}`}>
                             {credit.credit_data?.director ? `Dir: ${credit.credit_data.director}` : ''}
@@ -795,7 +803,7 @@ export default function AssetsPage() {
               <video src={`${apiBaseUrl}${playingVideo.video_url}`} controls controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} className="w-full h-auto aspect-video max-h-[75vh] select-none" />
             </div>
             <div className="px-4">
-              <h4 className="text-[13px] uppercase font-bold tracking-widest text-purple-400">Scene {playingVideo.scene_number} — {playingVideo.project_title}</h4>
+              <h4 className="text-[13px] uppercase font-bold tracking-widest text-purple-400 truncate">Scene {playingVideo.scene_number} — {playingVideo.project_title}</h4>
               <p className="text-[11.5px] text-surface-300 font-mono leading-relaxed mt-1.5">"{playingVideo.prompt_used}"</p>
             </div>
           </div>
