@@ -42,6 +42,10 @@ pnpm-debug.log*
 *.db
 /backend/director_desk.db
 
+# Test assets
+*.wav
+*.mp3
+
 # Backend Media Storage
 backend/static/uploads/
 backend/static/exports/
