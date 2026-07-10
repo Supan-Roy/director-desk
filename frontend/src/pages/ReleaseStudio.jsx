@@ -318,7 +318,7 @@ function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGen
                 {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Generating</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiAward size={10} /> Generate</>}
               </button>
               {isComplete && (
-                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${d ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'}`} title="Delete poster">
+                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${d ? 'bg-red-600 text-white border-black/20 hover:bg-red-500' : 'bg-red-600 text-white border-white/20 hover:bg-red-500'}`} title="Delete poster">
                   <FiTrash2 size={14} />
                 </button>
               )}
@@ -427,7 +427,7 @@ function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, set
                 {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Compiling</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiPlay size={10} /> Generate Trailer</>}
               </button>
               {isComplete && (
-                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${d ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'}`} title="Delete video promo">
+                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${d ? 'bg-red-600 text-white border-black/20 hover:bg-red-500' : 'bg-red-600 text-white border-white/20 hover:bg-red-500'}`} title="Delete video promo">
                   <FiTrash2 size={14} />
                 </button>
               )}
@@ -603,7 +603,7 @@ function CreditsSection({ asset, onGenerate, d, projectId }) {
                 {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Generating</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiFileText size={10} /> Generate Credits</>}
               </button>
               {isComplete && (
-                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${d ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'}`} title="Delete end credits">
+                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${d ? 'bg-red-600 text-white border-black/20 hover:bg-red-500' : 'bg-red-600 text-white border-white/20 hover:bg-red-500'}`} title="Delete end credits">
                   <FiTrash2 size={14} />
                 </button>
               )}

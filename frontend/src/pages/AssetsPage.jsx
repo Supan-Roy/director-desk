@@ -61,6 +61,27 @@ function CustomSelect({ options, value, onChange, d, className }) {
   );
 }
 
+// ── Download helper ─────────────────────────────────────────────────────────
+
+function handleDownload(url, filename) {
+  return async (e) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      console.error('Download failed', err);
+    }
+  };
+}
+
 // ── Delete confirmation modal ──────────────────────────────────────────────
 
 function ConfirmModal({ show, onConfirm, onCancel, d }) {
@@ -113,8 +134,8 @@ function DeleteButton({ assetType, assetId, onDeleted, d }) {
       <button
         onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
         disabled={deleting}
-        className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${
-          d ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
+        className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${
+          d ? 'bg-red-600 text-white border-black/20 hover:bg-red-500' : 'bg-red-600 text-white border-white/20 hover:bg-red-500'
         } ${deleting ? 'opacity-40 cursor-not-allowed' : ''}`}
         title="Delete asset"
       >
@@ -443,7 +464,18 @@ export default function AssetsPage() {
                               {char.character_profile?.description || 'AI Cast character profile'}
                             </p>
                           </div>
-                          <DeleteButton assetType="character" assetId={char.id} onDeleted={handleDeleted} d={d} />
+                          <div className="flex items-center gap-2">
+                            {char.image_url && (
+                              <button
+                                onClick={handleDownload(`${apiBaseUrl}${char.image_url}`, `character_${char.character_name}.png`)}
+                                className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${d ? 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100 hover:text-gray-800' : 'bg-black/40 text-white/60 border-white/[0.12] hover:bg-white/10 hover:text-white/90'}`}
+                                title="Download character image"
+                              >
+                                <FiDownload size={14} />
+                              </button>
+                            )}
+                            <DeleteButton assetType="character" assetId={char.id} onDeleted={handleDeleted} d={d} />
+                          </div>
                         </div>
 
                         {/* Expanded details */}
@@ -542,7 +574,18 @@ export default function AssetsPage() {
                               {env.environment_profile?.description || 'Generated environment visual cues'}
                             </p>
                           </div>
-                          <DeleteButton assetType="environment" assetId={env.id} onDeleted={handleDeleted} d={d} />
+                          <div className="flex items-center gap-2">
+                            {env.image_url && (
+                              <button
+                                onClick={handleDownload(`${apiBaseUrl}${env.image_url}`, `environment_${env.environment_name}.png`)}
+                                className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${d ? 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100 hover:text-gray-800' : 'bg-black/40 text-white/60 border-white/[0.12] hover:bg-white/10 hover:text-white/90'}`}
+                                title="Download environment image"
+                              >
+                                <FiDownload size={14} />
+                              </button>
+                            )}
+                            <DeleteButton assetType="environment" assetId={env.id} onDeleted={handleDeleted} d={d} />
+                          </div>
                         </div>
 
                         <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 border-t border-dashed border-neutral-300/40 pt-3.5 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}>
@@ -613,8 +656,15 @@ export default function AssetsPage() {
                         </div>
 
                         {voice.preview_url ? (
-                          <div onClick={(e) => e.stopPropagation()} className={`p-2.5 rounded-xl border ${d ? 'bg-white border-neutral-250' : 'bg-black/35 border-white/5'}`}>
-                            <audio controls src={`${apiBaseUrl}${voice.preview_url}`} className="w-full h-8 text-[11px]" />
+                          <div onClick={(e) => e.stopPropagation()} className={`flex items-center gap-2 p-2.5 rounded-xl border ${d ? 'bg-white border-neutral-250' : 'bg-black/35 border-white/5'}`}>
+                            <audio controls src={`${apiBaseUrl}${voice.preview_url}`} className="flex-1 h-8 text-[11px]" />
+                            <button
+                              onClick={handleDownload(`${apiBaseUrl}${voice.preview_url}`, `voice_${voice.character_name || 'preview'}.wav`)}
+                              className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer border ${d ? 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100 hover:text-gray-800' : 'bg-black/40 text-white/60 border-white/[0.12] hover:bg-white/10 hover:text-white/90'}`}
+                              title="Download voice"
+                            >
+                              <FiDownload size={14} />
+                            </button>
                           </div>
                         ) : (
                           <div className="text-[10.5px] italic text-gray-500">No preview voice clip generated yet</div>
@@ -689,9 +739,9 @@ export default function AssetsPage() {
 
                           {isRendered && (
                             <div className="flex gap-2.5 pt-3.5 border-t border-dashed border-white/5">
-                              <a href={`${apiBaseUrl}${video.video_url}`} download={`scene_${video.scene_number}_clip.mp4`} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-colors text-center ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
+                              <button onClick={handleDownload(`${apiBaseUrl}${video.video_url}`, `scene_${video.scene_number}_clip.mp4`)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-colors text-center cursor-pointer ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
                                 <FiDownload size={12} /> Download
-                              </a>
+                              </button>
                               <DeleteButton assetType="video" assetId={video.id} onDeleted={handleDeleted} d={d} />
                             </div>
                           )}
@@ -728,9 +778,9 @@ export default function AssetsPage() {
                           <p className={`text-[9px] font-mono mt-1 ${d ? 'text-neutral-500' : 'text-surface-500'}`}>{poster.asset_key}</p>
                         </div>
                         <div className="flex gap-2 pt-2 border-t border-dashed border-white/5">
-                          <a href={`${apiBaseUrl}${poster.url}`} download={`${poster.asset_key}.jpg`} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
+                          <button onClick={handleDownload(`${apiBaseUrl}${poster.url}`, `${poster.asset_key}.jpg`)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
                             <FiDownload size={11} /> Download
-                          </a>
+                          </button>
                           <DeleteButton assetType="release_asset" assetId={poster.id} onDeleted={handleDeleted} d={d} />
                         </div>
                       </div>
@@ -765,9 +815,9 @@ export default function AssetsPage() {
                           {promo.duration && <p className={`text-[9px] font-mono mt-1 ${d ? 'text-neutral-500' : 'text-surface-500'}`}>Duration: {promo.duration}s</p>}
                         </div>
                         <div className="flex gap-2 pt-2 border-t border-dashed border-white/5">
-                          <a href={`${apiBaseUrl}${promo.url}`} download="trailer.mp4" className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
+                          <button onClick={handleDownload(`${apiBaseUrl}${promo.url}`, `trailer.mp4`)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
                             <FiDownload size={11} /> Download
-                          </a>
+                          </button>
                           <DeleteButton assetType="release_asset" assetId={promo.id} onDeleted={handleDeleted} d={d} />
                         </div>
                       </div>
@@ -807,9 +857,9 @@ export default function AssetsPage() {
                           </p>
                         </div>
                         <div className="flex gap-2 pt-2 border-t border-dashed border-white/5">
-                          <a href={`${apiBaseUrl}${credit.url}`} download="credits.json" className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
+                          <button onClick={handleDownload(`${apiBaseUrl}${credit.url}`, `credits.json`)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${d ? 'border-neutral-250 text-neutral-800 hover:bg-neutral-100' : 'border-white/10 text-neutral-200 hover:bg-white/5'}`}>
                             <FiDownload size={11} /> Download
-                          </a>
+                          </button>
                           <DeleteButton assetType="release_asset" assetId={credit.id} onDeleted={handleDeleted} d={d} />
                         </div>
                       </div>
