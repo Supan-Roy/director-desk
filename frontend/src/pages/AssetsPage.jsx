@@ -406,6 +406,7 @@ export default function AssetsPage() {
                               {char.character_profile?.description || 'AI Cast character profile'}
                             </p>
                           </div>
+                          <DeleteButton assetType="character" assetId={char.id} onDeleted={handleDeleted} d={d} />
                         </div>
 
                         {/* Expanded details */}
@@ -449,10 +450,6 @@ export default function AssetsPage() {
                                 "{char.character_profile.prompt_instructions}"
                               </div>
                             )}
-                          </div>
-                          {/* Delete */}
-                          <div className="flex justify-end pt-3">
-                            <DeleteButton assetType="character" assetId={char.id} onDeleted={handleDeleted} d={d} />
                           </div>
                         </div>
                       </div>
@@ -508,6 +505,7 @@ export default function AssetsPage() {
                               {env.environment_profile?.description || 'Generated environment visual cues'}
                             </p>
                           </div>
+                          <DeleteButton assetType="environment" assetId={env.id} onDeleted={handleDeleted} d={d} />
                         </div>
 
                         <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 border-t border-dashed border-neutral-300/40 pt-3.5 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}>
@@ -533,9 +531,6 @@ export default function AssetsPage() {
                                 "{env.environment_profile.prompt_instructions}"
                               </div>
                             )}
-                          </div>
-                          <div className="flex justify-end pt-3">
-                            <DeleteButton assetType="environment" assetId={env.id} onDeleted={handleDeleted} d={d} />
                           </div>
                         </div>
                       </div>
@@ -587,15 +582,15 @@ export default function AssetsPage() {
                         ) : (
                           <div className="text-[10.5px] italic text-gray-500">No preview voice clip generated yet</div>
                         )}
+                        <div className="flex justify-end">
+                          <DeleteButton assetType="voice" assetId={voice.id} onDeleted={handleDeleted} d={d} />
+                        </div>
 
                         <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 border-t border-dashed border-neutral-300/40 pt-3.5 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                           <div className="grid grid-cols-2 gap-4 text-[10.5px] leading-normal">
                             <div><span className="text-[7.5px] uppercase tracking-wider font-bold text-amber-500 block mb-0.5">Gender Target</span><span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{voice.gender_tag || 'Male'}</span></div>
                             <div><span className="text-[7.5px] uppercase tracking-wider font-bold text-emerald-450 block mb-0.5">Speaker Age</span><span className={`font-semibold block ${d ? 'text-neutral-800' : 'text-neutral-200'}`}>{voice.age_tag || 'Adult'}</span></div>
                             <div className="col-span-2"><span className="text-[7.5px] uppercase tracking-wider font-bold text-purple-450 block mb-0.5">Technical Signature</span><span className={`font-mono text-[9px] block ${d ? 'text-neutral-700' : 'text-neutral-300'}`}>{voice.voice_signature || 'qwen-tts-v2-multilingual'}</span></div>
-                          </div>
-                          <div className="flex justify-end pt-3">
-                            <DeleteButton assetType="voice" assetId={voice.id} onDeleted={handleDeleted} d={d} />
                           </div>
                         </div>
                       </div>
