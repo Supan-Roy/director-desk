@@ -61,13 +61,35 @@ function CustomSelect({ options, value, onChange, d, className }) {
   );
 }
 
+// ── Delete confirmation modal ──────────────────────────────────────────────
+
+function ConfirmModal({ show, onConfirm, onCancel, d }) {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className={`relative rounded-xl p-5 shadow-xl border max-w-[280px] w-full ${d ? 'bg-white border-gray-200' : 'bg-surface-800 border-white/[0.06]'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <p className={`text-[12px] font-bold text-center ${d ? 'text-gray-800' : 'text-white'}`}>Delete this asset?</p>
+        <p className={`text-[10px] text-center mt-1.5 ${d ? 'text-gray-500' : 'text-surface-400'}`}>This cannot be undone.</p>
+        <div className="flex items-center gap-2 mt-4">
+          <button onClick={onCancel} className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-white/5 text-surface-400 hover:bg-white/10'}`}>Cancel</button>
+          <button onClick={onConfirm} className="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer bg-red-600 text-white hover:bg-red-500">Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Delete button helper ─────────────────────────────────────────────────────
 
 function DeleteButton({ assetType, assetId, onDeleted, d }) {
   const [deleting, setDeleting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this asset? This cannot be undone.')) return;
+    setShowConfirm(false);
     setDeleting(true);
     try {
       const res = await fetch(`${apiBaseUrl}/api/assets/${assetType}/${assetId}`, {
@@ -87,18 +109,19 @@ function DeleteButton({ assetType, assetId, onDeleted, d }) {
   };
 
   return (
-    <button
-      onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-      disabled={deleting}
-      className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-all cursor-pointer ${
-        d
-          ? 'border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-          : 'border-white/[0.12] text-white/50 hover:bg-white/10 hover:text-white/80'
-      } ${deleting ? 'opacity-40 cursor-not-allowed' : ''}`}
-      title="Delete asset"
-    >
-      {deleting ? <FiLoader size={11} className="animate-spin" /> : <FiTrash2 size={11} />}
-    </button>
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
+        disabled={deleting}
+        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all cursor-pointer ${
+          d ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'text-white/40 hover:text-white/80 hover:bg-white/10'
+        } ${deleting ? 'opacity-40 cursor-not-allowed' : ''}`}
+        title="Delete asset"
+      >
+        {deleting ? <FiLoader size={11} className="animate-spin" /> : <FiTrash2 size={11} />}
+      </button>
+      <ConfirmModal show={showConfirm} onConfirm={handleDelete} onCancel={() => setShowConfirm(false)} d={d} />
+    </>
   );
 }
 

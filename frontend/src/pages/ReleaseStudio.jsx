@@ -28,6 +28,27 @@ import Footer from '../components/Footer';
 import { decodeProjectRouteId } from '../utils/hashids';
 import html2canvas from 'html2canvas';
 
+// ── Delete confirmation modal ──────────────────────────────────────────────
+
+function ConfirmModal({ show, onConfirm, onCancel, d }) {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className={`relative rounded-xl p-5 shadow-xl border max-w-[280px] w-full ${d ? 'bg-white border-gray-200' : 'bg-surface-800 border-white/[0.06]'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <p className={`text-[12px] font-bold text-center ${d ? 'text-gray-800' : 'text-white'}`}>Delete this asset?</p>
+        <p className={`text-[10px] text-center mt-1.5 ${d ? 'text-gray-500' : 'text-surface-400'}`}>This cannot be undone.</p>
+        <div className="flex items-center gap-2 mt-4">
+          <button onClick={onCancel} className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-white/5 text-surface-400 hover:bg-white/10'}`}>Cancel</button>
+          <button onClick={onConfirm} className="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer bg-red-600 text-white hover:bg-red-500">Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const POSTER_TYPES = [
   { key: 'poster',          label: 'Official Poster',     ratio: '16:9',   desc: 'Theatrical release poster' },
   { key: 'thumbnail',       label: 'YouTube Thumbnail',   ratio: '16:9',   desc: 'Click-optimised thumbnail' },
@@ -207,6 +228,7 @@ function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGen
   const isGen = asset?.status === 'generating';
   const previewRef = useRef(null);
   const isVertical = selectedPoster === 'poster_vertical';
+  const [showDelete, setShowDelete] = useState(false);
 
   const handleFullscreen = () => {
     const el = previewRef.current?.querySelector('img');
@@ -216,7 +238,7 @@ function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGen
   const resolveAssetType = (key) => key === 'poster_vertical' ? 'poster-vertical' : key;
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this poster asset? This cannot be undone.')) return;
+    setShowDelete(false);
     try {
       await fetch(`${apiBaseUrl}/api/assets/release_asset/release_${projectId}_${resolveAssetType(selectedPoster)}`, {
         method: 'DELETE', credentials: 'include',
@@ -296,11 +318,12 @@ function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGen
                 {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Generating</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiAward size={10} /> Generate</>}
               </button>
               {isComplete && (
-                <button onClick={handleDelete} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'}`}>
-                  <FiTrash2 size={10} /> Delete
+                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all cursor-pointer ${d ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'text-white/40 hover:text-white/80 hover:bg-white/10'}`} title="Delete poster">
+                  <FiTrash2 size={12} />
                 </button>
               )}
             </div>
+            <ConfirmModal show={showDelete} onConfirm={handleDelete} onCancel={() => setShowDelete(false)} d={d} />
           </div>
         </div>
       </div>
@@ -312,6 +335,7 @@ function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, set
   const isGen = asset?.status === 'generating';
   const isComplete = asset?.status === 'completed' && asset?.url;
   const previewRef = useRef(null);
+  const [showDelete, setShowDelete] = useState(false);
 
   const handleFullscreen = () => {
     const el = previewRef.current?.querySelector('video');
@@ -319,7 +343,7 @@ function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, set
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this video promo? This cannot be undone.')) return;
+    setShowDelete(false);
     try {
       await fetch(`${apiBaseUrl}/api/assets/release_asset/release_${projectId}_trailer`, {
         method: 'DELETE', credentials: 'include',
@@ -403,11 +427,12 @@ function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, set
                 {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Compiling</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiPlay size={10} /> Generate Trailer</>}
               </button>
               {isComplete && (
-                <button onClick={handleDelete} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'}`}>
-                  <FiTrash2 size={10} /> Delete
+                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all cursor-pointer ${d ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'text-white/40 hover:text-white/80 hover:bg-white/10'}`} title="Delete video promo">
+                  <FiTrash2 size={12} />
                 </button>
               )}
             </div>
+            <ConfirmModal show={showDelete} onConfirm={handleDelete} onCancel={() => setShowDelete(false)} d={d} />
           </div>
         </div>
       </div>
@@ -423,6 +448,7 @@ function CreditsSection({ asset, onGenerate, d, projectId }) {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showDelete, setShowDelete] = useState(false);
   const cardRef = useRef(null);
 
   const showToast = (msg, type = 'success') => {
@@ -490,7 +516,7 @@ function CreditsSection({ asset, onGenerate, d, projectId }) {
   };
 
   const handleDeleteCredits = async () => {
-    if (!window.confirm('Delete these end credits? This cannot be undone.')) return;
+    setShowDelete(false);
     try {
       await fetch(`${apiBaseUrl}/api/assets/release_asset/release_${projectId}_credits`, {
         method: 'DELETE', credentials: 'include',
@@ -577,11 +603,12 @@ function CreditsSection({ asset, onGenerate, d, projectId }) {
                 {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Generating</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiFileText size={10} /> Generate Credits</>}
               </button>
               {isComplete && (
-                <button onClick={handleDeleteCredits} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'}`}>
-                  <FiTrash2 size={10} /> Delete
+                <button onClick={() => setShowDelete(true)} className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all cursor-pointer ${d ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'text-white/40 hover:text-white/80 hover:bg-white/10'}`} title="Delete end credits">
+                  <FiTrash2 size={12} />
                 </button>
               )}
             </div>
+            <ConfirmModal show={showDelete} onConfirm={handleDeleteCredits} onCancel={() => setShowDelete(false)} d={d} />
           </div>
         </div>
       </div>

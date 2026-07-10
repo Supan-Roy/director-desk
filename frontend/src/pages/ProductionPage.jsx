@@ -4,7 +4,7 @@ import {
   FiArrowLeft, FiClock, FiFilm, FiActivity, FiUser, FiVolume2, 
   FiMapPin, FiCpu, FiLock, FiCheck, FiCheckCircle, FiInfo, FiSliders, FiDatabase,
   FiPlay, FiPause, FiSettings, FiCheckSquare, FiAlertTriangle,
-  FiTerminal, FiPlus, FiVolumeX, FiMonitor, FiArrowRight, FiAward
+  FiTerminal, FiPlus, FiVolumeX, FiMonitor, FiArrowRight, FiAward, FiTrash2
 } from 'react-icons/fi';
 import { 
   getProjectById, 
@@ -38,6 +38,27 @@ import { decodeProjectRouteId } from '../utils/hashids';
 import { useEditor } from '../context/EditorContext';
 import Footer from '../components/Footer';
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
+
+// ── Delete confirmation modal ──────────────────────────────────────────────
+
+function ConfirmModal({ show, onConfirm, onCancel, d }) {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className={`relative rounded-xl p-5 shadow-xl border max-w-[280px] w-full ${d ? 'bg-white border-gray-200' : 'bg-surface-800 border-white/[0.06]'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <p className={`text-[12px] font-bold text-center ${d ? 'text-gray-800' : 'text-white'}`}>Delete this scene?</p>
+        <p className={`text-[10px] text-center mt-1.5 ${d ? 'text-gray-500' : 'text-surface-400'}`}>This cannot be undone.</p>
+        <div className="flex items-center gap-2 mt-4">
+          <button onClick={onCancel} className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-white/5 text-surface-400 hover:bg-white/10'}`}>Cancel</button>
+          <button onClick={onConfirm} className="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer bg-red-600 text-white hover:bg-red-500">Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Blueprint Vector Grid ──────────────────────────────────────────────────
 function BlueprintSVG({ type }) {
@@ -315,6 +336,7 @@ export default function ProductionPage() {
 
   // ── Director Sync™ State ──────────────────────────────────────────────────
   const [syncCardData, setSyncCardData] = useState(null); // impactData from analyzeImpact()
+  const [deleteTarget, setDeleteTarget] = useState(null); // { videoId, sceneNumber }
   const [syncStatus, setSyncStatus] = useState(null);    // from getSyncStatus()
 
   // Trigger Director Sync analysis and show floating card
@@ -2754,19 +2776,11 @@ export default function ProductionPage() {
                                       Regen
                                     </button>
                                     <button
-                                      onClick={() => {
-                                        if (window.confirm('Delete this scene video version?')) {
-                                          // Delete the video asset
-                                          fetch(`${apiBaseUrl}/api/assets/video/${activeVideo.id}`, {
-                                            method: 'DELETE', credentials: 'include'
-                                          }).then(() => {
-                                            getSceneVideos();
-                                          }).catch(() => {});
-                                        }
-                                      }}
-                                      className="py-1.5 px-3 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-300 font-bold rounded-md text-[9px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                                      onClick={() => setDeleteTarget({ videoId: activeVideo.id })}
+                                      className="flex items-center justify-center w-7 h-7 rounded-lg transition-all cursor-pointer text-white/40 hover:text-white/80 hover:bg-white/10"
+                                      title="Delete scene video"
                                     >
-                                      Delete
+                                      <FiTrash2 size={12} />
                                     </button>
                                   </div>
 
@@ -2832,6 +2846,24 @@ export default function ProductionPage() {
           )}
         </div>
       </div>
+
+      {/* Delete scene video modal */}
+      <ConfirmModal
+        show={!!deleteTarget}
+        onConfirm={async () => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (!target) return;
+          try {
+            await fetch(`${apiBaseUrl}/api/assets/video/${target.videoId}`, {
+              method: 'DELETE', credentials: 'include'
+            });
+            getSceneVideos();
+          } catch (e) { console.error(e); }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+        d={d}
+      />
 
       {/* Director Sync™ Floating Card — auto-appears after any asset change */}
       {syncCardData && (
