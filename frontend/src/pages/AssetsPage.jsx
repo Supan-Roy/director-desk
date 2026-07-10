@@ -67,7 +67,7 @@ function handleDownload(url, filename) {
   return async (e) => {
     e.stopPropagation();
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { credentials: 'include' });
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
