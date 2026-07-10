@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   FiArrowLeft, FiDatabase, FiSearch, FiSliders, FiDownload, FiPlay,
   FiX, FiVolume2, FiImage, FiVideo, FiUser, FiLoader, FiExternalLink,
-  FiChevronDown, FiTrash2, FiAward, FiFileText, FiClock
+  FiChevronDown, FiTrash2, FiAward, FiFileText, FiClock, FiChevronRight
 } from 'react-icons/fi'
 import Sidebar from '../components/Sidebar'
 import { useTheme } from '../context/ThemeContext'
@@ -90,14 +90,14 @@ function DeleteButton({ assetType, assetId, onDeleted, d }) {
     <button
       onClick={(e) => { e.stopPropagation(); handleDelete(); }}
       disabled={deleting}
-      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+      className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-all cursor-pointer ${
         d
-          ? 'border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300'
-          : 'border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30'
+          ? 'border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+          : 'border-white/[0.12] text-white/50 hover:bg-white/10 hover:text-white/80'
       } ${deleting ? 'opacity-40 cursor-not-allowed' : ''}`}
+      title="Delete asset"
     >
-      {deleting ? <FiLoader size={10} className="animate-spin" /> : <FiTrash2 size={10} />}
-      Delete
+      {deleting ? <FiLoader size={11} className="animate-spin" /> : <FiTrash2 size={11} />}
     </button>
   );
 }
@@ -107,6 +107,7 @@ function DeleteButton({ assetType, assetId, onDeleted, d }) {
 export default function AssetsPage() {
   const navigate = useNavigate()
   const { isDayMode: d } = useTheme()
+  const tabScrollRef = useRef(null)
 
   const [assets, setAssets] = useState({ characters: [], environments: [], voices: [], videos: [], posters: [], video_promos: [], end_credits: [] })
   const [projects, setProjects] = useState([])
@@ -276,33 +277,49 @@ export default function AssetsPage() {
           </div>
 
           {/* Sub tabs filtering */}
-          <div className="flex overflow-x-auto gap-2 w-full sm:w-auto scrollbar-none">
-            {TABS.map(tab => {
-              const isActive = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border cursor-pointer transition-all whitespace-nowrap ${
-                    isActive
-                      ? d
-                        ? 'bg-black text-white border-black'
-                        : 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/10'
-                      : d
-                        ? 'bg-white border-neutral-200 text-gray-500 hover:border-neutral-350 hover:text-gray-800'
-                        : 'bg-black/20 border-white/5 text-surface-450 hover:bg-white/[0.02] hover:border-white/10 hover:text-surface-200'
-                  }`}
-                >
-                  <tab.icon size={13} />
-                  <span>{tab.label}</span>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                    isActive ? 'bg-white/20 text-white' : d ? 'bg-black/5 text-black/50' : 'bg-white/5 text-white/40'
-                  }`}>
-                    {getAssetCount(tab.id)}
-                  </span>
-                </button>
-              )
-            })}
+          <div className="relative w-full sm:w-auto flex items-center gap-0">
+            <div ref={tabScrollRef} className="flex overflow-x-auto gap-2 scrollbar-none w-full sm:max-w-[600px]">
+              {TABS.map(tab => {
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border cursor-pointer transition-all whitespace-nowrap ${
+                      isActive
+                        ? d
+                          ? 'bg-black text-white border-black'
+                          : 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/10'
+                        : d
+                          ? 'bg-white border-neutral-200 text-gray-500 hover:border-neutral-350 hover:text-gray-800'
+                          : 'bg-black/20 border-white/5 text-surface-450 hover:bg-white/[0.02] hover:border-white/10 hover:text-surface-200'
+                    }`}
+                  >
+                    <tab.icon size={13} />
+                    <span>{tab.label}</span>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                      isActive ? 'bg-white/20 text-white' : d ? 'bg-black/5 text-black/50' : 'bg-white/5 text-white/40'
+                    }`}>
+                      {getAssetCount(tab.id)}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => {
+                const el = tabScrollRef.current;
+                if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
+              }}
+              className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-xl border transition-all cursor-pointer ${
+                d
+                  ? 'bg-white border-neutral-200 text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                  : 'bg-black/30 border-white/10 text-surface-450 hover:bg-white/5 hover:text-white'
+              }`}
+              title="Scroll tabs"
+            >
+              <FiChevronRight size={14} />
+            </button>
           </div>
         </div>
 
