@@ -36,16 +36,32 @@ def get_global_assets(
 ):
     """
     Get a unified list of all assets in the database, grouped by type.
+    Only returns assets belonging to non-archived, non-deleted projects.
     Optionally filters by project_id or matches names/descriptions with a search query.
     """
-    # 1. Base queries
-    char_query = db.query(CharacterAsset)
-    env_query = db.query(EnvironmentAsset)
-    voice_query = db.query(VoiceAsset)
-    video_query = db.query(SceneVideo)
+    # 0. Only consider active (non-archived) projects
+    active_project_ids = [
+        p.id for p in db.query(Project.id).filter(Project.is_archived == False).all()
+    ]
+    if not active_project_ids:
+        return {
+            "characters": [], "environments": [], "voices": [],
+            "videos": [], "posters": [], "video_promos": [], "end_credits": [],
+        }
+
+    # 1. Base queries — only active projects
+    char_query = db.query(CharacterAsset).filter(CharacterAsset.project_id.in_(active_project_ids))
+    env_query = db.query(EnvironmentAsset).filter(EnvironmentAsset.project_id.in_(active_project_ids))
+    voice_query = db.query(VoiceAsset).filter(VoiceAsset.project_id.in_(active_project_ids))
+    video_query = db.query(SceneVideo).filter(SceneVideo.project_id.in_(active_project_ids))
 
     # 2. Filter by project_id
     if project_id is not None:
+        if project_id not in active_project_ids:
+            return {
+                "characters": [], "environments": [], "voices": [],
+                "videos": [], "posters": [], "video_promos": [], "end_credits": [],
+            }
         char_query = char_query.filter(CharacterAsset.project_id == project_id)
         env_query = env_query.filter(EnvironmentAsset.project_id == project_id)
         voice_query = voice_query.filter(VoiceAsset.project_id == project_id)
@@ -85,7 +101,7 @@ def get_global_assets(
     video_promos = []
     end_credits = []
 
-    project_query = db.query(Project)
+    project_query = db.query(Project).filter(Project.is_archived == False)
     if project_id is not None:
         project_query = project_query.filter(Project.id == project_id)
     all_projects = project_query.all()
