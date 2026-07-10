@@ -2517,167 +2517,150 @@ export default function ProductionPage() {
                                 <div className="absolute top-0 bottom-0 left-0 w-1 bg-neutral-800" />
                               )}
 
-                              {/* Media Player Box (Top, Full Width) */}
-                              {isUnlocked && (
-                                <div className="w-full mb-6 rounded-lg overflow-hidden border border-white/[0.06] bg-black">
-                                  {activeJob ? (
-                                    /* Active Job progress */
-                                    <div className="bg-black/85 backdrop-blur-[2px] flex flex-col items-center justify-center text-center space-y-3.5 h-[280px] select-none">
-                                      <div className="relative flex items-center justify-center">
-                                        <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                                        <span className="absolute text-[10px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
-                                      </div>
-                                      <div className="space-y-1 w-full max-w-xs">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 animate-pulse block">
-                                          {activeJob.message || 'Generating...'}
-                                        </span>
-                                        <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-2">
-                                          <div 
-                                            className="bg-accent h-full rounded-full transition-all duration-300"
-                                            style={{ width: `${activeJob.progress}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : activeVideo ? (
-                                    activeVideo.status === 'completed' ? (
-                                      project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? (
-                                        <div className="flex flex-col items-center justify-center w-full h-[180px] p-4 bg-gradient-to-br from-neutral-900 to-neutral-950">
-                                          <FiVolume2 className="text-accent animate-pulse mb-3" size={32} />
-                                          <audio 
-                                             controls 
-                                             controlsList="nodownload"
-                                             src={apiBaseUrl + activeVideo.video_url} 
-                                            className="w-full max-w-md" 
-                                            onContextMenu={(e) => e.preventDefault()}
-                                          />
-                                          <span className="text-[10px] text-surface-500 font-mono mt-3 select-none">AUDIO SPEECH TRACK ACTIVE</span>
-                                        </div>
-                                      ) : (
-                                        <CustomVideoPlayer 
-                                          src={apiBaseUrl + activeVideo.video_url} 
-                                          className="w-full aspect-[21/9] md:aspect-[2.39/1]" 
-                                          poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
-                                        />
-                                      )
-                                    ) : (
-                                      /* Failed run block */
-                                      <div className="h-[200px] border border-red-500/20 bg-red-950/15 p-4 flex flex-col items-center justify-center text-center space-y-2 select-none overflow-y-auto">
-                                        <span className="text-red-400 text-lg">⚠️</span>
-                                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-red-400">Generation Failed</span>
-                                        <p className="text-[10px] text-red-300/80 leading-relaxed font-mono">
-                                          {activeVideo.error_message || "Video synthesis error."}
-                                        </p>
-                                      </div>
-                                    )
-                                  ) : (
-                                    /* Render box if ready to generate */
-                                    <div className="border border-dashed border-white/[0.08] bg-[#09090d]/50 p-5 flex flex-col items-center justify-center text-center space-y-4 h-[240px] select-none">
-                                      <FiVolume2 size={24} className="text-accent animate-pulse animate-duration-1000" />
-                                      <div className="space-y-1 w-full max-w-xs">
-                                        <span className="text-[10px] font-bold text-surface-450 uppercase tracking-widest block">Awaiting Render</span>
-                                        {project?.production_type === 'Podcast' ? (
-                                          <div className="flex flex-col gap-2 mt-2">
-                                            <label className="text-[9px] font-mono text-surface-500 uppercase tracking-wider text-left block">Select Podcast Duration</label>
-                                            <select
-                                              value={podcastDuration}
-                                              onChange={(e) => setPodcastDuration(Number(e.target.value))}
-                                              className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
-                                            >
-                                              <option value={5}>5 Minutes (approx. 750 words)</option>
-                                              <option value={10}>10 Minutes (approx. 1500 words)</option>
-                                              <option value={15}>15 Minutes (approx. 2250 words)</option>
-                                            </select>
+                              {/* Top flex row: Video Player (left) + Scene Metadata (right) */}
+                              <div className="flex flex-col lg:flex-row gap-6 mb-4">
+                                {/* Left: Smaller Video Player */}
+                                <div className="w-full lg:w-[380px] shrink-0">
+                                  {isUnlocked && (
+                                    <div className="rounded-lg overflow-hidden border border-white/[0.06] bg-black">
+                                      {activeJob ? (
+                                        <div className="bg-black/85 backdrop-blur-[2px] flex flex-col items-center justify-center text-center space-y-3.5 h-[200px] select-none">
+                                          <div className="relative flex items-center justify-center">
+                                            <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                                            <span className="absolute text-[9px] font-mono font-bold text-cyan-400">{activeJob.progress}%</span>
                                           </div>
+                                          <div className="space-y-1 w-full max-w-[200px]">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 animate-pulse block">
+                                              {activeJob.message || 'Generating...'}
+                                            </span>
+                                            <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-2">
+                                              <div className="bg-accent h-full rounded-full transition-all duration-300" style={{ width: `${activeJob.progress}%` }} />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ) : activeVideo ? (
+                                        activeVideo.status === 'completed' ? (
+                                          project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? (
+                                            <div className="flex flex-col items-center justify-center w-full h-[160px] p-4 bg-gradient-to-br from-neutral-900 to-neutral-950">
+                                              <FiVolume2 className="text-accent animate-pulse mb-3" size={28} />
+                                              <audio controls controlsList="nodownload" src={apiBaseUrl + activeVideo.video_url} className="w-full max-w-sm" onContextMenu={(e) => e.preventDefault()} />
+                                              <span className="text-[9px] text-surface-500 font-mono mt-2 select-none">AUDIO SPEECH TRACK ACTIVE</span>
+                                            </div>
+                                          ) : (
+                                            <CustomVideoPlayer 
+                                              src={apiBaseUrl + activeVideo.video_url} 
+                                              className="w-full aspect-video" 
+                                              poster={activeVideo.thumbnail_url && (activeVideo.thumbnail_url.startsWith('/') ? apiBaseUrl + activeVideo.thumbnail_url : activeVideo.thumbnail_url)}
+                                            />
+                                          )
                                         ) : (
-                                          <p className="text-[9px] text-surface-550 max-w-[200px] leading-normal mx-auto">
-                                            {scene.package_ready ? "Production assets mapped. Ready to synthesize." : "Requires missing pre-production assets."}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <button
-                                        onClick={() => handleGenerateScene(scene.scene_number_str)}
-                                        disabled={!scene.package_ready}
-                                        className="btn-accent px-5 py-2 text-[10px] tracking-wider transition-all transform active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none whitespace-nowrap shadow-none"
-                                      >
-                                        Generate Scene
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              <div className="flex flex-col lg:flex-row gap-6">
-                                {/* Left column: Info & dependencies */}
-                                <div className="flex-1 space-y-4">
-                                  <div className="flex justify-between items-start gap-4">
-                                    <div>
-                                      <h4 className={`text-base font-extrabold uppercase tracking-wide flex items-center gap-2 ${d ? 'text-neutral-900' : 'text-white'}`}>
-                                        {project?.production_type === 'Podcast' ? (
-                                          <span>Podcast Audio Track</span>
-                                        ) : (
-                                          <span>Scene {String(scene.scene_number).padStart(2, '0')}</span>
-                                        )}
-                                        <span className={`status-badge ${badgeClass} inline-flex items-center gap-1.5`}>
-                                          {!isUnlocked && <FiLock size={10} />}
-                                          <span>{statusLabel}</span>
-                                        </span>
-                                      </h4>
-
-                                      {/* Rich Scene Metadata Details */}
-                                      {isUnlocked && (
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[9px] font-mono text-surface-500 uppercase">
-                                          <span>Model: {activeVideo?.generation_model || (raw_ref_image ? "HappyHorse I2V" : "Wan2.7 T2V")}</span>
-                                          <span>•</span>
-                                          <span>Aspect: {project.aspect_ratio || "16:9"}</span>
-                                          <span>•</span>
-                                          <span>Length: {activeVideo?.duration ? `${activeVideo.duration}s` : "10s"}</span>
-                                          {activeVideo?.status === 'completed' && (
-                                            <>
-                                              <span>•</span>
-                                              <span className="text-emerald-400 font-semibold">Generated: {(() => {
-                                                const then = new Date(activeVideo.created_at);
-                                                const now = new Date();
-                                                const diffMs = now - then;
-                                                const diffSec = Math.floor(diffMs / 1000);
-                                                if (diffSec < 60) return 'Just now';
-                                                const diffMin = Math.floor(diffSec / 60);
-                                                if (diffMin < 60) return `${diffMin}m ago`;
-                                                const diffHr = Math.floor(diffMin / 60);
-                                                if (diffHr < 24) return `${diffHr}h ago`;
-                                                const diffDay = Math.floor(diffHr / 24);
-                                                return `${diffDay}d ago`;
-                                              })()}</span>
-                                            </>
-                                          )}
+                                          <div className="h-[160px] border border-red-500/20 bg-red-950/15 p-3 flex flex-col items-center justify-center text-center space-y-2 select-none overflow-y-auto">
+                                            <span className="text-red-400 text-base">⚠️</span>
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-red-400">Generation Failed</span>
+                                            <p className="text-[9px] text-red-300/80 leading-relaxed font-mono">{activeVideo.error_message || "Video synthesis error."}</p>
+                                          </div>
+                                        )
+                                      ) : (
+                                        <div className="border border-dashed border-white/[0.08] bg-[#09090d]/50 p-4 flex flex-col items-center justify-center text-center space-y-3 h-[180px] select-none">
+                                          <FiVolume2 size={20} className="text-accent animate-pulse animate-duration-1000" />
+                                          <div className="space-y-1 w-full max-w-[180px]">
+                                            <span className="text-[9px] font-bold text-surface-450 uppercase tracking-widest block">Awaiting Render</span>
+                                            {project?.production_type === 'Podcast' ? (
+                                              <div className="flex flex-col gap-2 mt-2">
+                                                <label className="text-[8px] font-mono text-surface-500 uppercase tracking-wider text-left block">Select Duration</label>
+                                                <select value={podcastDuration} onChange={(e) => setPodcastDuration(Number(e.target.value))} className="text-[10px] bg-neutral-900 border border-white/[0.08] rounded-md p-1 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer">
+                                                  <option value={5}>5 Minutes (750 words)</option>
+                                                  <option value={10}>10 Minutes (1500 words)</option>
+                                                  <option value={15}>15 Minutes (2250 words)</option>
+                                                </select>
+                                              </div>
+                                            ) : (
+                                              <p className="text-[8px] text-surface-550 max-w-[180px] leading-normal mx-auto">
+                                                {scene.package_ready ? "Production assets mapped. Ready to synthesize." : "Requires missing pre-production assets."}
+                                              </p>
+                                            )}
+                                          </div>
+                                          <button
+                                            onClick={() => handleGenerateScene(scene.scene_number_str)}
+                                            disabled={!scene.package_ready}
+                                            className="btn-accent px-4 py-1.5 text-[9px] tracking-wider transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shadow-none"
+                                          >
+                                            Generate Scene
+                                          </button>
                                         </div>
                                       )}
                                     </div>
+                                  )}
+                                </div>
+
+                                {/* Right: Scene metadata */}
+                                <div className="flex-1 min-w-0 space-y-3">
+                                  <div>
+                                    <h4 className={`text-sm font-extrabold uppercase tracking-wide flex items-center gap-2 ${d ? 'text-neutral-900' : 'text-white'}`}>
+                                      {project?.production_type === 'Podcast' ? (
+                                        <span>Podcast Audio Track</span>
+                                      ) : (
+                                        <span>Scene {String(scene.scene_number).padStart(2, '0')}</span>
+                                      )}
+                                      <span className={`status-badge ${badgeClass} inline-flex items-center gap-1.5`}>
+                                        {!isUnlocked && <FiLock size={10} />}
+                                        <span>{statusLabel}</span>
+                                      </span>
+                                    </h4>
+
+                                    {/* Scene metadata chips */}
+                                    {isUnlocked && (
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[8px] font-mono text-surface-500 uppercase">
+                                        <span>Model: {activeVideo?.generation_model || (raw_ref_image ? "HappyHorse I2V" : "Wan2.7 T2V")}</span>
+                                        <span>•</span>
+                                        <span>Aspect: {project.aspect_ratio || "16:9"}</span>
+                                        <span>•</span>
+                                        <span>Length: {activeVideo?.duration ? `${activeVideo.duration}s` : "10s"}</span>
+                                        {activeVideo?.status === 'completed' && (
+                                          <>
+                                            <span>•</span>
+                                            <span className="text-emerald-400 font-semibold">Generated: {(() => {
+                                              const then = new Date(activeVideo.created_at);
+                                              const now = new Date();
+                                              const diffMs = now - then;
+                                              const diffSec = Math.floor(diffMs / 1000);
+                                              if (diffSec < 60) return 'Just now';
+                                              const diffMin = Math.floor(diffSec / 60);
+                                              if (diffMin < 60) return `${diffMin}m ago`;
+                                              const diffHr = Math.floor(diffMin / 60);
+                                              if (diffHr < 24) return `${diffHr}h ago`;
+                                              const diffDay = Math.floor(diffHr / 24);
+                                              return `${diffDay}d ago`;
+                                            })()}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
 
-                                  <p className={`text-xs leading-relaxed ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
-                                    <span className="font-bold text-accent uppercase text-[9px] tracking-wider block mb-0.5">
+                                  <p className={`text-[11px] leading-relaxed ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
+                                    <span className="font-bold text-accent uppercase text-[8px] tracking-wider block mb-0.5">
                                       {project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? 'Dialogue/Narration Script' : 'Scene Description'}
                                     </span>
                                     {scene.details?.summary || "No description compiled."}
                                   </p>
 
-                                  {/* Technical specifications panel */}
+                                  {/* Technical specs inline */}
                                   {isUnlocked && (
-                                    <div className="grid grid-cols-2 gap-3 text-[10px] font-mono border-t border-dashed border-white/[0.05] pt-3.5">
+                                    <div className="grid grid-cols-2 gap-2 text-[9px] font-mono border-t border-dashed border-white/[0.05] pt-2.5">
                                       <div>
-                                        <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Speakers</span>
+                                        <span className="text-surface-500 block uppercase text-[7px] tracking-wider font-semibold">Speakers</span>
                                         <span className={`block truncate mt-0.5 ${d ? 'text-neutral-800' : 'text-surface-300'}`}>
                                           {scene.details?.characters?.length > 0 ? scene.details.characters.join(', ') : 'None'}
                                         </span>
                                       </div>
                                       {!(project?.production_type === 'Podcast' || project?.production_type === 'Audio Story') && (
                                         <div>
-                                          <span className="text-surface-500 block uppercase text-[8px] tracking-wider font-semibold">Reference Strategy</span>
+                                          <span className="text-surface-500 block uppercase text-[7px] tracking-wider font-semibold">Reference Strategy</span>
                                           <select
                                             value={scene.details?.reference_strategy || 'automatic'}
                                             onChange={(e) => handleUpdateSceneSpecs(scene.scene_number, { reference_strategy: e.target.value })}
-                                            className="text-[9px] mt-1 bg-neutral-900 border border-white/[0.08] rounded-md p-1 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
+                                            className="text-[8px] mt-1 bg-neutral-900 border border-white/[0.08] rounded-md p-1 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
                                           >
                                             <option value="automatic">Automatic (Recommended)</option>
                                             <option value="character_priority">Character Priority</option>
@@ -2688,29 +2671,25 @@ export default function ProductionPage() {
                                     </div>
                                   )}
 
-                                  {/* Dependency diagnostic logs */}
+                                  {/* Missing / Ready status */}
                                   {isUnlocked && !scene.package_ready && (
                                     <div className="card-premium border border-red-500/15">
-                                      <div className="card-premium-header px-4 py-3 flex items-center gap-2.5">
-                                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-500/10 shrink-0">
-                                          <FiAlertTriangle size={11} className="text-red-400" />
+                                      <div className="card-premium-header px-3 py-2 flex items-center gap-2">
+                                        <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-red-500/10 shrink-0">
+                                          <FiAlertTriangle size={9} className="text-red-400" />
                                         </div>
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-red-300">Missing Production Assets</span>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-red-300">Missing Production Assets</span>
                                       </div>
-                                      <div className="p-3 space-y-1">
+                                      <div className="p-2 space-y-0.5">
                                         {scene.missing_assets.map((msg, mIdx) => (
-                                          <div key={mIdx} className="flex items-center justify-between gap-2.5 py-1.5 px-2 rounded-lg hover:bg-red-500/[0.03] transition-colors">
+                                          <div key={mIdx} className="flex items-center justify-between gap-2 py-1 px-2 rounded-lg hover:bg-red-500/[0.03] transition-colors">
                                             <div className="flex items-center gap-2 min-w-0">
                                               <span className="w-1 h-1 rounded-full bg-red-400/50 shrink-0" />
-                                              <span className="truncate text-[11px] font-mono text-red-200/80" title={msg}>{msg}</span>
+                                              <span className="truncate text-[10px] font-mono text-red-200/80" title={msg}>{msg}</span>
                                             </div>
-                                            <button
-                                              onClick={() => handleGoToAsset(msg)}
-                                              className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-[9px] text-red-300 font-bold uppercase tracking-wider hover:bg-red-500/20 hover:border-red-500/30 transition-all active:scale-95 cursor-pointer"
-                                              title="Go directly to compile page"
-                                            >
+                                            <button onClick={() => handleGoToAsset(msg)} className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[8px] text-red-300 font-bold uppercase tracking-wider hover:bg-red-500/20 hover:border-red-500/30 transition-all cursor-pointer">
                                               <span>Go</span>
-                                              <FiArrowRight size={9} />
+                                              <FiArrowRight size={8} />
                                             </button>
                                           </div>
                                         ))}
@@ -2719,73 +2698,85 @@ export default function ProductionPage() {
                                   )}
                                   
                                   {isUnlocked && scene.package_ready && !activeVideo && !activeJob && (
-                                    <div className="card-premium p-3 border border-emerald-500/15 flex items-center gap-2.5">
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/10 shrink-0">
-                                        <FiCheckCircle size={11} className="text-emerald-400" />
+                                    <div className="card-premium p-2.5 border border-emerald-500/15 flex items-center gap-2">
+                                      <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/10 shrink-0">
+                                        <FiCheckCircle size={9} className="text-emerald-400" />
                                       </div>
-                                      <span className="text-[11px] font-mono text-emerald-300/80">Production assets ready. Compose scene video.</span>
+                                      <span className="text-[10px] font-mono text-emerald-300/80">Production assets ready. Compose scene video.</span>
                                     </div>
                                   )}
                                 </div>
-
-                                {/* Right column: Action Controls & Versions Bar */}
-                                {isUnlocked && activeVideo && (
-                                  <div className="w-full lg:w-[300px] shrink-0 flex flex-col justify-end border-t lg:border-t-0 lg:border-l border-white/[0.03] lg:pt-0 lg:pl-6 pt-4 space-y-4">
-                                    <div className="flex flex-col gap-1 text-left">
-                                      <label className="text-[8px] font-extrabold uppercase text-surface-500 tracking-wider">Version Cut</label>
-                                      <select
-                                        value={activeVideo.id}
-                                        onChange={(e) => setSelectedVersionsMap(prev => ({ ...prev, [scene.scene_number]: Number(e.target.value) }))}
-                                        className="text-xs bg-neutral-900 border border-white/[0.08] rounded-md p-1.5 focus:outline-none focus:border-accent text-surface-200 w-full font-mono cursor-pointer"
-                                      >
-                                        {versions.map(v => (
-                                          <option key={v.id} value={v.id}>
-                                            V{v.version} {v.is_approved ? '(Approved)' : ''}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                      {activeVideo.status === 'completed' && !activeVideo.is_approved && (
-                                        <button
-                                          onClick={() => handleApproveScene(activeVideo.id)}
-                                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.15)] whitespace-nowrap active:scale-[0.98]"
-                                        >
-                                          Approve Version
-                                        </button>
-                                      )}
-                                      
-                                      <div className="flex gap-2">
-                                        {activeVideo.status === 'completed' && (
-                                          <button
-                                            onClick={() => handleDownloadFile(
-                                              apiBaseUrl + activeVideo.video_url,
-                                              project?.production_type === 'Podcast' ? `podcast_v${activeVideo.version}.mp3` : `scene_${scene.scene_number}_v${activeVideo.version}.mp4`
-                                            )}
-                                            className="flex-1 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] inline-flex items-center justify-center whitespace-nowrap active:scale-[0.98]"
-                                            title="Download generated asset"
-                                          >
-                                            Download
-                                          </button>
-                                        )}
-                                        <button
-                                          onClick={() => handleGenerateScene(scene.scene_number_str)}
-                                          className="flex-1 py-1.5 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[10px] uppercase tracking-wider transition-all cursor-pointer h-[32px] whitespace-nowrap active:scale-[0.98]"
-                                        >
-                                          Regen
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {activeVideo.status === 'completed' && (
-                                      <div className="flex justify-between items-center text-[9px] font-mono text-surface-600 border-t border-white/[0.03] pt-2">
-                                        <span>Cost: 80 Credits</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
                               </div>
+
+                              {/* Bottom row: Version controls + Action buttons */}
+                              {isUnlocked && activeVideo && (
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.05]">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-[7px] font-extrabold uppercase text-surface-500 tracking-wider">Version:</label>
+                                    <select
+                                      value={activeVideo.id}
+                                      onChange={(e) => setSelectedVersionsMap(prev => ({ ...prev, [scene.scene_number]: Number(e.target.value) }))}
+                                      className="text-[10px] bg-neutral-900 border border-white/[0.08] rounded-md p-1 focus:outline-none focus:border-accent text-surface-200 font-mono cursor-pointer"
+                                    >
+                                      {versions.map(v => (
+                                        <option key={v.id} value={v.id}>
+                                          V{v.version} {v.is_approved ? '(Approved)' : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    {activeVideo.status === 'completed' && !activeVideo.is_approved && (
+                                      <button
+                                        onClick={() => handleApproveScene(activeVideo.id)}
+                                        className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md text-[9px] uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.15)] whitespace-nowrap active:scale-[0.98]"
+                                      >
+                                        Approve
+                                      </button>
+                                    )}
+                                    {activeVideo.status === 'completed' && (
+                                      <button
+                                        onClick={() => handleDownloadFile(
+                                          apiBaseUrl + activeVideo.video_url,
+                                          project?.production_type === 'Podcast' ? `podcast_v${activeVideo.version}.mp3` : `scene_${scene.scene_number}_v${activeVideo.version}.mp4`
+                                        )}
+                                        className="py-1.5 px-3 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[9px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                                        title="Download"
+                                      >
+                                        Download
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleGenerateScene(scene.scene_number_str)}
+                                      className="py-1.5 px-3 bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-white font-bold rounded-md text-[9px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                                    >
+                                      Regen
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm('Delete this scene video version?')) {
+                                          // Delete the video asset
+                                          fetch(`${apiBaseUrl}/api/assets/video/${activeVideo.id}`, {
+                                            method: 'DELETE', credentials: 'include'
+                                          }).then(() => {
+                                            getSceneVideos();
+                                          }).catch(() => {});
+                                        }
+                                      }}
+                                      className="py-1.5 px-3 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-300 font-bold rounded-md text-[9px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+
+                                  {activeVideo.status === 'completed' && (
+                                    <div className="text-[8px] font-mono text-surface-600">
+                                      <span>Cost: 80 Credits</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })

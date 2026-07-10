@@ -19,6 +19,7 @@ import {
   FiEdit2,
   FiSave,
   FiUpload,
+  FiTrash2,
 } from 'react-icons/fi';
 import { apiBaseUrl } from '../services/apiClient';
 import { useTheme } from '../context/ThemeContext';
@@ -199,7 +200,7 @@ const ASPECT_MAP = {
   banner:          'aspect-[21/9]',
 };
 
-function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGenerate, onDownload, d }) {
+function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGenerate, onDownload, d, projectId }) {
   const asset = releaseAssets[selectedPoster];
   const info = POSTER_TYPES.find(pt => pt.key === selectedPoster);
   const isComplete = asset?.status === 'completed' && asset?.url;
@@ -214,6 +215,16 @@ function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGen
 
   const resolveAssetType = (key) => key === 'poster_vertical' ? 'poster-vertical' : key;
 
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this poster asset? This cannot be undone.')) return;
+    try {
+      await fetch(`${apiBaseUrl}/api/assets/release_asset/release_${projectId}_${resolveAssetType(selectedPoster)}`, {
+        method: 'DELETE', credentials: 'include',
+      });
+      window.location.reload();
+    } catch (e) { console.error(e); }
+  };
+
   return (
     <section>
       <div className="flex items-center gap-3 mb-4">
@@ -226,91 +237,78 @@ function PosterSection({ releaseAssets, selectedPoster, setSelectedPoster, onGen
       <div className={`flex flex-col gap-4 p-4 rounded-xl border ${
         d ? 'bg-gray-50 border-gray-200' : 'bg-white/[0.02] border-white/[0.04]'
       }`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <CustomSelect options={POSTER_TYPES} value={selectedPoster} onChange={setSelectedPoster} d={d} />
-            <StatusBadge status={asset?.status || 'pending'} />
-          </div>
-          <div className="flex items-center gap-2">
-            {isComplete && (
-              <button
-                onClick={() => onDownload(resolveAssetType(selectedPoster))}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'
-                }`}
-              >
-                <FiDownload size={11} /> Download
-              </button>
-            )}
-            <button
-              onClick={() => onGenerate(resolveAssetType(selectedPoster))}
-              disabled={asset?.status === 'generating'}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                asset?.status === 'generating'
-                  ? 'opacity-40 cursor-not-allowed'
-                  : asset?.status === 'completed'
-                    ? d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'
-                    : 'btn-accent text-[10px] shadow-none'
-              }`}
-            >
-              {asset?.status === 'generating' ? (
-                <><FiLoader size={10} className="animate-spin" /> Generating</>
-              ) : asset?.status === 'completed' ? (
-                <><FiRefreshCw size={10} /> Regenerate</>
-              ) : (
-                <><FiAward size={10} /> Generate</>
-              )}
-            </button>
-          </div>
-        </div>
-        <div ref={previewRef} className={`relative ${isVertical ? 'w-[200px]' : 'w-full max-w-[500px]'} mx-auto ${ASPECT_MAP[selectedPoster]} overflow-hidden rounded-lg border flex items-center justify-center ${
-          d ? 'border-gray-200 bg-white' : 'border-white/[0.04] bg-black/40'
-        }`}>
-          {isComplete ? (
-            <>
-              <img
-                src={apiBaseUrl + asset.url}
-                alt={info?.label}
-                className="w-full h-full object-contain select-none pointer-events-none"
-                draggable={false}
-                onContextMenu={e => e.preventDefault()}
-                style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}
-              />
-              <div className="absolute inset-0 flex items-start justify-end gap-2 p-3 opacity-0 hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-black/30 to-transparent">
-                <button
-                  onClick={handleFullscreen}
-                  className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer"
-                  title="Fullscreen"
-                >
-                  <FiMaximize2 size={14} />
-                </button>
-                <button
-                  onClick={() => onDownload(resolveAssetType(selectedPoster))}
-                  className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer"
-                  title="Download"
-                >
-                  <FiDownloadCloud size={14} />
-                </button>
+        {/* Media + Metadata left-right row */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left: Media preview */}
+          <div ref={previewRef} className={`relative shrink-0 w-full lg:w-[320px] ${isVertical ? 'lg:w-[180px]' : ''} ${ASPECT_MAP[selectedPoster]} overflow-hidden rounded-lg border flex items-center justify-center ${
+            d ? 'border-gray-200 bg-white' : 'border-white/[0.04] bg-black/40'
+          }`}>
+            {isComplete ? (
+              <>
+                <img
+                  src={apiBaseUrl + asset.url}
+                  alt={info?.label}
+                  className="w-full h-full object-contain select-none pointer-events-none"
+                  draggable={false}
+                  onContextMenu={e => e.preventDefault()}
+                  style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}
+                />
+                <div className="absolute inset-0 flex items-start justify-end gap-2 p-3 opacity-0 hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-black/30 to-transparent">
+                  <button onClick={handleFullscreen} className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer" title="Fullscreen"><FiMaximize2 size={14} /></button>
+                  <button onClick={() => onDownload(resolveAssetType(selectedPoster))} className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer" title="Download"><FiDownloadCloud size={14} /></button>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-surface-500">
+                <FiImage size={32} className="opacity-40" />
+                <span className="text-[10px] font-mono">{info?.ratio}</span>
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-2 text-surface-500">
-              <FiImage size={32} className="opacity-40" />
-              <span className="text-[10px] font-mono">{info?.ratio}</span>
+            )}
+            {isGen && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                <FiLoader size={24} className="animate-spin text-white" />
+              </div>
+            )}
+          </div>
+
+          {/* Right: Metadata + controls */}
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <h3 className={`text-[13px] font-black uppercase tracking-wider ${d ? 'text-gray-900' : 'text-white'}`}>{info?.label}</h3>
+              <StatusBadge status={asset?.status || 'pending'} />
             </div>
-          )}
-          {isGen && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
-              <FiLoader size={24} className="animate-spin text-white" />
+            <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-surface-500'}`}>{info?.desc}</p>
+            <p className={`text-[9px] font-mono ${d ? 'text-gray-400' : 'text-surface-500'}`}>
+              Type: {info?.key} · Ratio: {info?.ratio}
+            </p>
+            {isComplete && (
+              <p className={`text-[9px] font-mono ${d ? 'text-gray-400' : 'text-surface-500'}`}>
+                Generated: {asset.generated_at ? new Date(asset.generated_at).toLocaleString() : 'Recently'}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-auto pt-3">
+              {isComplete && (
+                <button onClick={() => onDownload(resolveAssetType(selectedPoster))} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'}`}>
+                  <FiDownload size={11} /> Download
+                </button>
+              )}
+              <button onClick={() => onGenerate(resolveAssetType(selectedPoster))} disabled={asset?.status === 'generating'} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${asset?.status === 'generating' ? 'opacity-40 cursor-not-allowed' : asset?.status === 'completed' ? (d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300') : 'btn-accent text-[10px] shadow-none'}`}>
+                {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Generating</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiAward size={10} /> Generate</>}
+              </button>
+              {isComplete && (
+                <button onClick={handleDelete} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'}`}>
+                  <FiTrash2 size={10} /> Delete
+                </button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, setTrailerDuration }) {
+function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, setTrailerDuration, projectId }) {
   const isGen = asset?.status === 'generating';
   const isComplete = asset?.status === 'completed' && asset?.url;
   const previewRef = useRef(null);
@@ -318,6 +316,16 @@ function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, set
   const handleFullscreen = () => {
     const el = previewRef.current?.querySelector('video');
     if (el && el.requestFullscreen) el.requestFullscreen();
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this video promo? This cannot be undone.')) return;
+    try {
+      await fetch(`${apiBaseUrl}/api/assets/release_asset/release_${projectId}_trailer`, {
+        method: 'DELETE', credentials: 'include',
+      });
+      window.location.reload();
+    } catch (e) { console.error(e); }
   };
 
   return (
@@ -332,88 +340,75 @@ function TrailerSection({ asset, onGenerate, onDownload, d, trailerDuration, set
       <div className={`flex flex-col gap-4 p-4 rounded-xl border ${
         d ? 'bg-gray-50 border-gray-200' : 'bg-white/[0.02] border-white/[0.04]'
       }`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <StatusBadge status={asset?.status || 'pending'} />
-            <CustomSelect options={DURATION_OPTIONS} value={trailerDuration} onChange={v => setTrailerDuration(v)} d={d} />
-          </div>
-          <div className="flex items-center gap-2">
-            {isComplete && (
-              <button
-                onClick={() => onDownload('trailer')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'
-                }`}
-              >
-                <FiDownload size={11} /> Download
-              </button>
+        {/* Media + Metadata left-right row */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left: Video preview */}
+          <div ref={previewRef} className="relative shrink-0 w-full lg:w-[320px] aspect-video overflow-hidden rounded-lg border flex items-center justify-center bg-black">
+            {isComplete ? (
+              <>
+                <video
+                  src={apiBaseUrl + asset.url}
+                  controls
+                  className="w-full h-full"
+                  controlsList="nodownload noremoteplayback"
+                  disablePictureInPicture
+                  onContextMenu={e => e.preventDefault()}
+                >
+                  Your browser does not support the video tag.
+                </video>
+                <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-200">
+                  <button onClick={handleFullscreen} className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer" title="Fullscreen"><FiMaximize2 size={14} /></button>
+                  <button onClick={() => onDownload('trailer')} className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer" title="Download"><FiDownloadCloud size={14} /></button>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-surface-500">
+                <FiPlay size={36} className="opacity-40" />
+                <span className="text-[10px] font-mono">Trailer preview</span>
+              </div>
             )}
-            <button
-              onClick={() => onGenerate('trailer', { duration: trailerDuration })}
-              disabled={asset?.status === 'generating'}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                asset?.status === 'generating'
-                  ? 'opacity-40 cursor-not-allowed'
-                  : asset?.status === 'completed'
-                    ? d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'
-                    : 'btn-accent text-[10px] shadow-none'
-              }`}
-            >
-              {asset?.status === 'generating' ? (
-                <><FiLoader size={10} className="animate-spin" /> Compiling</>
-              ) : asset?.status === 'completed' ? (
-                <><FiRefreshCw size={10} /> Regenerate</>
-              ) : (
-                <><FiPlay size={10} /> Generate Trailer</>
-              )}
-            </button>
+            {isGen && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <FiLoader size={24} className="animate-spin text-white" />
+                  <span className="text-[11px] font-bold text-white/80 uppercase tracking-wider">Assembling...</span>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-        {/* Trailer preview */}
-        <div ref={previewRef} className="relative w-full max-w-[500px] mx-auto aspect-video overflow-hidden rounded-lg border flex items-center justify-center bg-black">
-          {isComplete ? (
-            <>
-              <video
-                src={apiBaseUrl + asset.url}
-                controls
-                className="w-full h-full"
-                controlsList="nodownload noremoteplayback"
-                disablePictureInPicture
-                onContextMenu={e => e.preventDefault()}
-              >
-                Your browser does not support the video tag.
-              </video>
-              <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-200">
-                <button
-                  onClick={handleFullscreen}
-                  className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer"
-                  title="Fullscreen"
-                >
-                  <FiMaximize2 size={14} />
-                </button>
-                <button
-                  onClick={() => onDownload('trailer')}
-                  className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all cursor-pointer"
-                  title="Download"
-                >
-                  <FiDownloadCloud size={14} />
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-3 text-surface-500">
-              <FiPlay size={36} className="opacity-40" />
-              <span className="text-[10px] font-mono">Trailer preview</span>
+
+          {/* Right: Metadata + controls */}
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <h3 className={`text-[13px] font-black uppercase tracking-wider ${d ? 'text-gray-900' : 'text-white'}`}>Video Promo</h3>
+              <StatusBadge status={asset?.status || 'pending'} />
             </div>
-          )}
-          {isGen && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-2">
-                <FiLoader size={24} className="animate-spin text-white" />
-                <span className="text-[11px] font-bold text-white/80 uppercase tracking-wider">Assembling...</span>
-              </div>
+            <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-surface-500'}`}>Trailer compiled from approved scenes</p>
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] ${d ? 'text-gray-600' : 'text-surface-400'}`}>Duration:</span>
+              <CustomSelect options={DURATION_OPTIONS} value={trailerDuration} onChange={v => setTrailerDuration(v)} d={d} />
             </div>
-          )}
+            {isComplete && asset.duration && (
+              <p className={`text-[9px] font-mono ${d ? 'text-gray-400' : 'text-surface-500'}`}>
+                Final duration: {asset.duration}s · Generated: {asset.generated_at ? new Date(asset.generated_at).toLocaleString() : 'Recently'}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-auto pt-3">
+              {isComplete && (
+                <button onClick={() => onDownload('trailer')} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'}`}>
+                  <FiDownload size={11} /> Download
+                </button>
+              )}
+              <button onClick={() => onGenerate('trailer', { duration: trailerDuration })} disabled={asset?.status === 'generating'} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${asset?.status === 'generating' ? 'opacity-40 cursor-not-allowed' : asset?.status === 'completed' ? (d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300') : 'btn-accent text-[10px] shadow-none'}`}>
+                {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Compiling</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiPlay size={10} /> Generate Trailer</>}
+              </button>
+              {isComplete && (
+                <button onClick={handleDelete} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'}`}>
+                  <FiTrash2 size={10} /> Delete
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -478,7 +473,6 @@ function CreditsSection({ asset, onGenerate, d, projectId }) {
       if (!uploadRes.ok) throw new Error('Upload failed');
       const data = await uploadRes.json();
 
-      // Add to localStorage editor_assets so it shows up in Editor Studio
       try {
         const existing = JSON.parse(localStorage.getItem('editor_assets') || '[]');
         if (!existing.some(a => a.id === data.id)) {
@@ -495,6 +489,16 @@ function CreditsSection({ asset, onGenerate, d, projectId }) {
     }
   };
 
+  const handleDeleteCredits = async () => {
+    if (!window.confirm('Delete these end credits? This cannot be undone.')) return;
+    try {
+      await fetch(`${apiBaseUrl}/api/assets/release_asset/release_${projectId}_credits`, {
+        method: 'DELETE', credentials: 'include',
+      });
+      window.location.reload();
+    } catch (e) { console.error(e); }
+  };
+
   return (
     <section>
       <div className="flex items-center gap-3 mb-4">
@@ -507,85 +511,79 @@ function CreditsSection({ asset, onGenerate, d, projectId }) {
       <div className={`flex flex-col gap-4 p-4 rounded-xl border ${
         d ? 'bg-gray-50 border-gray-200' : 'bg-white/[0.02] border-white/[0.04]'
       }`}>
-        {/* Top row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <StatusBadge status={asset?.status || 'pending'} />
-            {asset?.status === 'failed' && <p className="text-[9px] text-red-400">{asset?.error}</p>}
-          </div>
-          <div className="flex items-center gap-2">
-            {isComplete && !editMode && (
-              <>
-                <button
-                  onClick={() => setEditMode(true)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'
-                  }`}
-                >
-                  <FiEdit2 size={11} /> Edit
-                </button>
-                <button
-                  onClick={handleExportImage}
-                  disabled={exporting}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'
-                  }`}
-                >
-                  {exporting ? (
-                    <><FiLoader size={11} className="animate-spin" /> Exporting</>
-                  ) : (
-                    <><FiUpload size={11} /> Export to Assets</>
-                  )}
-                </button>
-              </>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left: Credits card preview */}
+          <div className="shrink-0 w-full lg:w-[320px]">
+            {isComplete ? (
+              <div
+                ref={cardRef}
+                className={`w-full aspect-video rounded-lg border overflow-hidden ${
+                  d ? 'border-gray-200 bg-gray-50' : 'border-white/[0.04] bg-black/60'
+                }`}
+              >
+                <CreditsPreview
+                  asset={asset}
+                  d={d}
+                  editMode={editMode}
+                  editData={editData}
+                  setEditData={setEditData}
+                  onSaveEdit={handleSaveEdit}
+                />
+              </div>
+            ) : (
+              <div className={`w-full aspect-video rounded-lg border flex items-center justify-center ${
+                d ? 'border-gray-200 bg-gray-50' : 'border-white/[0.04] bg-black/40'
+              }`}>
+                <div className="flex flex-col items-center gap-2 text-surface-500">
+                  <FiFileText size={28} className="opacity-40" />
+                  <span className="text-[9px] font-mono">Credits preview</span>
+                </div>
+              </div>
             )}
-            <button
-              onClick={() => onGenerate('credits')}
-              disabled={asset?.status === 'generating'}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                asset?.status === 'generating'
-                  ? 'opacity-40 cursor-not-allowed'
-                  : asset?.status === 'completed'
-                    ? d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'
-                    : 'btn-accent text-[10px] shadow-none'
-              }`}
-            >
-              {asset?.status === 'generating' ? (
-                <><FiLoader size={10} className="animate-spin" /> Generating</>
-              ) : asset?.status === 'completed' ? (
-                <><FiRefreshCw size={10} /> Regenerate</>
-              ) : (
-                <><FiFileText size={10} /> Generate Credits</>
+            {isGen && (
+              <div className="w-full aspect-video rounded-lg border flex items-center justify-center bg-black/40">
+                <FiLoader size={20} className="animate-spin text-white" />
+              </div>
+            )}
+          </div>
+
+          {/* Right: Metadata + controls */}
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <h3 className={`text-[13px] font-black uppercase tracking-wider ${d ? 'text-gray-900' : 'text-white'}`}>End Credits</h3>
+              <StatusBadge status={asset?.status || 'pending'} />
+            </div>
+            {asset?.status === 'failed' && <p className="text-[9px] text-red-400">{asset?.error}</p>}
+            <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-surface-500'}`}>
+              Automatically built from your project metadata — title, director, AI models used, and generation timestamp.
+            </p>
+            {isComplete && (
+              <p className={`text-[9px] font-mono ${d ? 'text-gray-400' : 'text-surface-500'}`}>
+                Generated: {asset.generated_at ? new Date(asset.generated_at).toLocaleString() : 'Recently'}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-auto pt-3 flex-wrap">
+              {isComplete && !editMode && (
+                <>
+                  <button onClick={() => setEditMode(true)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'}`}>
+                    <FiEdit2 size={11} /> Edit
+                  </button>
+                  <button onClick={handleExportImage} disabled={exporting} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300'}`}>
+                    {exporting ? <><FiLoader size={11} className="animate-spin" /> Exporting</> : <><FiUpload size={11} /> Export to Assets</>}
+                  </button>
+                </>
               )}
-            </button>
+              <button onClick={() => onGenerate('credits')} disabled={asset?.status === 'generating'} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${asset?.status === 'generating' ? 'opacity-40 cursor-not-allowed' : asset?.status === 'completed' ? (d ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/10 hover:bg-white/15 text-surface-300') : 'btn-accent text-[10px] shadow-none'}`}>
+                {asset?.status === 'generating' ? <><FiLoader size={10} className="animate-spin" /> Generating</> : asset?.status === 'completed' ? <><FiRefreshCw size={10} /> Regenerate</> : <><FiFileText size={10} /> Generate Credits</>}
+              </button>
+              {isComplete && (
+                <button onClick={handleDeleteCredits} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${d ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'}`}>
+                  <FiTrash2 size={10} /> Delete
+                </button>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Credits card */}
-        {isComplete && (
-          <div
-            ref={cardRef}
-            className={`relative w-full max-w-[500px] mx-auto aspect-video rounded-lg border overflow-hidden ${
-              d ? 'border-gray-200 bg-gray-50' : 'border-white/[0.04] bg-black/60'
-            }`}
-          >
-            <CreditsPreview
-              asset={asset}
-              d={d}
-              editMode={editMode}
-              editData={editData}
-              setEditData={setEditData}
-              onSaveEdit={handleSaveEdit}
-            />
-          </div>
-        )}
-
-        {/* Description */}
-        {!isComplete && (
-          <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-surface-500'}`}>
-            Automatically built from your project metadata — title, director, AI models used, and generation timestamp.
-          </p>
-        )}
       </div>
 
       {/* Toast */}
@@ -786,6 +784,7 @@ export default function ReleaseStudio() {
                   onGenerate={handleGenerate}
                   onDownload={handleAssetDownload}
                   d={d}
+                  projectId={numericId}
                 />
                 <TrailerSection
                   asset={releaseAssets.trailer}
@@ -794,6 +793,7 @@ export default function ReleaseStudio() {
                   d={d}
                   trailerDuration={trailerDuration}
                   setTrailerDuration={setTrailerDuration}
+                  projectId={numericId}
                 />
                 <CreditsSection
                   asset={releaseAssets.credits}
