@@ -82,7 +82,7 @@ export default function Footer() {
             }`}
           >
             <FiGithub size={14} />
-            <span>Supan-Roy/director-desk</span>
+            <span>GitHub</span>
             <FiExternalLink size={10} className="opacity-50" />
           </a>
 
@@ -191,12 +191,10 @@ export default function Footer() {
             <h4 className={`text-[10px] font-bold uppercase tracking-widest ${
               d ? 'text-neutral-900 font-black' : 'text-surface-200'
             }`}>
-              About
+              Developed by
             </h4>
             <ul className="space-y-2.5 text-[11.5px]">
               <li>
-                <span className="opacity-60">Developed by</span>
-                <br />
                 <span className={`font-semibold ${d ? 'text-gray-800' : 'text-surface-200'}`}>Supan Roy</span>
               </li>
               <li>
