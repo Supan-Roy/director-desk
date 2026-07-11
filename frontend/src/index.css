@@ -32,7 +32,7 @@
   }
 
   body {
-    background: #050505;
+    background: #000000;
     color: #e2e3e5;
   }
 
@@ -76,19 +76,19 @@
 @layer components {
   /* ── Matte background layers ── */
   .bg-cinematic {
-    background: #050505;
+    background: #000000;
   }
 
   /* ── Matte panels ── */
   .glass-panel {
-    background: #0B0B0B;
+    background: #000000;
     border: 1px solid #1E1E1E;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
 
   .glass-panel-strong {
-    background: #101010;
+    background: #000000;
     border: 1px solid #252525;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -97,7 +97,7 @@
   /* ── Premium weighted cards for production output ── */
   .card-premium {
     position: relative;
-    background: linear-gradient(135deg, #0E0E10 0%, #0A0A0C 100%);
+    background: #000000;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 1rem;
     box-shadow:
@@ -330,7 +330,7 @@
   /* ── Scene cards ── */
   .scene-card {
     position: relative;
-    background: linear-gradient(135deg, #0E0E10 0%, #0A0A0C 100%);
+    background: #000000;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 0.85rem;
     padding: 1.125rem;
@@ -457,7 +457,7 @@
   /* ── Creative mode card ── */
   .mode-card {
     position: relative;
-    background: rgba(255, 255, 255, 0.015);
+    background: #000000;
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 1rem;
     padding: 1.25rem;
@@ -562,7 +562,7 @@
   .film-strip-card {
     position: relative;
     border-radius: 12px;
-    background: rgba(10, 10, 15, 0.7);
+    background: rgba(0, 0, 0, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.06);
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -606,13 +606,13 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, transparent 30%, rgba(6, 6, 11, 0.9) 100%);
+    background: linear-gradient(to bottom, transparent 30%, rgba(0, 0, 0, 0.9) 100%);
     z-index: 2;
   }
   
   /* ── Terminal/Agent Logs ── */
   .terminal-box {
-    background: rgba(4, 4, 8, 0.95);
+    background: rgba(0, 0, 0, 0.95);
     border: 1px solid rgba(139, 92, 246, 0.1);
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 4px 24px rgba(0, 0, 0, 0.5);
     font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -649,7 +649,7 @@
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .floating-dock {
-    background: rgba(10, 10, 16, 0.6);
+    background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
@@ -996,12 +996,12 @@
 
 /* Redefine lens flare overlays to be black/matte dark grey */
 .lens-flare-radial {
-  background: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.02), transparent 80%), #050505 !important;
+  background: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.02), transparent 80%), #000000 !important;
 }
 
 /* Global Background Color Overrides for Compiled Tailwind Arbitrary Hexes */
 .bg-\[\#06060b\] {
-  background-color: #050505 !important;
+  background-color: #000000 !important;
 }
 .bg-\[\#07070d\]\/80,
 .bg-\[\#090912\],
@@ -1009,13 +1009,13 @@
 .bg-\[\#090910\]\/95,
 .bg-\[\#0b0b14\]\/95,
 .bg-\[\#0b0b14\]\/90 {
-  background-color: #0B0B0B !important;
+  background-color: #000000 !important;
 }
 .bg-\[\#0c0c16\],
 .bg-\[\#0c0c16\]\/30,
 .bg-\[\#0c0c16\]\/40,
 .bg-\[\#0a0a12\]\/80 {
-  background-color: #101010 !important;
+  background-color: #000000 !important;
 }
 .bg-\[\#08080f\],
 .bg-\[\#08080f\]\/80,
@@ -1023,10 +1023,56 @@
 .bg-\[\#080810\]\/45,
 .bg-\[\#080810\]\/80,
 .bg-\[\#040409\] {
-  background-color: #050505 !important;
+  background-color: #000000 !important;
 }
 .bg-\[\#030305\] {
-  background-color: #050505 !important;
+  background-color: #000000 !important;
+}
+
+/* Additional global dark bg overrides — all backgrounds to pure black */
+.bg-\[\#0a0a0f\],
+.bg-\[\#0a0a0e\],
+.bg-\[\#0b0b0e\],
+.bg-\[\#0c0c0f\],
+.bg-\[\#0f0f12\],
+.bg-\[\#0c0c0e\],
+.bg-\[\#0a0a0c\],
+.bg-\[\#060608\],
+.bg-\[\#0a0a14\] {
+  background-color: #000000 !important;
+}
+.bg-\[\#111111\],
+.bg-\[\#121212\],
+.bg-\[\#141414\],
+.bg-\[\#121218\],
+.bg-\[\#12121b\],
+.bg-\[\#0f0f15\],
+.bg-\[\#08080c\] {
+  background-color: #000000 !important;
+}
+.bg-\[\#09090d\],
+.bg-\[\#121216\],
+.bg-\[\#16161c\],
+.bg-\[\#17171f\],
+.bg-\[\#15151b\],
+.bg-\[\#1a1a22\],
+.bg-\[\#1c1c24\],
+.bg-\[\#101014\],
+.bg-\[\#0c0c16\],
+.bg-\[\#0a0a12\],
+.bg-\[\#1e1a14\],
+.bg-\[\#12121a\],
+.bg-\[\#090912\],
+.bg-\[\#030303\],
+.bg-\[\#0b0b0f\],
+.bg-\[\#15151a\],
+.bg-\[\#18181f\],
+.bg-\[\#1c1c27\],
+.bg-\[\#0f0f15\]\/80,
+.bg-\[\#131318\]\/40,
+.bg-\[\#09090d\]\/30,
+.bg-\[\#09090d\]\/50 {
+  background-color: #000000 !important;
 }
 
 /* Global Border Color Overrides for Compiled Tailwind Arbitrary Borders */

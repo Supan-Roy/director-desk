@@ -672,7 +672,8 @@ export default function Sidebar() {
           <img
             src="/logo.svg"
             alt="Director Desk Logo"
-            className="h-8 w-8 shrink-0 transition-transform duration-500 group-hover:scale-110"
+            draggable="false"
+            className="h-8 w-8 shrink-0 transition-transform duration-500 group-hover:scale-110 select-none pointer-events-none"
           />
           {!isCollapsed && (
             <div className="flex flex-col">
@@ -793,7 +794,7 @@ export default function Sidebar() {
                 }}
                 title={isCollapsed ? item.label : undefined}
                 className={`flex items-center rounded-lg transition-all duration-300 relative group ${
-                  isCollapsed ? 'justify-center w-12 h-12 p-0' : 'w-full gap-3.5 px-3.5 py-2.5 text-[12px] font-medium'
+                  isCollapsed ? 'justify-center w-12 h-12 p-0' : 'w-full gap-3.5 px-3.5 py-2.5 text-[13px] font-medium'
                 } ${
                   isActive
                     ? d
@@ -852,7 +853,7 @@ export default function Sidebar() {
               {/* Section header / toggle — always rendered */}
               <button
                 onClick={() => setProjectsOpen((o) => !o)}
-                className={`flex w-full items-center justify-between px-2 py-1.5 mb-2 rounded-lg text-[10px] font-bold tracking-widest uppercase transition-colors duration-200 ${
+                className={`flex w-full items-center justify-between px-2 py-1.5 mb-2 rounded-lg text-[11px] font-bold tracking-widest uppercase transition-colors duration-200 ${
                   d
                     ? 'text-gray-500 hover:text-gray-800'
                     : 'text-surface-400 hover:text-surface-200'

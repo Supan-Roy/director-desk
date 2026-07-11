@@ -20,7 +20,8 @@ export default function Footer() {
               <img
                 src="/logo.svg"
                 alt="Director Desk Logo"
-                className="h-6 w-6 shrink-0"
+                draggable="false"
+                className="h-6 w-6 shrink-0 select-none pointer-events-none"
               />
             </div>
             <div className="flex flex-col select-none">
