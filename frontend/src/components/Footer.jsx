@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { FiGithub, FiExternalLink } from 'react-icons/fi';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Footer() {
@@ -70,14 +71,29 @@ export default function Footer() {
           <p className={`text-[11.5px] leading-relaxed mt-1 ${d ? 'text-neutral-600' : 'text-surface-500'}`}>
             Next-generation autonomous production workspace. Generate, refine, and orchestrate cinematic productions with agents.
           </p>
-          <p className={`text-[10px] tracking-wide mt-2 ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
+
+          {/* GitHub project link */}
+          <a
+            href="https://github.com/Supan-Roy/director-desk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center gap-2 text-[11px] font-bold tracking-wider transition-colors duration-200 hover:text-accent ${
+              d ? 'text-neutral-500' : 'text-surface-500'
+            }`}
+          >
+            <FiGithub size={14} />
+            <span>Supan-Roy/director-desk</span>
+            <FiExternalLink size={10} className="opacity-50" />
+          </a>
+
+          <p className={`text-[10px] tracking-wide mt-1 ${d ? 'text-neutral-600' : 'text-surface-400'}`}>
             &copy; {currentYear} Director Desk. All rights reserved.
           </p>
         </div>
 
         {/* Right columns: Navigation Links */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 md:gap-16">
-          {/* Column 1: Studio */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:gap-12">
+          {/* Column 1: Platform */}
           <div className="flex flex-col gap-3.5">
             <h4 className={`text-[10px] font-bold uppercase tracking-widest ${
               d ? 'text-neutral-900 font-black' : 'text-surface-200'
@@ -86,19 +102,29 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 text-[11.5px]">
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <Link to="/" className={`transition-colors duration-200 hover:text-accent`}>
                   Studio Dashboard
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <Link to="/agents" className={`transition-colors duration-200 hover:text-accent`}>
                   Agent Network
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <Link to="/templates" className={`transition-colors duration-200 hover:text-accent`}>
                   Preset Library
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link to="/assets" className={`transition-colors duration-200 hover:text-accent`}>
+                  Asset Manager
+                </Link>
+              </li>
+              <li>
+                <Link to="/settings" className={`transition-colors duration-200 hover:text-accent`}>
+                  Settings
+                </Link>
               </li>
             </ul>
           </div>
@@ -112,18 +138,21 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 text-[11.5px]">
               <li>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className={`transition-colors duration-200 hover:text-accent`}>
+                <a href="https://github.com/Supan-Roy/director-desk/blob/main/DOCUMENTATION.md" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
                   Documentation
+                  <FiExternalLink size={10} className="opacity-50" />
                 </a>
               </li>
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <a href="https://github.com/Supan-Roy/director-desk/issues" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
                   Help Center
+                  <FiExternalLink size={10} className="opacity-50" />
                 </a>
               </li>
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <a href="https://github.com/Supan-Roy/director-desk/blob/main/README.md" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
                   API Reference
+                  <FiExternalLink size={10} className="opacity-50" />
                 </a>
               </li>
             </ul>
@@ -143,13 +172,50 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <a href="https://github.com/Supan-Roy/director-desk/blob/main/TERMS.md" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
                   Terms of Service
+                  <FiExternalLink size={10} className="opacity-50" />
                 </a>
               </li>
               <li>
-                <a href="/" className={`transition-colors duration-200 hover:text-accent`}>
+                <a href="https://github.com/Supan-Roy/director-desk/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
                   License Agreement
+                  <FiExternalLink size={10} className="opacity-50" />
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: About */}
+          <div className="flex flex-col gap-3.5">
+            <h4 className={`text-[10px] font-bold uppercase tracking-widest ${
+              d ? 'text-neutral-900 font-black' : 'text-surface-200'
+            }`}>
+              About
+            </h4>
+            <ul className="space-y-2.5 text-[11.5px]">
+              <li>
+                <span className="opacity-60">Developed by</span>
+                <br />
+                <span className={`font-semibold ${d ? 'text-gray-800' : 'text-surface-200'}`}>Supan Roy</span>
+              </li>
+              <li>
+                <a href="mailto:contact@supanroy.com" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
+                  contact@supanroy.com
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/Supan-Roy" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
+                  <FiGithub size={12} />
+                  Supan-Roy
+                </a>
+              </li>
+              <li>
+                <a href="https://linkedin.com/in/supanroy" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 transition-colors duration-200 hover:text-accent`}>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                  supanroy
                 </a>
               </li>
             </ul>
