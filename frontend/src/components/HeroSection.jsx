@@ -581,14 +581,33 @@ export default function HeroSection({
 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+  const silenceTimeoutRef = useRef(null);
   const promptRef = useRef(prompt);
 
   useEffect(() => {
     promptRef.current = prompt;
   }, [prompt]);
 
+  const cleanupSilenceTimer = () => {
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+  };
+
+  const resetSilenceTimer = () => {
+    cleanupSilenceTimer();
+    silenceTimeoutRef.current = setTimeout(() => {
+      console.log("[Voice Input] Auto-stopped due to 10 seconds of silence.");
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    }, 10000);
+  };
+
   useEffect(() => {
     return () => {
+      cleanupSilenceTimer();
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -603,6 +622,7 @@ export default function HeroSection({
     }
 
     if (isListening) {
+      cleanupSilenceTimer();
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -618,9 +638,11 @@ export default function HeroSection({
 
     recognition.onstart = () => {
       setIsListening(true);
+      resetSilenceTimer();
     };
 
     recognition.onresult = (event) => {
+      resetSilenceTimer();
       let interimTranscript = '';
       let finalTranscript = '';
 
@@ -643,6 +665,7 @@ export default function HeroSection({
     recognition.onerror = (e) => {
       console.error("Speech recognition error:", e);
       setIsListening(false);
+      cleanupSilenceTimer();
       if (e.error === 'not-allowed') {
         setToastMsg("Microphone access denied. Please check browser permissions.");
       } else if (e.error !== 'aborted') {
@@ -652,6 +675,7 @@ export default function HeroSection({
 
     recognition.onend = () => {
       setIsListening(false);
+      cleanupSilenceTimer();
     };
 
     recognitionRef.current = recognition;
