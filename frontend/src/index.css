@@ -1301,3 +1301,45 @@ aside nav button.bg-accent\/10 .blur-sm {
   position: relative !important;
   z-index: 50 !important;
 }
+
+/* ── Rich Mic Pulse Recording Animations ── */
+@keyframes mic-ring-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+.mic-pulse-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  background-color: rgba(239, 68, 68, 0.35);
+  animation: mic-ring-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mic-pulse-ring-delay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  background-color: rgba(139, 92, 246, 0.25);
+  animation: mic-ring-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation-delay: 0.65s;
+  pointer-events: none;
+  z-index: 0;
+}

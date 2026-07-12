@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle, FiAlertTriangle, FiX, FiPlus, FiStopCircle } from 'react-icons/fi';
+import { FiSend, FiLoader, FiVideo, FiMaximize2, FiCompass, FiLayers, FiSliders, FiFilm, FiAlertCircle, FiAlertTriangle, FiX, FiPlus, FiStopCircle, FiMic, FiMicOff } from 'react-icons/fi';
 import { PiSparkle, PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
 import { useTheme } from '../context/ThemeContext';
@@ -579,6 +579,85 @@ export default function HeroSection({
   const [toastMsg, setToastMsg] = useState('');
   const { isDayMode } = useTheme();
 
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const promptRef = useRef(prompt);
+
+  useEffect(() => {
+    promptRef.current = prompt;
+  }, [prompt]);
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setToastMsg("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    const initialPrompt = promptRef.current;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      const base = initialPrompt.trim();
+      const suffix = (finalTranscript + interimTranscript).trim();
+      const separator = base && suffix ? ' ' : '';
+
+      setPrompt(base + separator + suffix);
+    };
+
+    recognition.onerror = (e) => {
+      console.error("Speech recognition error:", e);
+      setIsListening(false);
+      if (e.error === 'not-allowed') {
+        setToastMsg("Microphone access denied. Please check browser permissions.");
+      } else if (e.error !== 'aborted') {
+        setToastMsg(`Voice input error: ${e.error}`);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
   const [showSettingsOnMobile, setShowSettingsOnMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -792,6 +871,9 @@ export default function HeroSection({
   }, [previewFile]);
 
   const handleSubmit = async () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
     if (!prompt.trim() || loading) return;
     setErrorMsg('');
     setToastMsg('');
@@ -1096,6 +1178,31 @@ export default function HeroSection({
               disabled={loading}
             />
 
+            {/* Mic / Voice Input Action */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              className={`p-2 rounded-lg transition-colors cursor-pointer shrink-0 mt-1 flex items-center justify-center relative ${
+                isListening
+                  ? 'text-red-500'
+                  : isDayMode ? 'text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100' : 'text-surface-500 hover:text-white hover:bg-white/[0.04]'
+              }`}
+              title={isListening ? "Stop Listening" : "Voice Input (Speech to Text)"}
+              disabled={loading}
+            >
+              {isListening && (
+                <>
+                  <span className="mic-pulse-ring" />
+                  <span className="mic-pulse-ring-delay" />
+                </>
+              )}
+              {isListening ? (
+                <FiMicOff size={16} className="relative z-10" />
+              ) : (
+                <FiMic size={16} className="relative z-10" />
+              )}
+            </button>
+
             {/* Sparkles Action */}
             <button 
               type="button"
@@ -1265,7 +1372,10 @@ export default function HeroSection({
               {hasProject && (
                 <button
                   type="button"
-                  onClick={reset}
+                  onClick={() => {
+                    if (recognitionRef.current) recognitionRef.current.stop();
+                    reset();
+                  }}
                   className={`flex items-center justify-center px-3 py-2.5 md:px-4 md:py-3 rounded-lg border transition-all duration-200 cursor-pointer ${
                     isDayMode
                       ? 'bg-black border-black text-white hover:bg-neutral-800 hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]'
