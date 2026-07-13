@@ -24,7 +24,7 @@ import { featuredProductions } from '../data/featuredProductions'
 const ProjectDataContext = createContext(null)
 
 export function ProjectDataProvider({ children }) {
-  const { user } = useAuth()
+  const { user, openLoginModal } = useAuth()
   const [hasProject, setHasProject] = useState(false)
   const abortControllerRef = useRef(null)
   const [title, setTitle] = useState(null)
@@ -188,6 +188,13 @@ export function ProjectDataProvider({ children }) {
 
   // ── Generation handler ──────────────────────────────────────────────────
   const handleGenerate = async (prompt, mode = 'fast', prodType = 'Auto Detect', files = []) => {
+    if (!user && savedProjects.length >= 3) {
+      if (openLoginModal) {
+        openLoginModal()
+      }
+      throw new Error("Guest users can generate a maximum of 3 projects. Please sign up or log in to continue.")
+    }
+
     setLoading(true)
     setError(null)
     setHasProject(true)
