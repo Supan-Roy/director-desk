@@ -305,6 +305,7 @@ def generate_sfx_audio(effect_id, output_path, duration=3.0, sample_rate=44100):
             decay = math.exp(-4 * t)
             val = int(math.sin(2 * math.pi * 440 * t) * decay * 10000)
             
+        val = max(-32768, min(32767, val))
         audio_data.extend(struct.pack('<h', val))
         
     temp_wav = output_path + ".wav"
