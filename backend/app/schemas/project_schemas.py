@@ -39,6 +39,8 @@ class ProjectDetail(BaseModel):
     environments: Optional[List[Dict[str, Any]]] = None
     voices: Optional[List[Dict[str, Any]]] = None
     release_assets: Optional[Dict[str, Any]] = None
+    subtitles: Optional[List[Dict[str, Any]]] = None
+    mastered_movie_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -57,4 +59,7 @@ class ProjectUpdate(BaseModel):
     title: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_archived: Optional[bool] = None
+    subtitles: Optional[List[Dict[str, Any]]] = None
+    mastered_movie_url: Optional[str] = None
+
 

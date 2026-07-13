@@ -915,7 +915,7 @@ export default function ProductionPage() {
 
       loadProjectGeneratedClips(resolvedClips, isAudio);
       showToast(`Imported ${resolvedClips.length} clips to Editor timeline.`, 'success');
-      navigate('/editor');
+      navigate(`/projects/${id}/editor`);
     } else {
       showToast("No generated clips available to load.", 'error');
     }

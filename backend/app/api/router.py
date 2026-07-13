@@ -14,6 +14,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.settings_auth import router as settings_auth_router
 from app.api.routes.director_sync import router as director_sync_router
 from app.api.routes.release import router as release_router
+from app.api.routes.post_production import router as post_production_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -30,3 +31,4 @@ api_router.include_router(auth_router)
 api_router.include_router(settings_auth_router)
 api_router.include_router(director_sync_router)
 api_router.include_router(release_router)
+api_router.include_router(post_production_router)

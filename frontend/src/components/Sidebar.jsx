@@ -26,6 +26,7 @@ import {
   FiAward,
   FiCheck,
   FiMenu,
+  FiTv,
 } from 'react-icons/fi';
 import { PiRobotBold } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
@@ -761,30 +762,30 @@ export default function Sidebar() {
         <nav className={`space-y-1 w-full ${isCollapsed ? 'px-2 flex flex-col items-center' : 'px-3'}`}>
           {[
             { icon: FiGrid,      label: 'Studio',        path: '/' },
-            { icon: FiFilm,      label: 'Studio Editor',  path: '/editor' },
-            { icon: FiAward,     label: 'Release Studio', path: null, dynamic: true },
+            { icon: FiFilm,      label: 'Studio Editor',  path: null, dynamicType: 'editor' },
+            { icon: FiTv,        label: 'Post Production', path: null, dynamicType: 'post-production' },
+            { icon: FiAward,     label: 'Release Studio', path: null, dynamicType: 'release' },
             { icon: PiRobotBold, label: 'Agents',         path: '/agents' },
             { icon: FiLayers,    label: 'Templates',      path: '/templates' },
             { icon: FiDatabase,  label: 'Assets',         path: '/assets' },
             { icon: FiSettings,  label: 'Settings',       path: '/settings' },
           ].map((item) => {
-            const isReleaseStudio = item.dynamic;
             const activeProjectMatch = location.pathname.match(/^\/projects\/([a-z0-9]+)/);
             const activeProjectEncodedId = activeProjectMatch?.[1] || null;
 
-            const isActive = isReleaseStudio
-              ? location.pathname.startsWith(`/projects/${activeProjectEncodedId}/release`)
+            const isActive = item.dynamicType
+              ? location.pathname.startsWith(`/projects/${activeProjectEncodedId}/${item.dynamicType}`)
               : item.path ? location.pathname === item.path : false;
 
             return (
               <button
                 key={item.label}
                 onClick={() => {
-                  if (isReleaseStudio) {
+                  if (item.dynamicType) {
                     if (activeProjectEncodedId) {
-                      navigate(`/projects/${activeProjectEncodedId}/release`);
+                      navigate(`/projects/${activeProjectEncodedId}/${item.dynamicType}`);
                     } else {
-                      navigate('/release');
+                      navigate(`/${item.dynamicType}`);
                     }
                   } else {
                     if (item.path === '/' && hasProject) reset();

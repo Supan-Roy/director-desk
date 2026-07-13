@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { decodeProjectRouteId, encodeId } from '../utils/hashids'
 import {
   FiGrid,
   FiPlay,
@@ -32,7 +33,7 @@ import {
   FiChevronRight,
   FiChevronDown
 } from 'react-icons/fi'
-import { apiBaseUrl } from '../services/apiClient'
+import { apiBaseUrl, apiClient } from '../services/apiClient'
 import { useEditor } from '../context/EditorContext'
 import { useProjectData } from '../hooks/useProjectData'
 import { useTheme } from '../context/ThemeContext'
@@ -632,14 +633,20 @@ function NLEDropdown({ value, onChange, options, disabled = false, className = '
 }
 
 export default function EditorPage() {
+  const { id } = useParams()
   const navigate = useNavigate()
   const { isDayMode } = useTheme()
   const {
     script,
     storyboard,
     title: projectTitle,
-    hasProject
+    hasProject,
+    activeProjectId,
+    loadProject
   } = useProjectData()
+
+  const routeProjectId = id ? decodeProjectRouteId(id) : null
+  const targetProjectId = routeProjectId || activeProjectId
 
   const {
     assets,
@@ -701,6 +708,39 @@ export default function EditorPage() {
     splitLeft,
     splitRight
   } = useEditor()
+
+  useEffect(() => {
+    if (routeProjectId && routeProjectId !== activeProjectId) {
+      loadProject(routeProjectId)
+    }
+  }, [routeProjectId, activeProjectId, loadProject])
+
+  useEffect(() => {
+    if (exportStatus === 'completed' && exportUrl) {
+      // Resolve apiBaseUrl to relative static path
+      const urlPath = exportUrl.replace(apiBaseUrl, "")
+      
+      if (targetProjectId) {
+        const saveAndNavigate = async () => {
+          try {
+            await apiClient.patch(`/api/projects/${targetProjectId}`, {
+              mastered_movie_url: urlPath
+            })
+          } catch (err) {
+            console.error("Failed to save mastered movie url to project", err)
+          } finally {
+            resetExport()
+            const targetRouteId = id || encodeId(targetProjectId)
+            navigate(`/projects/${targetRouteId}/post-production`, { state: { movieUrl: urlPath } })
+          }
+        }
+        saveAndNavigate()
+      } else {
+        resetExport()
+        navigate('/post-production', { state: { movieUrl: urlPath } })
+      }
+    }
+  }, [exportStatus, exportUrl, targetProjectId, id, navigate, resetExport])
 
   const getAspectRatioCSS = (ar) => {
     const map = {
@@ -1696,8 +1736,8 @@ export default function EditorPage() {
                 </>
               ) : (
                 <>
-                  <FiDownload size={isMobile ? 10 : 12} />
-                  <span>{isMobile ? '' : 'Export'}</span>
+                  <FiCheckCircle size={isMobile ? 10 : 12} />
+                  <span>{isMobile ? '' : 'Done'}</span>
                 </>
               )}
             </button>

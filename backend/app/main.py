@@ -69,6 +69,8 @@ def _run_migrations(engine) -> None:
         ("projects", "voices", "TEXT"),
         ("projects", "user_id", "INTEGER REFERENCES users(id) ON DELETE CASCADE"),
         ("projects", "release_assets", "TEXT"),
+        ("projects", "subtitles", "TEXT"),
+        ("projects", "mastered_movie_url", "TEXT"),
     ]
 
     with engine.connect() as conn:

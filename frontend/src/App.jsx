@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard'
 import ProjectPage from './pages/ProjectPage'
 import ProductionPage from './pages/ProductionPage'
 import EditorPage from './pages/EditorPage'
+import PostProductionStudio from './pages/PostProductionStudio'
 import ReleaseStudio from './pages/ReleaseStudio'
 import SettingsPage from './pages/SettingsPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -19,8 +20,11 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects/:id" element={<ProjectPage />} />
         <Route path="/projects/:id/production" element={<ProductionPage />} />
+        <Route path="/projects/:id/post-production" element={<PostProductionStudio />} />
+        <Route path="/post-production" element={<PostProductionStudio />} />
         <Route path="/projects/:id/release" element={<ReleaseStudio />} />
         <Route path="/release" element={<ReleaseStudio />} />
+        <Route path="/projects/:id/editor" element={<EditorPage />} />
         <Route path="/editor" element={<EditorPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
