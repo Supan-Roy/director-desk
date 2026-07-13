@@ -967,45 +967,64 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* User Info Card */}
-        <div 
-          onClick={(e) => {
-            e.stopPropagation();
-            user ? setIsProfileMenuOpen(!isProfileMenuOpen) : openLoginModal();
-          }}
-          className={`flex rounded-lg border relative overflow-hidden group transition-all duration-300 cursor-pointer select-none ${
-            isCollapsed ? 'p-1.5 justify-center w-10 h-10 items-center' : 'gap-2.5 p-3 w-full items-center'
-          } ${
-            d 
-              ? 'bg-gray-50/80 border-black/[0.07] hover:bg-neutral-100 hover:border-black/15' 
-              : 'bg-surface-900 border-surface-700 hover:bg-surface-800/80 hover:border-white/15'
-          }`}
-          title="Open User Profile Control Room"
-        >
-          <div className="absolute inset-0 bg-grid-lines opacity-[0.02] pointer-events-none" />
-          <div className={`flex items-center gap-3 relative z-10 ${isCollapsed ? 'justify-center' : 'w-full'}`}>
-            {profile.photo ? (
-              <img src={profile.photo} className={`h-8 w-8 rounded-full object-cover border shrink-0 animate-fade-in ${d ? 'border-black/25' : 'border-white/25'}`} alt="Avatar" />
-            ) : (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-700 text-[10px] font-black text-white border border-surface-600 uppercase">
-                {getInitials(profile.firstName, profile.lastName)}
-              </div>
-            )}
-            {!isCollapsed && (
-              <div className="min-w-0 flex-1 text-left">
-                {`${profile.firstName || ''} ${profile.lastName || ''}`.trim() ? (
-                  <p className={`truncate text-[11.5px] font-extrabold leading-tight transition-colors duration-500 ${d ? 'text-gray-800' : 'text-white'}`}>
-                    {`${profile.firstName || ''} ${profile.lastName || ''}`.trim()}
+        {/* User Card or Login Button */}
+        {user ? (
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsProfileMenuOpen(!isProfileMenuOpen);
+            }}
+            className={`flex rounded-lg border relative overflow-hidden group transition-all duration-300 cursor-pointer select-none ${
+              isCollapsed ? 'p-1.5 justify-center w-10 h-10 items-center' : 'gap-2.5 p-3 w-full items-center'
+            } ${
+              d 
+                ? 'bg-gray-50/80 border-black/[0.07] hover:bg-neutral-100 hover:border-black/15' 
+                : 'bg-surface-900 border-surface-700 hover:bg-surface-800/80 hover:border-white/15'
+            }`}
+            title="Open User Profile Control Room"
+          >
+            <div className="absolute inset-0 bg-grid-lines opacity-[0.02] pointer-events-none" />
+            <div className={`flex items-center gap-3 relative z-10 ${isCollapsed ? 'justify-center' : 'w-full'}`}>
+              {profile.photo ? (
+                <img src={profile.photo} className={`h-8 w-8 rounded-full object-cover border shrink-0 animate-fade-in ${d ? 'border-black/25' : 'border-white/25'}`} alt="Avatar" />
+              ) : (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-700 text-[10px] font-black text-white border border-surface-600 uppercase">
+                  {getInitials(profile.firstName, profile.lastName)}
+                </div>
+              )}
+              {!isCollapsed && (
+                <div className="min-w-0 flex-1 text-left">
+                  {`${profile.firstName || ''} ${profile.lastName || ''}`.trim() ? (
+                    <p className={`truncate text-[11.5px] font-extrabold leading-tight transition-colors duration-500 ${d ? 'text-gray-800' : 'text-white'}`}>
+                      {`${profile.firstName || ''} ${profile.lastName || ''}`.trim()}
+                    </p>
+                  ) : null}
+                  <p className={`truncate text-[9.5px] font-extrabold mt-0.5 leading-none ${d ? 'text-black' : 'text-white'}`}>
+                     {profile.plan || 'Free Plan'}
                   </p>
-                ) : null}
-                <p className={`truncate text-[9.5px] font-extrabold mt-0.5 leading-none ${d ? 'text-black' : 'text-white'}`}>
-                   {profile.plan || 'Free Plan'}
-                </p>
-
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openLoginModal();
+            }}
+            className={`w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer ${
+              isCollapsed ? 'h-10 w-10 p-0 rounded-full' : ''
+            } ${
+              d 
+                ? 'bg-black text-white hover:bg-neutral-850 border border-black/10' 
+                : 'bg-white text-black hover:bg-neutral-100 border border-white/10'
+            }`}
+            title="Log In / Sign Up"
+          >
+            <FiUser size={13} className="shrink-0" />
+            {!isCollapsed && <span>Sign In</span>}
+          </button>
+        )}
       </div>
  
       {/* Profile Modal */}
