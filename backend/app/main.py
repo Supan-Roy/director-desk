@@ -22,12 +22,13 @@ async def lifespan(app: FastAPI):
     # Run lightweight migrations for columns added after initial schema
     _run_migrations(engine)
 
-    # Pre-generate procedural VFX overlay video assets and SFX audio
+    # Pre-generate procedural VFX overlay video assets and SFX audio in the background
     try:
+        import threading
         from app.utils.vfx_generator import generate_all_vfx_assets
-        generate_all_vfx_assets()
+        threading.Thread(target=generate_all_vfx_assets, daemon=True).start()
     except Exception as exc:
-        logger.error(f"Failed to generate procedural VFX assets on startup: {exc}")
+        logger.error(f"Failed to start background procedural VFX generation: {exc}")
 
     # Connect to Redis
     from app.core.redis import redis_manager
