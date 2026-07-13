@@ -1012,16 +1012,16 @@ export default function Sidebar() {
               e.stopPropagation();
               openLoginModal();
             }}
-            className={`w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer ${
-              isCollapsed ? 'h-10 w-10 p-0 rounded-full' : ''
+            className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 px-4 text-[9px] font-extrabold uppercase tracking-wider transition-all duration-300 shadow-sm cursor-pointer ${
+              isCollapsed ? 'h-9 w-9 p-0 rounded-full mx-auto' : 'w-fit mx-auto'
             } ${
               d 
-                ? 'bg-black text-white hover:bg-neutral-850 border border-black/10' 
-                : 'bg-white text-black hover:bg-neutral-100 border border-white/10'
+                ? 'bg-gradient-to-b from-neutral-800 to-black hover:from-neutral-900 hover:to-black text-white border border-black/15 hover:shadow-md' 
+                : 'bg-gradient-to-b from-white via-neutral-50 to-neutral-200 text-black hover:from-white hover:to-neutral-100 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(255,255,255,0.25)]'
             }`}
             title="Log In / Sign Up"
           >
-            <FiUser size={13} className="shrink-0" />
+            <FiUser size={11} className="shrink-0" />
             {!isCollapsed && <span>Sign In</span>}
           </button>
         )}

@@ -468,10 +468,10 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                className={`w-full font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm cursor-pointer ${
                   d 
-                    ? 'bg-black text-white hover:bg-neutral-850 border border-black/10' 
-                    : 'bg-white text-black hover:bg-neutral-200 border border-white/10'
+                    ? 'bg-gradient-to-b from-neutral-800 to-black hover:from-neutral-900 hover:to-black text-white border border-black/15 hover:shadow-md' 
+                    : 'bg-gradient-to-b from-white via-neutral-50 to-neutral-200 text-black hover:from-white hover:to-neutral-100 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(255,255,255,0.25)]'
                 }`}
               >
                 <span>{loading ? 'Processing...' : 'Continue'}</span>
@@ -549,10 +549,10 @@ export default function AuthModal() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex-1 font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`flex-1 font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm cursor-pointer ${
                     d 
-                      ? 'bg-black text-white hover:bg-neutral-850 border border-black/10' 
-                      : 'bg-white text-black hover:bg-neutral-200 border border-white/10'
+                      ? 'bg-gradient-to-b from-neutral-800 to-black hover:from-neutral-900 hover:to-black text-white border border-black/15 hover:shadow-md' 
+                      : 'bg-gradient-to-b from-white via-neutral-50 to-neutral-200 text-black hover:from-white hover:to-neutral-100 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(255,255,255,0.25)]'
                   }`}
                 >
                   <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
@@ -674,10 +674,10 @@ export default function AuthModal() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex-1 font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`flex-1 font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm cursor-pointer ${
                     d 
-                      ? 'bg-black text-white hover:bg-neutral-850 border border-black/10' 
-                      : 'bg-white text-black hover:bg-neutral-200 border border-white/10'
+                      ? 'bg-gradient-to-b from-neutral-800 to-black hover:from-neutral-900 hover:to-black text-white border border-black/15 hover:shadow-md' 
+                      : 'bg-gradient-to-b from-white via-neutral-50 to-neutral-200 text-black hover:from-white hover:to-neutral-100 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(255,255,255,0.25)]'
                   }`}
                 >
                   <span>{loading ? 'Creating...' : 'Register'}</span>
@@ -744,10 +744,10 @@ export default function AuthModal() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex-1 font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                  className={`flex-1 font-extrabold uppercase tracking-wider text-xs py-2.5 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer ${
                     d 
-                      ? 'bg-black text-white hover:bg-neutral-850 border border-black/10' 
-                      : 'bg-white text-black hover:bg-neutral-200 border border-white/10'
+                      ? 'bg-gradient-to-b from-neutral-800 to-black hover:from-neutral-900 hover:to-black text-white border border-black/15 hover:shadow-md' 
+                      : 'bg-gradient-to-b from-white via-neutral-50 to-neutral-200 text-black hover:from-white hover:to-neutral-100 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(255,255,255,0.25)]'
                   }`}
                 >
                   {loading ? 'Verifying...' : 'Verify & Sign In'}
