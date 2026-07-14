@@ -742,6 +742,40 @@ export default function EditorPage() {
     }
   }, [exportStatus, exportUrl, targetProjectId, id, navigate, resetExport])
 
+  const handleExportOrRedirect = () => {
+    const isSingleVideoOnly = 
+      videoTrack.length === 1 &&
+      audioTrack.length === 0 &&
+      textTrack.length === 0 &&
+      vfxTrack.length === 0 &&
+      !logo?.enabled
+
+    if (isSingleVideoOnly) {
+      const singleVideo = videoTrack[0]
+      const urlPath = singleVideo.url.replace(apiBaseUrl, "")
+      
+      if (targetProjectId) {
+        const saveAndNavigate = async () => {
+          try {
+            await apiClient.patch(`/api/projects/${targetProjectId}`, {
+              mastered_movie_url: urlPath
+            })
+          } catch (err) {
+            console.error("Failed to save mastered movie url to project", err)
+          } finally {
+            const targetRouteId = id || encodeId(targetProjectId)
+            navigate(`/projects/${targetRouteId}/post-production`, { state: { movieUrl: urlPath } })
+          }
+        }
+        saveAndNavigate()
+      } else {
+        navigate('/post-production', { state: { movieUrl: urlPath } })
+      }
+    } else {
+      triggerExport()
+    }
+  }
+
   const getAspectRatioCSS = (ar) => {
     const map = {
       '16:9': '16 / 9',
@@ -1723,7 +1757,7 @@ export default function EditorPage() {
 
             {/* Export Trigger */}
             <button
-              onClick={triggerExport}
+              onClick={handleExportOrRedirect}
               disabled={isExporting || videoTrack.length === 0}
               className={`bg-gradient-to-b from-[#ffffff] to-[#d6d6db] text-black font-extrabold uppercase tracking-wider rounded-sm disabled:opacity-30 flex items-center gap-2 cursor-pointer transition-all border border-[#ffffff] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(0,0,0,0.4)] active:translate-y-[0.5px] ${
                 isMobile ? 'text-[9px] px-2 py-1' : 'text-[9.5px] px-4 py-1.5'

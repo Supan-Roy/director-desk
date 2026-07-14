@@ -1,0 +1,21 @@
+# Node
+node_modules/
+dist/
+.vite/
+
+# Environment
+.env
+!.env.example
+
+# Version control & CI
+.git/
+.github/
+.gitignore
+.dockerignore
+
+# OS trash
+.DS_Store
+Thumbs.db
+
+# Docker build context artifacts
+Dockerfile

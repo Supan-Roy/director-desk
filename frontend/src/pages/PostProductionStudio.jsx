@@ -72,6 +72,7 @@ export default function PostProductionStudio() {
   // Generation status states
   const [generating, setGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
+  const [generationProgress, setGenerationProgress] = useState(0)
   const [generationError, setGenerationError] = useState("")
 
   // Video playback states
@@ -87,7 +88,7 @@ export default function PostProductionStudio() {
   const [saveStatus, setSaveStatus] = useState("idle") // idle, saving, success, error
 
   const videoRef = useRef(null)
-  const stepTimerRef = useRef(null)
+  const pollingRef = useRef(null)
 
   const steps = [
     { title: "FFmpeg Audio Extraction", desc: "Extracting audio track from high-resolution movie canvas..." },
@@ -185,34 +186,56 @@ export default function PostProductionStudio() {
     }
   }
 
-  // Simulate progress step visualizer during actual generation call
-  const startProgressSimulation = () => {
-    setGenerationStep(0)
-    if (stepTimerRef.current) clearInterval(stepTimerRef.current)
-    stepTimerRef.current = setInterval(() => {
-      setGenerationStep(prev => {
-        if (prev < steps.length - 1) {
-          return prev + 1
-        }
-        return prev
+  // Poll generation progress from the backend
+  const pollGenerationStatus = useCallback(async (taskId) => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/post-production/subtitles/generate/status/${taskId}`, {
+        credentials: 'include'
       })
-    }, 2800)
-  }
+      if (!res.ok) throw new Error("Failed to fetch generation status")
 
-  const stopProgressSimulation = () => {
-    if (stepTimerRef.current) {
-      clearInterval(stepTimerRef.current)
-      stepTimerRef.current = null
+      const data = await res.json()
+
+      // Update step and progress from real backend data
+      setGenerationStep(data.step ?? 0)
+      setGenerationProgress(data.step_progress ?? 0)
+
+      if (data.status === "completed") {
+        if (pollingRef.current) clearInterval(pollingRef.current)
+        pollingRef.current = null
+        setSubtitles(data.subtitles || [])
+        setEditedSubtitles(data.subtitles || [])
+        setStatistics(data.statistics)
+        setGenerating(false)
+      } else if (data.status === "failed") {
+        if (pollingRef.current) clearInterval(pollingRef.current)
+        pollingRef.current = null
+        setGenerationError(data.error || "Transcription failed.")
+        setGenerating(false)
+      }
+    } catch (err) {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      pollingRef.current = null
+      setGenerationError(err.message || "Failed to poll generation status.")
+      setGenerating(false)
     }
-  }
+  }, [])
 
-  // Trigger Subtitle Generation
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [])
+
+  // Trigger Subtitle Generation (async, polls backend for real progress)
   const handleGenerateSubtitles = async () => {
     if (!project || !project.mastered_movie_url) return
-    
+
     setGenerating(true)
     setGenerationError("")
-    startProgressSimulation()
+    setGenerationStep(0)
+    setGenerationProgress(0)
 
     try {
       const res = await fetch(`${apiBaseUrl}/api/post-production/subtitles/generate`, {
@@ -224,21 +247,18 @@ export default function PostProductionStudio() {
         })
       })
 
-      stopProgressSimulation()
-
       if (!res.ok) {
-        throw new Error("Failed to generate subtitles. Please check if file is rendered correctly.")
+        throw new Error("Failed to start subtitle generation. Please check if the file is rendered correctly.")
       }
 
-      const data = await res.json()
-      setSubtitles(data.subtitles || [])
-      setEditedSubtitles(data.subtitles || [])
-      setStatistics(data.statistics)
-      setGenerationStep(steps.length) // Done
+      const { task_id } = await res.json()
+
+      // Poll real progress every 1.5 s
+      pollingRef.current = setInterval(() => {
+        pollGenerationStatus(task_id)
+      }, 1500)
     } catch (err) {
-      stopProgressSimulation()
       setGenerationError(err.message || "An error occurred during transcription.")
-    } finally {
       setGenerating(false)
     }
   }
@@ -539,7 +559,7 @@ export default function PostProductionStudio() {
                             Auto-Generate Master Subtitles
                           </h4>
                           <p className={`text-[10.5px] mt-1.5 leading-relaxed ${d ? 'text-gray-500' : 'text-gray-400'}`}>
-                            Extract video speech tracks and automatically produce time-synchronized subtitles. Uses local hardware acceleration or OpenAI fallback.
+                            Extract video speech tracks and automatically produce time-synchronized subtitles. Uses local FFmpeg + faster-whisper — entirely API-cost-free.
                           </p>
                         </div>
                         {generationError && (
@@ -585,6 +605,7 @@ export default function PostProductionStudio() {
                           {steps.map((step, idx) => {
                             const isCurrent = idx === generationStep
                             const isPast = idx < generationStep
+                            const progress = isCurrent ? generationProgress : isPast ? 100 : 0
                             return (
                               <div key={idx} className={`flex items-start gap-3 transition-opacity ${
                                 isCurrent ? 'opacity-100' : isPast ? 'opacity-55' : 'opacity-25'
@@ -598,14 +619,23 @@ export default function PostProductionStudio() {
                                 }`}>
                                   {isPast ? <FiCheckCircle size={10} /> : idx + 1}
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                   <span className={`block text-[10.5px] font-bold uppercase tracking-wider ${
                                     isCurrent ? 'text-purple-400' : d ? 'text-gray-800' : 'text-white'
                                   }`}>{step.title}</span>
                                   {isCurrent && (
-                                    <span className={`block text-[9.5px] mt-0.5 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
-                                      {step.desc}
-                                    </span>
+                                    <>
+                                      <span className={`block text-[9.5px] mt-0.5 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
+                                        {step.desc}
+                                      </span>
+                                      {/* Real progress bar */}
+                                      <div className={`mt-2 h-1 rounded-full overflow-hidden ${d ? 'bg-gray-200' : 'bg-white/5'}`}>
+                                        <div
+                                          className="h-full rounded-full bg-purple-500 transition-all duration-300"
+                                          style={{ width: `${progress}%` }}
+                                        />
+                                      </div>
+                                    </>
                                   )}
                                 </div>
                               </div>

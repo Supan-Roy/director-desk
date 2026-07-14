@@ -31,5 +31,6 @@ jobs:
             
             # Rebuild and restart the container services
             # Note: We rebuild without cache to ensure the latest static frontend/backend changes are applied
-            docker compose down
-            docker compose up -d --build
+            # --profile dev is required because nginx, frontend, and backend services are scoped to the dev profile
+            docker compose --profile dev down
+            docker compose --profile dev up -d --build

@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Environment secrets (live values, not for image)
+.env
+!.env.example
+
+# Database
+*.db
+director_desk.db
+
+# Test / generated audio files
+*.wav
+*.mp3
+
+# User-generated media (rendered in production, not baked into image)
+static/uploads/
+static/exports/
+static/release-assets/
+
+# Version control & CI
+.git/
+.github/
+.gitignore
+.dockerignore
+
+# OS trash
+.DS_Store
+Thumbs.db
+
+# Docker build context artifacts (not needed in image)
+Dockerfile
