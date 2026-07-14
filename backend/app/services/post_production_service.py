@@ -149,22 +149,36 @@ def generate_subtitles_background(task_id: str, project_id: int, movie_url: str)
         model = get_or_create_model()
         generation_tasks[task_id]["step_progress"] = 100
 
-        # ---- Step 2: Transcribe ----
+        # ---- Step 2: Transcribe (word-level timestamps for sub-second precision) ----
         generation_tasks[task_id]["step"] = 2
         generation_tasks[task_id]["step_progress"] = 0
 
-        segments, _info = model.transcribe(audio_path, beam_size=5)
+        segments, _info = model.transcribe(
+            audio_path,
+            beam_size=5,
+            word_timestamps=True,
+            vad_filter=True,
+        )
 
         subtitles: List[Dict[str, Any]] = []
         last_end = 0.0
         for idx, segment in enumerate(segments):
+            # Use word-level timestamps for the most accurate start/end
+            words = list(segment.words) if segment.words else []
+            if words:
+                seg_start = words[0].start
+                seg_end = words[-1].end
+            else:
+                seg_start = segment.start
+                seg_end = segment.end
+
             subtitles.append({
                 "id": idx + 1,
-                "start": round(segment.start, 2),
-                "end": round(segment.end, 2),
+                "start": round(seg_start, 3),
+                "end": round(seg_end, 3),
                 "text": segment.text.strip(),
             })
-            last_end = segment.end
+            last_end = seg_end
             # Report progress as fraction of total audio duration
             if audio_duration and audio_duration > 0:
                 progress = min(int((last_end / audio_duration) * 100), 99)
