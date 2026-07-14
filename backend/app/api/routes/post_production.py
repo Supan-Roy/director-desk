@@ -106,6 +106,17 @@ def get_subtitles(project_id: int = Query(...), db: Session = Depends(get_db)):
     }
 
 
+@router.delete("/post-production/subtitles")
+def delete_subtitles(project_id: int = Query(...), db: Session = Depends(get_db)):
+    """Delete all subtitles for a project."""
+    project = project_repository.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project_repository.update(db, project_id, subtitles=[])
+    return {"status": "success", "subtitles": []}
+
+
 @router.put("/post-production/subtitles")
 def update_subtitles(payload: UpdateSubtitlesPayload, db: Session = Depends(get_db)):
     """Save user-edited subtitle segments."""

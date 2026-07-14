@@ -14,10 +14,9 @@ import {
   FiPlus,
   FiSave,
   FiBarChart2,
-  FiSettings,
-  FiMusic,
   FiGlobe,
-  FiTv
+  FiTv,
+  FiXCircle
 } from 'react-icons/fi'
 import { apiBaseUrl } from '../services/apiClient'
 import { useTheme } from '../context/ThemeContext'
@@ -82,7 +81,7 @@ export default function PostProductionStudio() {
   const [activeSubtitle, setActiveSubtitle] = useState(null)
 
   // Tabs state
-  const [activeTab, setActiveTab] = useState('subtitles')
+  const [activeTab, setActiveTab] = useState('editor')
 
   // Edit states
   const [editedSubtitles, setEditedSubtitles] = useState([])
@@ -269,6 +268,29 @@ export default function PostProductionStudio() {
     }
   }
 
+  // Delete all subtitles
+  const handleDeleteSubtitles = async () => {
+    if (!hasValidProject) {
+      setSubtitles([])
+      setEditedSubtitles([])
+      setStatistics(null)
+      return
+    }
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/post-production/subtitles?project_id=${numericId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      if (res.ok) {
+        setSubtitles([])
+        setEditedSubtitles([])
+        setStatistics(null)
+      }
+    } catch (e) {
+      console.error("Failed to delete subtitles", e)
+    }
+  }
+
   // Update subtitle values locally in the form
   const handleSubtitleTextChange = (index, value) => {
     setEditedSubtitles(prev => {
@@ -349,69 +371,91 @@ export default function PostProductionStudio() {
     }
   }
 
+  const getExportBaseName = () => {
+    if (project?.title) return project.title.replace(/[^a-zA-Z0-9_-]/g, '_')
+    // Derive from movie URL filename
+    const url = rawMovieUrlRef.current || movieUrl
+    const name = url.split('/').pop()?.replace(/\.[^.]+$/, '') || 'subtitles'
+    return name.replace(/[^a-zA-Z0-9_-]/g, '_')
+  }
+
   const downloadSRT = () => {
+    const base = getExportBaseName()
     if (hasValidProject) {
       window.open(`${apiBaseUrl}/api/post-production/export/subtitles?project_id=${numericId}&format=srt`, '_blank')
     } else {
       const content = editedSubtitles.map((s, idx) => {
         return `${idx + 1}\n${formatTimeSRT(s.start)} --> ${formatTimeSRT(s.end)}\n${s.text}\n`
       }).join('\n')
-      triggerClientDownload(content, 'subtitles.srt', 'text/srt')
+      triggerClientDownload(content, `${base}.srt`, 'text/srt')
     }
   }
 
   const downloadWebVTT = () => {
+    const base = getExportBaseName()
     if (hasValidProject) {
       window.open(`${apiBaseUrl}/api/post-production/export/subtitles?project_id=${numericId}&format=vtt`, '_blank')
     } else {
       const content = 'WEBVTT\n\n' + editedSubtitles.map((s, idx) => {
         return `${idx + 1}\n${formatTimeVTT(s.start)} --> ${formatTimeVTT(s.end)}\n${s.text}\n`
       }).join('\n')
-      triggerClientDownload(content, 'subtitles.vtt', 'text/vtt')
+      triggerClientDownload(content, `${base}.vtt`, 'text/vtt')
     }
   }
+
+  const bgt = (light, dark) => d ? light : dark
+  const txt = (light, dark) => d ? light : dark
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       
-      <div className={`flex-1 flex flex-col min-w-0 ${d ? 'bg-[#f4f4f7]' : 'bg-[#06070a]'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 ${bgt('bg-[#f4f4f7]', 'bg-[#06070a]')}`}>
         
         {/* Header */}
         <header className={`shrink-0 flex items-center justify-between px-6 py-4 border-b ${
-          d ? 'border-gray-200 bg-white' : 'border-white/[0.04] bg-[#090b0f]'
+          bgt('border-gray-200 bg-white', 'border-white/[0.04] bg-[#090b0f]')
         }`}>
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(id ? `/projects/${id}` : '/editor')}
               className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                d ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-white/5 text-gray-400'
+                bgt('hover:bg-gray-100 text-gray-600', 'hover:bg-white/5 text-gray-400')
               }`}
             >
               <FiArrowLeft size={16} />
             </button>
             <div>
-              <h1 className={`text-sm font-black uppercase tracking-wider ${d ? 'text-gray-900' : 'text-white'}`}>
+              <h1 className={`text-sm font-black uppercase tracking-wider ${bgt('text-gray-900', 'text-white')}`}>
                 Post Production Studio
               </h1>
               {project && (
-                <p className={`text-[10px] font-mono mt-0.5 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {project.title} · Finishing Suite
+                <p className={`text-[10px] font-mono mt-0.5 ${bgt('text-gray-500', 'text-gray-400')}`}>
+                  {project.title} · Post-Production Suite
                 </p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Export Master Movie — white button matching Editor "Done" style */}
+            <button
+              onClick={downloadMovie}
+              className={`bg-gradient-to-b from-[#ffffff] to-[#d6d6db] text-black font-extrabold uppercase tracking-wider rounded-sm flex items-center gap-2 cursor-pointer transition-all border border-[#ffffff] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(0,0,0,0.4)] active:translate-y-[0.5px] text-[9.5px] px-4 py-1.5`}
+            >
+              <FiVideo size={12} />
+              <span>Export Master Movie</span>
+            </button>
             {hasValidProject && (
               <button
                 onClick={() => navigate(`/projects/${id}/release`)}
                 className={`px-4 py-1.5 rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-all border ${
-                  d
-                    ? 'bg-black text-white hover:bg-gray-800 border-black'
-                    : 'bg-white text-black hover:bg-gray-200 border-white shadow-[0_2px_10px_rgba(255,255,255,0.05)]'
+                  bgt(
+                    'border-gray-300 text-gray-700 hover:bg-gray-100',
+                    'border-white/[0.12] text-gray-300 hover:bg-white/5'
+                  )
                 }`}
               >
-                To Release Studio
+                Release Studio
               </button>
             )}
           </div>
@@ -421,23 +465,27 @@ export default function PostProductionStudio() {
         <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
           {loading ? (
             <div className="flex items-center justify-center flex-1">
-              <FiLoader size={24} className="animate-spin text-purple-500" />
+              <FiLoader size={24} className="animate-spin text-gray-400" />
             </div>
           ) : !movieUrl ? (
-            /* Warning if no movie has been rendered from EditorPage yet */
             <div className="flex flex-col items-center justify-center flex-1 max-w-md mx-auto text-center gap-4 p-6">
               <FiAlertCircle size={48} className="text-amber-500 opacity-80" />
               <div>
-                <h3 className={`text-sm font-bold uppercase tracking-wider ${d ? 'text-gray-800' : 'text-white'}`}>
+                <h3 className={`text-sm font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
                   Master Movie Missing
                 </h3>
-                <p className={`text-[11.5px] mt-2 leading-relaxed ${d ? 'text-gray-500' : 'text-gray-400'}`}>
+                <p className={`text-[11.5px] mt-2 leading-relaxed ${bgt('text-gray-500', 'text-gray-400')}`}>
                   You must complete rendering your edit inside the Studio Editor before adding final finishing touches or generating master subtitles.
                 </p>
               </div>
               <button
                 onClick={() => navigate(id ? `/projects/${id}/editor` : '/editor')}
-                className="px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-purple-600 text-white hover:bg-purple-500 transition-all"
+                className={`px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
+                  bgt(
+                    'bg-black text-white hover:bg-gray-800',
+                    'bg-white text-black hover:bg-gray-200'
+                  )
+                }`}
               >
                 Open Studio Editor
               </button>
@@ -450,7 +498,7 @@ export default function PostProductionStudio() {
                 
                 {/* Master Player Container */}
                 <div className={`relative rounded-2xl overflow-hidden border shadow-2xl ${
-                  d ? 'bg-black border-gray-200' : 'bg-black border-white/[0.06]'
+                  bgt('bg-black border-gray-200', 'bg-black border-white/[0.06]')
                 }`}>
                   <div className="aspect-video relative flex items-center justify-center">
                     <video
@@ -461,7 +509,7 @@ export default function PostProductionStudio() {
                       onClick={handlePlayPause}
                     />
 
-                    {/* Subtitle Overlay Overlay */}
+                    {/* Subtitle Overlay */}
                     {activeSubtitle && (
                       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[85%] text-center pointer-events-none select-none z-10">
                         <span className="px-4 py-2 rounded-lg bg-black/85 border border-white/10 text-white font-semibold text-[13px] md:text-[15px] leading-relaxed shadow-xl backdrop-blur-md">
@@ -480,7 +528,7 @@ export default function PostProductionStudio() {
                           {isPlaying ? <FiPause size={16} /> : <FiPlay size={16} />}
                         </button>
                         <span className="font-mono text-[10.5px]">
-                          {currentTime.toFixed(2)}s / {videoRef.current?.duration ? videoRef.current.duration.toFixed(2) : "0.00"}s
+                          {currentTime.toFixed(3)}s / {videoRef.current?.duration ? videoRef.current.duration.toFixed(3) : "0.000"}s
                         </span>
                       </div>
                     </div>
@@ -488,37 +536,35 @@ export default function PostProductionStudio() {
                 </div>
 
                 {/* Subtitle Timeline Statistics Panel */}
-                <div className={`rounded-2xl border p-5 ${
-                  d ? 'bg-white border-gray-200 text-gray-800' : 'bg-[#0a0c10] border-white/[0.04] text-white'
-                }`}>
-                  <h3 className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 opacity-80 mb-4">
-                    <FiBarChart2 className="text-purple-500" /> Subtitle Timeline Analytics
-                  </h3>
-                  {statistics && statistics.total_subtitles > 0 ? (
+                {statistics && statistics.total_subtitles > 0 && (
+                  <div className={`rounded-2xl border p-5 ${
+                    bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                  }`}>
+                    <h3 className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-2 mb-4 ${
+                      bgt('text-gray-700', 'text-gray-300')
+                    }`}>
+                      <FiBarChart2 size={14} /> Timeline Analytics
+                    </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div className={`p-3.5 rounded-xl ${d ? 'bg-gray-50' : 'bg-[#101319]'}`}>
-                        <span className="block text-[9px] font-bold uppercase tracking-wider opacity-50">Total Segments</span>
-                        <span className="block text-lg font-black mt-1 font-mono">{statistics.total_subtitles}</span>
+                      <div className={`p-3.5 rounded-xl ${bgt('bg-gray-50', 'bg-[#101319]')}`}>
+                        <span className={`block text-[9px] font-bold uppercase tracking-wider ${bgt('text-gray-400', 'text-gray-500')}`}>Total Segments</span>
+                        <span className={`block text-lg font-black mt-1 font-mono ${bgt('text-gray-900', 'text-white')}`}>{statistics.total_subtitles}</span>
                       </div>
-                      <div className={`p-3.5 rounded-xl ${d ? 'bg-gray-50' : 'bg-[#101319]'}`}>
-                        <span className="block text-[9px] font-bold uppercase tracking-wider opacity-50">Avg Segment</span>
-                        <span className="block text-lg font-black mt-1 font-mono">{statistics.average_duration}s</span>
+                      <div className={`p-3.5 rounded-xl ${bgt('bg-gray-50', 'bg-[#101319]')}`}>
+                        <span className={`block text-[9px] font-bold uppercase tracking-wider ${bgt('text-gray-400', 'text-gray-500')}`}>Avg Segment</span>
+                        <span className={`block text-lg font-black mt-1 font-mono ${bgt('text-gray-900', 'text-white')}`}>{statistics.average_duration}s</span>
                       </div>
-                      <div className={`p-3.5 rounded-xl ${d ? 'bg-gray-50' : 'bg-[#101319]'}`}>
-                        <span className="block text-[9px] font-bold uppercase tracking-wider opacity-50">Total Words</span>
-                        <span className="block text-lg font-black mt-1 font-mono">{statistics.total_words}</span>
+                      <div className={`p-3.5 rounded-xl ${bgt('bg-gray-50', 'bg-[#101319]')}`}>
+                        <span className={`block text-[9px] font-bold uppercase tracking-wider ${bgt('text-gray-400', 'text-gray-500')}`}>Total Words</span>
+                        <span className={`block text-lg font-black mt-1 font-mono ${bgt('text-gray-900', 'text-white')}`}>{statistics.total_words}</span>
                       </div>
-                      <div className={`p-3.5 rounded-xl ${d ? 'bg-gray-50' : 'bg-[#101319]'}`}>
-                        <span className="block text-[9px] font-bold uppercase tracking-wider opacity-50">CPS (Speed)</span>
-                        <span className="block text-lg font-black mt-1 font-mono text-purple-400">{statistics.characters_per_second}</span>
+                      <div className={`p-3.5 rounded-xl ${bgt('bg-gray-50', 'bg-[#101319]')}`}>
+                        <span className={`block text-[9px] font-bold uppercase tracking-wider ${bgt('text-gray-400', 'text-gray-500')}`}>CPS (Speed)</span>
+                        <span className={`block text-lg font-black mt-1 font-mono ${bgt('text-gray-900', 'text-white')}`}>{statistics.characters_per_second}</span>
                       </div>
                     </div>
-                  ) : (
-                    <p className={`text-[11px] text-center py-4 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
-                      No subtitles generated yet. Run generator to gather timeline statistics.
-                    </p>
-                  )}
-                </div>
+                  </div>
+                )}
 
               </div>
 
@@ -526,45 +572,47 @@ export default function PostProductionStudio() {
               <div className="lg:col-span-5 space-y-6">
                 
                 {/* Mode Select Tabs */}
-                <div className="flex border-b border-white/[0.04]">
+                <div className={`flex border-b ${bgt('border-gray-200', 'border-white/[0.04]')}`}>
                   <button
-                    onClick={() => setActiveTab('subtitles')}
-                    className={`flex-1 pb-3 text-[10px] font-extrabold uppercase tracking-wider border-b-2 cursor-pointer transition-colors ${
-                      activeTab === 'subtitles'
-                        ? 'border-purple-500 text-purple-400'
-                        : d ? 'border-transparent text-gray-500 hover:text-gray-900' : 'border-transparent text-gray-400 hover:text-white'
+                    onClick={() => setActiveTab('editor')}
+                    className={`flex-1 pb-3 text-[10px] font-extrabold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${
+                      activeTab === 'editor'
+                        ? bgt('border-black text-black', 'border-white text-white')
+                        : bgt('border-transparent text-gray-400 hover:text-gray-700', 'border-transparent text-gray-500 hover:text-gray-300')
                     }`}
                   >
-                    Subtitles Editor
+                    Subtitle Editor
                   </button>
                   <button
-                    onClick={() => setActiveTab('export')}
-                    className={`flex-1 pb-3 text-[10px] font-extrabold uppercase tracking-wider border-b-2 cursor-pointer transition-colors ${
-                      activeTab === 'export'
-                        ? 'border-purple-500 text-purple-400'
-                        : d ? 'border-transparent text-gray-500 hover:text-gray-900' : 'border-transparent text-gray-400 hover:text-white'
+                    onClick={() => setActiveTab('dubbing')}
+                    className={`flex-1 pb-3 text-[10px] font-extrabold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${
+                      activeTab === 'dubbing'
+                        ? bgt('border-black text-black', 'border-white text-white')
+                        : bgt('border-transparent text-gray-400 hover:text-gray-700', 'border-transparent text-gray-500 hover:text-gray-300')
                     }`}
                   >
-                    Finishing & Exports
+                    Multilingual Dubbing
                   </button>
                 </div>
 
-                {/* Tab Content 1: Subtitles Editor */}
-                {activeTab === 'subtitles' && (
+                {/* Tab Content 1: Subtitle Editor */}
+                {activeTab === 'editor' && (
                   <div className="space-y-4">
                     {editedSubtitles.length === 0 && !generating ? (
                       /* CTA to Generate Subtitles */
                       <div className={`rounded-2xl border p-8 text-center space-y-4 ${
-                        d ? 'bg-white border-gray-200' : 'bg-[#0a0c10] border-white/[0.04]'
+                        bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
                       }`}>
-                        <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto text-purple-400">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${
+                          bgt('bg-gray-100 text-gray-600', 'bg-white/5 text-gray-400')
+                        }`}>
                           <FiFileText size={20} />
                         </div>
                         <div>
-                          <h4 className={`text-[12px] font-bold uppercase tracking-wider ${d ? 'text-gray-800' : 'text-white'}`}>
+                          <h4 className={`text-[12px] font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
                             Auto-Generate Master Subtitles
                           </h4>
-                          <p className={`text-[10.5px] mt-1.5 leading-relaxed ${d ? 'text-gray-500' : 'text-gray-400'}`}>
+                          <p className={`text-[10.5px] mt-1.5 leading-relaxed ${bgt('text-gray-500', 'text-gray-400')}`}>
                             Extract video speech tracks and automatically produce time-synchronized subtitles. Uses local FFmpeg + faster-whisper — entirely API-cost-free.
                           </p>
                         </div>
@@ -578,13 +626,23 @@ export default function PostProductionStudio() {
                           <div className="space-y-3">
                             <button
                               onClick={handleGenerateSubtitles}
-                              className="w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider bg-purple-600 text-white hover:bg-purple-500 transition-all cursor-pointer shadow-lg shadow-purple-500/10"
+                              className={`w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
+                                bgt(
+                                  'bg-black text-white hover:bg-gray-800 shadow-black/10',
+                                  'bg-white text-black hover:bg-gray-200 shadow-white/5'
+                                )
+                              }`}
                             >
                               Generate Subtitles
                             </button>
                             <button
                               onClick={handleAddSubtitle}
-                              className="w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider border border-purple-600 text-purple-400 hover:bg-purple-600/10 transition-all cursor-pointer"
+                              className={`w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer border ${
+                                bgt(
+                                  'border-gray-300 text-gray-700 hover:bg-gray-50',
+                                  'border-white/[0.12] text-gray-300 hover:bg-white/5'
+                                )
+                              }`}
                             >
                               Add Segment Manually
                             </button>
@@ -592,20 +650,25 @@ export default function PostProductionStudio() {
                         ) : (
                           <button
                             onClick={handleGenerateSubtitles}
-                            className="w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider bg-purple-600 text-white hover:bg-purple-500 transition-all cursor-pointer shadow-lg shadow-purple-500/10"
+                            className={`w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
+                              bgt(
+                                'bg-black text-white hover:bg-gray-800 shadow-black/10',
+                                'bg-white text-black hover:bg-gray-200 shadow-white/5'
+                              )
+                            }`}
                           >
                             Generate Subtitles
                           </button>
                         )}
                       </div>
                     ) : generating ? (
-                      /* Beautiful transcription step progress status display */
+                      /* Transcription step progress */
                       <div className={`rounded-2xl border p-8 space-y-6 ${
-                        d ? 'bg-white border-gray-200' : 'bg-[#0a0c10] border-white/[0.04]'
+                        bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
                       }`}>
                         <div className="flex items-center gap-3">
-                          <FiLoader className="animate-spin text-purple-400" size={18} />
-                          <h4 className={`text-[12px] font-bold uppercase tracking-wider ${d ? 'text-gray-800' : 'text-white'}`}>
+                          <FiLoader className="animate-spin text-white" size={18} />
+                          <h4 className={`text-[12px] font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
                             Transcribing Movie...
                           </h4>
                         </div>
@@ -616,31 +679,32 @@ export default function PostProductionStudio() {
                             const isPast = idx < generationStep
                             const progress = isCurrent ? generationProgress : isPast ? 100 : 0
                             return (
-                              <div key={idx} className={`flex items-start gap-3 transition-opacity ${
+                              <div key={idx} className={`flex items-start gap-3 transition-all duration-500 ${
                                 isCurrent ? 'opacity-100' : isPast ? 'opacity-55' : 'opacity-25'
                               }`}>
-                                <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 text-[9px] font-bold ${
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 text-[9px] font-bold transition-all duration-300 ${
                                   isPast
-                                    ? 'bg-purple-600 text-white'
+                                    ? bgt('bg-gray-800 text-white', 'bg-white text-black')
                                     : isCurrent
-                                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                                      : 'bg-white/5 text-gray-500 border border-white/5'
+                                      ? bgt('bg-gray-200 text-gray-800 border border-gray-400', 'bg-white/10 text-white border border-white/20')
+                                      : bgt('bg-gray-100 text-gray-400 border border-gray-200', 'bg-white/5 text-gray-500 border border-white/5')
                                 }`}>
                                   {isPast ? <FiCheckCircle size={10} /> : idx + 1}
                                 </div>
-                                <div className="flex-1">
-                                  <span className={`block text-[10.5px] font-bold uppercase tracking-wider ${
-                                    isCurrent ? 'text-purple-400' : d ? 'text-gray-800' : 'text-white'
+                                <div className="flex-1 min-w-0">
+                                  <span className={`block text-[10.5px] font-bold uppercase tracking-wider transition-colors ${
+                                    isCurrent ? (bgt('text-gray-900', 'text-white')) : (bgt('text-gray-700', 'text-gray-300'))
                                   }`}>{step.title}</span>
                                   {isCurrent && (
                                     <>
-                                      <span className={`block text-[9.5px] mt-0.5 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
+                                      <span className={`block text-[9.5px] mt-0.5 ${bgt('text-gray-500', 'text-gray-400')}`}>
                                         {step.desc}
                                       </span>
-                                      {/* Real progress bar */}
-                                      <div className={`mt-2 h-1 rounded-full overflow-hidden ${d ? 'bg-gray-200' : 'bg-white/5'}`}>
+                                      <div className={`mt-2 h-1 rounded-full overflow-hidden ${bgt('bg-gray-200', 'bg-white/5')}`}>
                                         <div
-                                          className="h-full rounded-full bg-purple-500 transition-all duration-300"
+                                          className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                            bgt('bg-gray-800', 'bg-white')
+                                          }`}
                                           style={{ width: `${progress}%` }}
                                         />
                                       </div>
@@ -655,106 +719,157 @@ export default function PostProductionStudio() {
                     ) : (
                       /* Subtitle Timeline Table Editor */
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className={`text-[10px] font-black uppercase tracking-wider opacity-85 ${d ? 'text-gray-700' : 'text-gray-300'}`}>
-                            Timeline Segments
-                          </h3>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={handleAddSubtitle}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider border cursor-pointer transition-all ${
-                                d
-                                  ? 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                  : 'bg-[#101319] border-white/5 text-gray-300 hover:bg-[#161a22]'
-                              }`}
-                            >
-                              <FiPlus size={10} /> Add Segment
-                            </button>
-                            {hasValidProject && (
+                        <div className={`rounded-2xl border p-5 ${
+                          bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                        }`}>
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className={`text-[10px] font-black uppercase tracking-wider ${bgt('text-gray-700', 'text-gray-300')}`}>
+                              Timeline Segments
+                            </h3>
+                            <div className="flex items-center gap-2">
                               <button
-                                onClick={handleSaveSubtitles}
-                                disabled={saveStatus === "saving"}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider text-white transition-all cursor-pointer ${
-                                  saveStatus === "success"
-                                    ? 'bg-emerald-600'
-                                    : saveStatus === "error"
-                                      ? 'bg-red-600'
-                                      : 'bg-purple-600 hover:bg-purple-500'
+                                onClick={handleAddSubtitle}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider border cursor-pointer transition-all ${
+                                  bgt(
+                                    'border-gray-300 text-gray-700 hover:bg-gray-50',
+                                    'border-white/10 text-gray-300 hover:bg-white/5'
+                                  )
                                 }`}
                               >
-                                {saveStatus === "saving" ? (
-                                  <FiLoader className="animate-spin" size={10} />
-                                ) : saveStatus === "success" ? (
-                                  <FiCheckCircle size={10} />
-                                ) : (
-                                  <FiSave size={10} />
-                                )}
-                                {saveStatus === "saving" ? "Saving..." : saveStatus === "success" ? "Saved!" : "Save Changes"}
+                                <FiPlus size={10} /> Add
                               </button>
-                            )}
+                              {hasValidProject && (
+                                <button
+                                  onClick={handleSaveSubtitles}
+                                  disabled={saveStatus === "saving"}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider text-white transition-all cursor-pointer ${
+                                    saveStatus === "success"
+                                      ? 'bg-emerald-600'
+                                      : saveStatus === "error"
+                                        ? 'bg-red-600'
+                                        : bgt('bg-gray-800 hover:bg-gray-700', 'bg-white text-black hover:bg-gray-200')
+                                  }`}
+                                >
+                                  {saveStatus === "saving" ? (
+                                    <FiLoader className="animate-spin" size={10} />
+                                  ) : saveStatus === "success" ? (
+                                    <FiCheckCircle size={10} />
+                                  ) : (
+                                    <FiSave size={10} />
+                                  )}
+                                  {saveStatus === "saving" ? "Saving..." : saveStatus === "success" ? "Saved!" : "Save"}
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Timeline Edit List container */}
-                        <div className={`rounded-2xl border overflow-hidden max-h-[480px] overflow-y-auto ${
-                          d ? 'bg-white border-gray-200' : 'bg-[#0a0c10] border-white/[0.04]'
-                        }`}>
-                          <div className="divide-y divide-white/[0.04]">
+                          {/* Download & Delete bar */}
+                          <div className={`flex items-center gap-2 mb-4 p-2.5 rounded-xl ${
+                            bgt('bg-gray-50', 'bg-[#101319]')
+                          }`}>
+                            <span className={`text-[8.5px] font-bold uppercase tracking-wider mr-1 ${bgt('text-gray-400', 'text-gray-500')}`}>Export:</span>
+                            <button
+                              onClick={downloadSRT}
+                              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                                bgt(
+                                  'bg-black text-white border border-gray-700 hover:bg-gray-800',
+                                  'bg-white text-black border border-gray-300 hover:bg-gray-100'
+                                )
+                              }`}
+                            >
+                              <FiDownload size={9} /> SRT
+                            </button>
+                            <button
+                              onClick={downloadWebVTT}
+                              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                                bgt(
+                                  'bg-black text-white border border-gray-700 hover:bg-gray-800',
+                                  'bg-white text-black border border-gray-300 hover:bg-gray-100'
+                                )
+                              }`}
+                            >
+                              <FiDownload size={9} /> VTT
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                              onClick={handleDeleteSubtitles}
+                              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all bg-red-600 text-white hover:bg-red-500"
+                            >
+                              <FiTrash2 size={9} /> Delete
+                            </button>
+                          </div>
+
+                          {/* Timeline Edit List */}
+                          <div className={`max-h-[400px] overflow-y-auto space-y-2 ${bgt('', '')}`} style={{ scrollbarWidth: 'thin' }}>
                             {editedSubtitles.map((sub, index) => (
                               <div
                                 key={sub.id}
-                                className={`p-3.5 transition-colors flex flex-col gap-2 ${
-                                  d
-                                    ? 'hover:bg-gray-50/80 divide-gray-100'
-                                    : 'hover:bg-[#12151c]/60'
+                                className={`rounded-xl border p-3 transition-all duration-150 ${
+                                  bgt(
+                                    'border-gray-100 hover:border-gray-200 bg-white',
+                                    'border-white/[0.03] hover:border-white/[0.08] bg-[#0a0c10]'
+                                  )
                                 }`}
                               >
-                                <div className="flex items-center justify-between gap-3">
+                                {/* Time row */}
+                                <div className="flex items-center justify-between gap-2 mb-2">
                                   <button
                                     onClick={() => seekTo(sub.start)}
-                                    className="text-[9px] font-mono font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-full hover:bg-purple-500/20 cursor-pointer"
+                                    className={`text-[8.5px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border cursor-pointer transition-all ${
+                                      bgt(
+                                        'border-gray-200 text-gray-500 hover:bg-gray-100',
+                                        'border-white/[0.06] text-gray-400 hover:bg-white/5'
+                                      )
+                                    }`}
                                   >
-                                    Seek to {sub.start.toFixed(2)}s
+                                    Seek {sub.start.toFixed(0)}s
                                   </button>
                                   
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5">
                                     <div className="flex items-center gap-1 text-[9px] font-mono">
                                       <input
                                         type="number"
-                                        step="0.1"
+                                        step="0.001"
                                         value={sub.start}
                                         onChange={(e) => handleSubtitleTimeChange(index, 'start', e.target.value)}
-                                        className={`w-12 text-center rounded border p-0.5 ${
-                                          d ? 'bg-gray-50 border-gray-200' : 'bg-[#141820] border-white/5'
+                                        className={`w-16 text-center rounded-md border p-1 text-[9.5px] ${
+                                          bgt('bg-gray-50 border-gray-200 text-gray-800', 'bg-[#141820] border-white/5 text-gray-200')
                                         }`}
                                       />
-                                      <span className="opacity-40">to</span>
+                                      <span className={bgt('text-gray-300', 'text-gray-600')}>→</span>
                                       <input
                                         type="number"
-                                        step="0.1"
+                                        step="0.001"
                                         value={sub.end}
                                         onChange={(e) => handleSubtitleTimeChange(index, 'end', e.target.value)}
-                                        className={`w-12 text-center rounded border p-0.5 ${
-                                          d ? 'bg-gray-50 border-gray-200' : 'bg-[#141820] border-white/5'
+                                        className={`w-16 text-center rounded-md border p-1 text-[9.5px] ${
+                                          bgt('bg-gray-50 border-gray-200 text-gray-800', 'bg-[#141820] border-white/5 text-gray-200')
                                         }`}
                                       />
                                     </div>
                                     <button
                                       onClick={() => handleDeleteSubtitle(index)}
-                                      className="p-1 hover:bg-red-500/10 text-gray-500 hover:text-red-400 rounded transition-all cursor-pointer"
+                                      className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                                        bgt(
+                                          'text-gray-400 hover:text-red-500 hover:bg-red-50',
+                                          'text-gray-500 hover:text-red-400 hover:bg-red-500/10'
+                                        )
+                                      }`}
                                     >
-                                      <FiTrash2 size={11} />
+                                      <FiXCircle size={12} />
                                     </button>
                                   </div>
                                 </div>
 
+                                {/* Text area */}
                                 <textarea
                                   value={sub.text}
                                   onChange={(e) => handleSubtitleTextChange(index, e.target.value)}
-                                  className={`w-full text-[11px] leading-relaxed rounded-xl border p-2.5 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500 ${
-                                    d
-                                      ? 'bg-gray-50 border-gray-200 text-gray-800'
-                                      : 'bg-[#101319] border-white/5 text-gray-200 focus:bg-[#141922]'
+                                  className={`w-full text-[11px] leading-relaxed rounded-lg border p-2.5 resize-none focus:outline-none focus:ring-1 transition-all ${
+                                    bgt(
+                                      'bg-gray-50 border-gray-100 text-gray-800 focus:border-gray-300 focus:ring-gray-300',
+                                      'bg-[#101319] border-white/[0.04] text-gray-200 focus:border-white/10 focus:ring-white/10'
+                                    )
                                   }`}
                                   rows={2}
                                 />
@@ -762,123 +877,100 @@ export default function PostProductionStudio() {
                             ))}
                           </div>
                         </div>
+
+                        {/* Burn-In Captions Section */}
+                        <div className={`rounded-2xl border p-5 ${
+                          bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                              bgt('bg-gray-100 text-gray-600', 'bg-white/5 text-gray-400')
+                            }`}>
+                              <FiTv size={16} />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className={`text-[11px] font-bold ${bgt('text-gray-800', 'text-white')}`}>Burn-In Captions</h4>
+                              <p className={`text-[9.5px] mt-0.5 ${bgt('text-gray-500', 'text-gray-400')}`}>
+                                Hardcode subtitle overlay directly onto video master
+                              </p>
+                            </div>
+                            <button
+                              className={`px-4 py-2 rounded-lg text-[9.5px] font-bold uppercase tracking-wider border cursor-pointer transition-all opacity-55 ${
+                                bgt(
+                                  'border-gray-300 text-gray-600 hover:bg-gray-50',
+                                  'border-white/[0.08] text-gray-400 hover:bg-white/5'
+                                )
+                              }`}
+                              disabled
+                            >
+                              Coming Soon
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Tab Content 2: Finishing & Exports */}
-                {activeTab === 'export' && (
+                {/* Tab Content 2: Multilingual Dubbing */}
+                {activeTab === 'dubbing' && (
                   <div className="space-y-4">
-                    <h3 className={`text-[10px] font-black uppercase tracking-wider opacity-85 ${d ? 'text-gray-700' : 'text-gray-300'}`}>
-                      Available Downloads
-                    </h3>
-                    
+                    {/* Dubbing CTA */}
+                    <div className={`rounded-2xl border p-8 text-center space-y-4 ${
+                      bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                    }`}>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${
+                        bgt('bg-gray-100 text-gray-600', 'bg-white/5 text-gray-400')
+                      }`}>
+                        <FiGlobe size={20} />
+                      </div>
+                      <div>
+                        <h4 className={`text-[12px] font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
+                          Multilingual AI Dubbing
+                        </h4>
+                        <p className={`text-[10.5px] mt-1.5 leading-relaxed ${bgt('text-gray-500', 'text-gray-400')}`}>
+                          Translate and synchronize voice tracks across multiple languages. Coming soon.
+                        </p>
+                      </div>
+                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
+                        bgt(
+                          'border-gray-200 text-gray-400',
+                          'border-white/[0.06] text-gray-500'
+                        )
+                      }`}>
+                        <span className="text-[9px] font-bold uppercase tracking-wider">Under Development</span>
+                      </div>
+                    </div>
+
+                    {/* Dubbing feature cards preview */}
                     <div className="grid grid-cols-1 gap-3">
-                      {/* Movie Download */}
-                      <div
-                        onClick={downloadMovie}
-                        className={`p-4 rounded-2xl border flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer ${
-                          d
-                            ? 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
-                            : 'bg-[#0a0c10] border-white/[0.04] text-white hover:bg-[#0e1117]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                            <FiVideo size={16} />
-                          </div>
-                          <div>
-                            <span className="block text-[11.5px] font-bold">Final Mastered Movie</span>
-                            <span className={`block text-[9px] mt-0.5 opacity-60`}>Download rendered video in full quality</span>
-                          </div>
+                      <div className={`p-4 rounded-2xl border flex items-center gap-3 ${
+                        bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                      }`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                          bgt('bg-gray-100 text-gray-500', 'bg-white/5 text-gray-400')
+                        }`}>
+                          <FiFileText size={16} />
                         </div>
-                        <FiDownload size={14} className="opacity-50" />
+                        <div>
+                          <span className={`block text-[11px] font-bold ${bgt('text-gray-800', 'text-gray-200')}`}>Voice Language Detection</span>
+                          <span className={`block text-[9px] mt-0.5 ${bgt('text-gray-400', 'text-gray-500')}`}>Auto-detect source language from audio track</span>
+                        </div>
                       </div>
-
-                      {/* SRT Download */}
-                      <div
-                        onClick={downloadSRT}
-                        className={`p-4 rounded-2xl border flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer ${
-                          d
-                            ? 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
-                            : 'bg-[#0a0c10] border-white/[0.04] text-white hover:bg-[#0e1117]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                            <FiFileText size={16} />
-                          </div>
-                          <div>
-                            <span className="block text-[11.5px] font-bold">Download Subtitles (SRT)</span>
-                            <span className={`block text-[9px] mt-0.5 opacity-60`}>SubRip timeline file for media players</span>
-                          </div>
+                      <div className={`p-4 rounded-2xl border flex items-center gap-3 ${
+                        bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                      }`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                          bgt('bg-gray-100 text-gray-500', 'bg-white/5 text-gray-400')
+                        }`}>
+                          <FiGlobe size={16} />
                         </div>
-                        <FiDownload size={14} className="opacity-50" />
-                      </div>
-
-                      {/* WebVTT Download */}
-                      <div
-                        onClick={downloadWebVTT}
-                        className={`p-4 rounded-2xl border flex items-center justify-between hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer ${
-                          d
-                            ? 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
-                            : 'bg-[#0a0c10] border-white/[0.04] text-white hover:bg-[#0e1117]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                            <FiFileText size={16} />
-                          </div>
-                          <div>
-                            <span className="block text-[11.5px] font-bold">Download Subtitles (VTT)</span>
-                            <span className={`block text-[9px] mt-0.5 opacity-60`}>WebVTT format optimized for modern browsers</span>
-                          </div>
-                        </div>
-                        <FiDownload size={14} className="opacity-50" />
-                      </div>
-                    </div>
-
-                    <h3 className={`text-[10px] font-black uppercase tracking-wider opacity-85 pt-4 ${d ? 'text-gray-700' : 'text-gray-300'}`}>
-                      Studio Upgrades & Mastering
-                    </h3>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 opacity-55">
-                      {/* AI Dubbing */}
-                      <div className={`p-4 rounded-2xl border relative overflow-hidden select-none border-white/[0.04] bg-[#090a0d]`}>
-                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[7.5px] font-extrabold uppercase tracking-wider">
-                          Coming Soon
-                        </div>
-                        <FiGlobe size={18} className="text-purple-400" />
-                        <span className="block text-[11px] font-bold mt-2.5">Multilingual AI Dubbing</span>
-                        <span className="block text-[9px] mt-1 opacity-60">Translate and synchronize voice tracks</span>
-                      </div>
-
-                      {/* Burn-In Captions */}
-                      <div className={`p-4 rounded-2xl border relative overflow-hidden select-none border-white/[0.04] bg-[#090a0d]`}>
-                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[7.5px] font-extrabold uppercase tracking-wider">
-                          Coming Soon
-                        </div>
-                        <FiTv size={18} className="text-purple-400" />
-                        <span className="block text-[11px] font-bold mt-2.5">Burn-In Captions</span>
-                        <span className="block text-[9px] mt-1 opacity-60">Hardcode subtitle overlay directly onto video</span>
-                      </div>
-
-                      {/* Equalizer/Mastering */}
-                      <div className={`p-4 rounded-2xl border relative overflow-hidden select-none border-white/[0.04] bg-[#090a0d] sm:col-span-2`}>
-                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[7.5px] font-extrabold uppercase tracking-wider">
-                          Coming Soon
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <FiMusic size={18} className="text-purple-400" />
-                          <div>
-                            <span className="block text-[11px] font-bold">Dynamic Audio Mastering</span>
-                            <span className="block text-[9px] mt-0.5 opacity-60">Auto gain control, equalizer preset filters, and loudness normalization</span>
-                          </div>
+                        <div>
+                          <span className={`block text-[11px] font-bold ${bgt('text-gray-800', 'text-gray-200')}`}>Multi-Language Sync</span>
+                          <span className={`block text-[9px] mt-0.5 ${bgt('text-gray-400', 'text-gray-500')}`}>Generate synced voice tracks in target languages</span>
                         </div>
                       </div>
                     </div>
-
                   </div>
                 )}
 
