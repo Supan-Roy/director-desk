@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.repository import get_db, project_repository
-from app.services import post_production_service
+from app.services import post_production_service, dubbing_service
 
 logger = logging.getLogger(__name__)
 
@@ -190,3 +190,154 @@ def download_subtitles(project_id: int = Query(...),
             "Cache-Control": "no-cache",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Dubbing schemas
+# ---------------------------------------------------------------------------
+
+class DubbingPayload(BaseModel):
+    project_id: int = 0
+    language: str
+    movie_url: Optional[str] = None
+    subtitles: Optional[List[SubtitleItem]] = None
+
+
+# ---------------------------------------------------------------------------
+# Dubbing — generate
+# ---------------------------------------------------------------------------
+
+@router.post("/post-production/dubbing/generate")
+def generate_dub(
+    payload: DubbingPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Start multilingual dubbing.
+
+    Two modes:
+      - **Project mode** (project_id > 0): reads movie_url + subtitles from the DB.
+      - **Standalone mode** (project_id = 0): expects explicit ``movie_url`` + ``subtitles``.
+
+    Returns immediately with a ``task_id``; poll
+    ``GET /post-production/dubbing/status/{task_id}`` to follow progress.
+    """
+    movie_url = payload.movie_url
+    subtitles_data = None
+
+    if payload.project_id and payload.project_id > 0:
+        project = project_repository.get_by_id(db, payload.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        if not project.mastered_movie_url:
+            raise HTTPException(status_code=400, detail="No mastered movie. Render in Studio Editor first.")
+        if not project.subtitles:
+            raise HTTPException(status_code=400, detail="No subtitles. Generate subtitles first.")
+        movie_url = project.mastered_movie_url
+        subtitles_data = project.subtitles
+    else:
+        if not movie_url:
+            raise HTTPException(status_code=400, detail="movie_url is required for standalone dubbing.")
+        if not payload.subtitles:
+            raise HTTPException(status_code=400, detail="subtitles are required for standalone dubbing.")
+        subtitles_data = [s.model_dump() for s in payload.subtitles]
+
+    if not dubbing_service.supports_language(payload.language):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language '{payload.language}'. Supported: {dubbing_service.get_supported_languages()}",
+        )
+
+    task_id = str(uuid.uuid4())
+    background_tasks.add_task(
+        dubbing_service.generate_dub_background,
+        task_id,
+        payload.project_id or 0,
+        movie_url,
+        payload.language,
+        subtitles=subtitles_data,
+    )
+
+    return {"task_id": task_id, "status": "pending", "language": payload.language}
+
+
+# ---------------------------------------------------------------------------
+# Dubbing — status
+# ---------------------------------------------------------------------------
+
+@router.get("/post-production/dubbing/status/{task_id}")
+def get_dub_status(task_id: str):
+    """Poll the current dubbing task progress."""
+    task = dubbing_service.dubbing_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Dubbing task not found")
+    return task
+
+
+# ---------------------------------------------------------------------------
+# Dubbing — downloads
+# ---------------------------------------------------------------------------
+
+@router.get("/post-production/dubbing/download/{task_id}")
+def download_dubbed_movie(task_id: str):
+    """Download the fully dubbed movie for a completed task."""
+    task = dubbing_service.dubbing_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Dubbing not yet completed")
+    movie_path = task.get("movie_url", "").lstrip("/")
+    if not movie_path or not os.path.exists(movie_path):
+        raise HTTPException(status_code=404, detail="Dubbed movie file not found")
+
+    filename = os.path.basename(movie_path)
+    return FileResponse(path=movie_path, filename=filename, media_type="video/mp4")
+
+
+@router.get("/post-production/dubbing/download/audio/{task_id}")
+def download_dubbed_audio(task_id: str):
+    """Download the raw dubbed audio track."""
+    task = dubbing_service.dubbing_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Dubbing not yet completed")
+    audio_path = task.get("audio_url", "").lstrip("/")
+    if not audio_path or not os.path.exists(audio_path):
+        raise HTTPException(status_code=404, detail="Dubbed audio file not found")
+
+    filename = os.path.basename(audio_path)
+    return FileResponse(path=audio_path, filename=filename, media_type="audio/wav")
+
+
+@router.get("/post-production/dubbing/download/subtitles/{task_id}")
+def download_translated_subtitles(task_id: str):
+    """Download translated subtitles as SRT for a completed dubbing task."""
+    task = dubbing_service.dubbing_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Dubbing not yet completed")
+
+    subs = task.get("translated_subtitles", [])
+    if not subs:
+        raise HTTPException(status_code=404, detail="No translated subtitles found")
+
+    content = post_production_service.export_srt(subs)
+    filename = f"translated_subtitles_{task_id[:8]}.srt"
+    return Response(
+        content=content,
+        media_type="application/x-subrip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Dubbing — supported languages
+# ---------------------------------------------------------------------------
+
+@router.get("/post-production/dubbing/languages")
+def list_dub_languages():
+    """Return the list of languages supported for dubbing."""
+    return {"languages": dubbing_service.get_supported_languages()}

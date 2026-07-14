@@ -7,6 +7,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libgomp1 \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency list and install packages

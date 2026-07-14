@@ -16,7 +16,12 @@ import {
   FiBarChart2,
   FiGlobe,
   FiTv,
-  FiXCircle
+  FiXCircle,
+  FiVolume2,
+  FiVolumeX,
+  FiMaximize2,
+  FiChevronDown,
+  FiCheck
 } from 'react-icons/fi'
 import { apiBaseUrl } from '../services/apiClient'
 import { useTheme } from '../context/ThemeContext'
@@ -78,6 +83,9 @@ export default function PostProductionStudio() {
   // Video playback states
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [volume, setVolume] = useState(1)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [activeSubtitle, setActiveSubtitle] = useState(null)
 
   // Tabs state
@@ -87,8 +95,27 @@ export default function PostProductionStudio() {
   const [editedSubtitles, setEditedSubtitles] = useState([])
   const [saveStatus, setSaveStatus] = useState("idle") // idle, saving, success, error
 
+  // Dubbing states
+  const [dubLanguages, setDubLanguages] = useState([])
+  const [dubLang, setDubLang] = useState("Spanish")
+  const [dubOpen, setDubOpen] = useState(false)
+  const [isDubbing, setIsDubbing] = useState(false)
+  const [dubTaskId, setDubTaskId] = useState(null)
+  const [dubStep, setDubStep] = useState(0)
+  const [dubProgress, setDubProgress] = useState(0)
+  const [dubTotalClips, setDubTotalClips] = useState(0)
+  const [dubCurrentClip, setDubCurrentClip] = useState(0)
+  const [dubStatus, setDubStatus] = useState(null) // processing, completed, failed
+  const [dubError, setDubError] = useState("")
+  const [dubMovieUrl, setDubMovieUrl] = useState("")
+  const [dubAudioUrl, setDubAudioUrl] = useState("")
+  const [dubSubsUrl, setDubSubsUrl] = useState("")
+  // Track completed dubs per language
+  const [completedDubs, setCompletedDubs] = useState({})
+
   const videoRef = useRef(null)
   const pollingRef = useRef(null)
+  const dubPollRef = useRef(null)
 
   const steps = [
     { title: "FFmpeg Audio Extraction", desc: "Extracting audio track from high-resolution movie canvas..." },
@@ -187,6 +214,61 @@ export default function PostProductionStudio() {
       }
     }
   }
+
+  const handleSeek = (e) => {
+    if (!videoRef.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const frac = (e.clientX - rect.left) / rect.width
+    const t = frac * (videoRef.current.duration || 0)
+    videoRef.current.currentTime = t
+    setCurrentTime(t)
+  }
+
+  const handleVolumeChange = (e) => {
+    const v = parseFloat(e.target.value)
+    setVolume(v)
+    if (videoRef.current) {
+      videoRef.current.volume = v
+      if (v === 0) setIsMuted(true)
+      else setIsMuted(false)
+    }
+  }
+
+  const toggleMute = () => {
+    if (!videoRef.current) return
+    const next = !isMuted
+    setIsMuted(next)
+    videoRef.current.muted = next
+  }
+
+  const toggleFullscreen = () => {
+    const el = videoRef.current?.parentElement?.parentElement
+    if (!el) return
+    if (!document.fullscreenElement) {
+      el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {})
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
+    }
+  }
+
+  // Listen for fullscreen change and keyboard events
+  useEffect(() => {
+    const fsHandler = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', fsHandler)
+
+    const keyHandler = (e) => {
+      if (e.code === 'Space' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault()
+        handlePlayPause()
+      }
+    }
+    document.addEventListener('keydown', keyHandler)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', fsHandler)
+      document.removeEventListener('keydown', keyHandler)
+    }
+  }, [isPlaying])
 
   // Poll generation progress from the backend
   const pollGenerationStatus = useCallback(async (taskId) => {
@@ -403,6 +485,135 @@ export default function PostProductionStudio() {
     }
   }
 
+  // -------------------------------------------------------------------
+  // Dubbing handlers
+  // -------------------------------------------------------------------
+
+  // Fetch supported dubbing languages on mount
+  useEffect(() => {
+    fetch(`${apiBaseUrl}/api/post-production/dubbing/languages`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { if (d.languages?.length) setDubLanguages(d.languages) })
+      .catch(() => {})
+  }, [])
+
+  const pollDubStatus = useCallback(async (taskId) => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/post-production/dubbing/status/${taskId}`, {
+        credentials: 'include'
+      })
+      if (!res.ok) throw new Error("Failed to fetch dubbing status")
+      const data = await res.json()
+
+      setDubStep(data.step ?? 0)
+      setDubProgress(data.step_progress ?? 0)
+      setDubTotalClips(data.total_clips ?? 0)
+      setDubCurrentClip(data.current_clip ?? 0)
+
+      if (data.status === "completed") {
+        if (dubPollRef.current) clearInterval(dubPollRef.current)
+        dubPollRef.current = null
+        setDubStatus("completed")
+        setIsDubbing(false)
+        setDubMovieUrl(data.movie_url ? `${apiBaseUrl}${data.movie_url}` : "")
+        setDubAudioUrl(data.audio_url ? `${apiBaseUrl}${data.audio_url}` : "")
+        setDubSubsUrl(data.translated_subtitles || [])
+        // Track this language as completed
+        setCompletedDubs(prev => ({ ...prev, [dubLang]: true }))
+      } else if (data.status === "failed") {
+        if (dubPollRef.current) clearInterval(dubPollRef.current)
+        dubPollRef.current = null
+        setDubStatus("failed")
+        setDubError(data.error || "Dubbing failed.")
+        setIsDubbing(false)
+      }
+    } catch (err) {
+      if (dubPollRef.current) clearInterval(dubPollRef.current)
+      dubPollRef.current = null
+      setDubError(err.message || "Failed to poll dubbing status.")
+      setIsDubbing(false)
+    }
+  }, [dubLang])
+
+  const handleGenerateDub = async () => {
+    const movieSrc = hasValidProject && project?.mastered_movie_url
+      ? project.mastered_movie_url
+      : rawMovieUrlRef.current || movieUrl
+    if (!movieSrc) return
+    setIsDubbing(true)
+    setDubError("")
+    setDubStatus(null)
+    setDubStep(0)
+    setDubProgress(0)
+    setDubMovieUrl("")
+    setDubAudioUrl("")
+
+    try {
+      const body = {
+        project_id: numericId || 0,
+        language: dubLang,
+        movie_url: movieSrc,
+      }
+      // For non-project videos, send subtitles inline
+      if (!hasValidProject) {
+        body.subtitles = editedSubtitles
+      }
+
+      const res = await fetch(`${apiBaseUrl}/api/post-production/dubbing/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || "Failed to start dubbing.")
+      }
+      const { task_id } = await res.json()
+      setDubTaskId(task_id)
+
+      dubPollRef.current = setInterval(() => {
+        pollDubStatus(task_id)
+      }, 1500)
+    } catch (err) {
+      setDubError(err.message || "An error occurred during dubbing.")
+      setIsDubbing(false)
+    }
+  }
+
+  const downloadDubbedMovie = () => {
+    if (dubTaskId) {
+      window.open(`${apiBaseUrl}/api/post-production/dubbing/download/${dubTaskId}`, '_blank')
+    }
+  }
+
+  const downloadDubbedAudio = () => {
+    if (dubTaskId) {
+      window.open(`${apiBaseUrl}/api/post-production/dubbing/download/audio/${dubTaskId}`, '_blank')
+    }
+  }
+
+  const downloadTranslatedSubs = () => {
+    if (dubTaskId) {
+      window.open(`${apiBaseUrl}/api/post-production/dubbing/download/subtitles/${dubTaskId}`, '_blank')
+    }
+  }
+
+  // Cleanup dubbing poll on unmount
+  useEffect(() => {
+    return () => {
+      if (dubPollRef.current) clearInterval(dubPollRef.current)
+    }
+  }, [])
+
+  const dubSteps = [
+    { title: "Loading Subtitles", desc: "Reading subtitle timeline from project..." },
+    { title: "Translating Dialogue", desc: "Translating subtitle text using NLLB-200..." },
+    { title: "Generating Voices", desc: "Synthesizing speech for each subtitle block..." },
+    { title: "Assembling Audio", desc: "Concatenating clips and mixing with video..." },
+    { title: "Rendering Movie", desc: "Encoding final dubbed movie..." },
+  ]
+
   const bgt = (light, dark) => d ? light : dark
   const txt = (light, dark) => d ? light : dark
 
@@ -506,7 +717,6 @@ export default function PostProductionStudio() {
                       src={movieUrl}
                       onTimeUpdate={handleTimeUpdate}
                       className="w-full h-full object-contain"
-                      onClick={handlePlayPause}
                     />
 
                     {/* Subtitle Overlay */}
@@ -518,18 +728,83 @@ export default function PostProductionStudio() {
                       </div>
                     )}
 
-                    {/* Control HUD Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                      <div className="flex items-center justify-between text-white text-[11px]">
-                        <button
-                          onClick={handlePlayPause}
-                          className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
-                        >
-                          {isPlaying ? <FiPause size={16} /> : <FiPlay size={16} />}
-                        </button>
-                        <span className="font-mono text-[10.5px]">
-                          {currentTime.toFixed(3)}s / {videoRef.current?.duration ? videoRef.current.duration.toFixed(3) : "0.000"}s
-                        </span>
+                    {/* Control Bar Overlay — click anywhere on video to play/pause */}
+                    <div
+                      className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity flex flex-col justify-end"
+                      onClick={handlePlayPause}
+                    >
+                      {/* Seekbar track */}
+                      <div
+                        className="w-full h-1.5 bg-white/10 cursor-pointer group/seek relative"
+                        onClick={(e) => { e.stopPropagation(); handleSeek(e) }}
+                      >
+                        <div
+                          className="h-full bg-white transition-all duration-75"
+                          style={{
+                            width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%`,
+                          }}
+                        />
+                        <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white opacity-0 group-hover/seek:opacity-100 transition-opacity shadow"
+                          style={{
+                            left: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%`,
+                            marginLeft: '-6px',
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        className="flex items-center justify-between px-4 pb-3 pt-2 text-white text-[11px] gap-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* Left: Play/Pause + time */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handlePlayPause() }}
+                            className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                          >
+                            {isPlaying ? <FiPause size={14} /> : <FiPlay size={14} />}
+                          </button>
+                          <span className="font-mono text-[10px] opacity-80">
+                            {currentTime.toFixed(3)}s / {videoRef.current?.duration ? videoRef.current.duration.toFixed(3) : "0.000"}s
+                          </span>
+                        </div>
+
+                        {/* Right: Volume + Fullscreen */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5 group/vol">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleMute() }}
+                              className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                            >
+                              {isMuted || volume === 0 ? (
+                                <FiVolumeX size={14} />
+                              ) : (
+                                <FiVolume2 size={14} />
+                              )}
+                            </button>
+                            <div className="w-0 group-hover/vol:w-16 overflow-hidden transition-all duration-200">
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={isMuted ? 0 : volume}
+                                onChange={handleVolumeChange}
+                                className="w-16 h-1 accent-white cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFullscreen() }}
+                            className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                          >
+                            {isFullscreen ? (
+                              <FiMaximize2 size={14} className="rotate-180" />
+                            ) : (
+                              <FiMaximize2 size={14} />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -915,62 +1190,268 @@ export default function PostProductionStudio() {
                 {/* Tab Content 2: Multilingual Dubbing */}
                 {activeTab === 'dubbing' && (
                   <div className="space-y-4">
-                    {/* Dubbing CTA */}
-                    <div className={`rounded-2xl border p-8 text-center space-y-4 ${
+                    {/* Language selector + Generate button */}
+                    <div className={`rounded-2xl border p-5 ${
                       bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
                     }`}>
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${
-                        bgt('bg-gray-100 text-gray-600', 'bg-white/5 text-gray-400')
-                      }`}>
-                        <FiGlobe size={20} />
-                      </div>
-                      <div>
-                        <h4 className={`text-[12px] font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
-                          Multilingual AI Dubbing
-                        </h4>
-                        <p className={`text-[10.5px] mt-1.5 leading-relaxed ${bgt('text-gray-500', 'text-gray-400')}`}>
-                          Translate and synchronize voice tracks across multiple languages. Coming soon.
-                        </p>
-                      </div>
-                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
-                        bgt(
-                          'border-gray-200 text-gray-400',
-                          'border-white/[0.06] text-gray-500'
-                        )
-                      }`}>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">Under Development</span>
-                      </div>
-                    </div>
-
-                    {/* Dubbing feature cards preview */}
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className={`p-4 rounded-2xl border flex items-center gap-3 ${
-                        bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
-                      }`}>
+                      <div className="flex items-center gap-3 mb-4">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                          bgt('bg-gray-100 text-gray-500', 'bg-white/5 text-gray-400')
-                        }`}>
-                          <FiFileText size={16} />
-                        </div>
-                        <div>
-                          <span className={`block text-[11px] font-bold ${bgt('text-gray-800', 'text-gray-200')}`}>Voice Language Detection</span>
-                          <span className={`block text-[9px] mt-0.5 ${bgt('text-gray-400', 'text-gray-500')}`}>Auto-detect source language from audio track</span>
-                        </div>
-                      </div>
-                      <div className={`p-4 rounded-2xl border flex items-center gap-3 ${
-                        bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
-                      }`}>
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                          bgt('bg-gray-100 text-gray-500', 'bg-white/5 text-gray-400')
+                          bgt('bg-gray-100 text-gray-600', 'bg-white/5 text-gray-400')
                         }`}>
                           <FiGlobe size={16} />
                         </div>
                         <div>
-                          <span className={`block text-[11px] font-bold ${bgt('text-gray-800', 'text-gray-200')}`}>Multi-Language Sync</span>
-                          <span className={`block text-[9px] mt-0.5 ${bgt('text-gray-400', 'text-gray-500')}`}>Generate synced voice tracks in target languages</span>
+                          <h4 className={`text-[11px] font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
+                            Global Distribution
+                          </h4>
+                          <p className={`text-[9.5px] mt-0.5 ${bgt('text-gray-500', 'text-gray-400')}`}>
+                            Generate multilingual dubbed versions of your final mastered movie
+                          </p>
                         </div>
                       </div>
+
+                      {/* Language dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setDubOpen(!dubOpen)}
+                          disabled={isDubbing}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl border text-[11px] font-bold cursor-pointer transition-all ${
+                            bgt(
+                              'border-gray-300 bg-white text-gray-800 hover:bg-gray-50 disabled:opacity-40',
+                              'border-white/[0.08] bg-[#101319] text-gray-200 hover:bg-[#161a22] disabled:opacity-40'
+                            )
+                          }`}
+                        >
+                          <span>{dubLang}</span>
+                          <FiChevronDown size={14} className={`transition-transform ${dubOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {dubOpen && (
+                          <div className={`absolute z-20 mt-1 w-full rounded-xl border shadow-xl overflow-hidden ${
+                            bgt('bg-white border-gray-200', 'bg-[#101319] border-white/[0.06]')
+                          }`}>
+                            {dubLanguages.map(lang => (
+                              <button
+                                key={lang}
+                                onClick={() => { setDubLang(lang); setDubOpen(false) }}
+                                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-between ${
+                                  dubLang === lang
+                                    ? bgt('bg-gray-100 text-gray-900', 'bg-white/10 text-white')
+                                    : bgt('text-gray-700 hover:bg-gray-50', 'text-gray-400 hover:bg-white/5')
+                                }`}
+                              >
+                                {lang}
+                                {(completedDubs[lang] || (dubStatus === 'completed' && dubLang === lang)) && (
+                                  <FiCheck size={12} className="text-emerald-500" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Generate button */}
+                      <button
+                        onClick={handleGenerateDub}
+                        disabled={isDubbing || !movieUrl || (!hasValidProject && editedSubtitles.length === 0) || (hasValidProject && (!project?.mastered_movie_url || !subtitles?.length))}
+                        className={`w-full mt-3 py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg disabled:opacity-30 ${
+                          bgt(
+                            'bg-black text-white hover:bg-gray-800 shadow-black/10',
+                            'bg-white text-black hover:bg-gray-200 shadow-white/5'
+                          )
+                        }`}
+                      >
+                        {isDubbing ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <FiLoader className="animate-spin" size={12} />
+                            Dubbing...
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center gap-2">
+                            <FiGlobe size={12} />
+                            Generate {dubLang} Dub
+                          </span>
+                        )}
+                      </button>
+
+                      {dubError && (
+                        <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] flex items-start gap-2">
+                          <FiAlertCircle size={14} className="shrink-0 mt-0.5" />
+                          <span>{dubError}</span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Progress Display */}
+                    {isDubbing && (
+                      <div className={`rounded-2xl border p-5 space-y-4 ${
+                        bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <FiLoader className="animate-spin text-white" size={16} />
+                          <h4 className={`text-[11px] font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
+                            Dubbing to {dubLang}...
+                          </h4>
+                        </div>
+
+                        <div className="space-y-3">
+                          {dubSteps.map((step, idx) => {
+                            const isCurrent = idx === dubStep
+                            const isPast = idx < dubStep
+                            const progress = isCurrent ? dubProgress : isPast ? 100 : 0
+                            return (
+                              <div key={idx} className={`flex items-start gap-3 transition-all duration-500 ${
+                                isCurrent ? 'opacity-100' : isPast ? 'opacity-55' : 'opacity-25'
+                              }`}>
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 text-[9px] font-bold transition-all duration-300 ${
+                                  isPast
+                                    ? bgt('bg-gray-800 text-white', 'bg-white text-black')
+                                    : isCurrent
+                                      ? bgt('bg-gray-200 text-gray-800 border border-gray-400', 'bg-white/10 text-white border border-white/20')
+                                      : bgt('bg-gray-100 text-gray-400 border border-gray-200', 'bg-white/5 text-gray-500 border border-white/5')
+                                }`}>
+                                  {isPast ? <FiCheckCircle size={10} /> : idx + 1}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className={`block text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                                    isCurrent ? (bgt('text-gray-900', 'text-white')) : (bgt('text-gray-700', 'text-gray-300'))
+                                  }`}>{step.title}</span>
+                                  {isCurrent && (
+                                    <>
+                                      <span className={`block text-[9px] mt-0.5 ${bgt('text-gray-500', 'text-gray-400')}`}>
+                                        {step.desc}
+                                        {dubStep === 2 && dubTotalClips > 0 && ` — Clip ${dubCurrentClip} / ${dubTotalClips}`}
+                                      </span>
+                                      <div className={`mt-1.5 h-1 rounded-full overflow-hidden ${bgt('bg-gray-200', 'bg-white/5')}`}>
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                            bgt('bg-gray-800', 'bg-white')
+                                          }`}
+                                          style={{ width: `${progress}%` }}
+                                        />
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Completed — preview + export */}
+                    {dubStatus === 'completed' && dubMovieUrl && (
+                      <>
+                        {/* Preview card */}
+                        <div className={`rounded-2xl border p-5 ${
+                          bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                        }`}>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                              bgt('bg-emerald-100 text-emerald-600', 'bg-emerald-500/10 text-emerald-400')
+                            }`}>
+                              <FiCheckCircle size={16} />
+                            </div>
+                            <div>
+                              <h4 className={`text-[11px] font-bold ${bgt('text-gray-800', 'text-white')}`}>
+                                {dubLang} Dub Complete
+                              </h4>
+                              <p className={`text-[9.5px] ${bgt('text-gray-500', 'text-gray-400')}`}>
+                                Dubbed movie is ready for preview and download
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Preview video */}
+                          <div className={`relative rounded-xl overflow-hidden border mb-4 ${
+                            bgt('border-gray-200', 'border-white/[0.04]')
+                          }`}>
+                            <video
+                              src={dubMovieUrl}
+                              controls
+                              className="w-full h-auto max-h-[200px] object-contain bg-black"
+                            />
+                          </div>
+
+                          {/* Download buttons */}
+                          <div className="grid grid-cols-1 gap-2">
+                            <button
+                              onClick={downloadDubbedMovie}
+                              className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all border ${
+                                bgt(
+                                  'bg-black text-white border-black hover:bg-gray-800',
+                                  'bg-white text-black border-white hover:bg-gray-200'
+                                )
+                              }`}
+                            >
+                              <FiDownload size={12} /> Download Dubbed Movie ({dubLang})
+                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={downloadDubbedAudio}
+                                className={`flex items-center gap-1.5 justify-center px-3 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all border ${
+                                  bgt(
+                                    'border-gray-300 text-gray-700 hover:bg-gray-50',
+                                    'border-white/[0.08] text-gray-300 hover:bg-white/5'
+                                  )
+                                }`}
+                              >
+                                <FiDownload size={10} /> Audio
+                              </button>
+                              <button
+                                onClick={downloadTranslatedSubs}
+                                className={`flex items-center gap-1.5 justify-center px-3 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all border ${
+                                  bgt(
+                                    'border-gray-300 text-gray-700 hover:bg-gray-50',
+                                    'border-white/[0.08] text-gray-300 hover:bg-white/5'
+                                  )
+                                }`}
+                              >
+                                <FiFileText size={10} /> Subtitles
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Completed dubs per language */}
+                        {Object.keys(completedDubs).length > 0 && (
+                          <div className={`rounded-2xl border p-4 ${
+                            bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                          }`}>
+                            <h4 className={`text-[9px] font-bold uppercase tracking-wider mb-3 ${bgt('text-gray-500', 'text-gray-500')}`}>
+                              Completed Languages
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(completedDubs).map(([lang, done]) => done && (
+                                <span key={lang} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider ${
+                                  bgt('bg-emerald-50 text-emerald-700', 'bg-emerald-500/10 text-emerald-400')
+                                }`}>
+                                  <FiCheck size={9} /> {lang}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Initial state — nothing generated yet and not currently processing */}
+                    {!isDubbing && dubStatus !== 'completed' && (
+                      <div className={`rounded-2xl border p-5 ${bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')}`}>
+                        <div className="grid grid-cols-2 gap-3">
+                          {dubLanguages.filter(l => l !== dubLang).slice(0, 4).map(lang => (
+                            <div key={lang} className={`p-3 rounded-xl border text-center ${
+                              bgt('border-gray-100 bg-gray-50', 'border-white/[0.03] bg-[#0a0c10]')
+                            }`}>
+                              <span className={`block text-[10px] font-bold ${bgt('text-gray-500', 'text-gray-500')}`}>{lang}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className={`text-[9.5px] text-center mt-4 ${bgt('text-gray-400', 'text-gray-500')}`}>
+                          Select a language above and generate your first dub
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
