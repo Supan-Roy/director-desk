@@ -1,7 +1,7 @@
 import os
 import uuid
 import logging
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ router = APIRouter(tags=["Post Production"])
 # ---------------------------------------------------------------------------
 
 class GenerateSubtitlesPayload(BaseModel):
-    project_id: int
+    project_id: Optional[int] = 0
     movie_url: str
 
 
@@ -47,20 +47,21 @@ def generate_subtitles(payload: GenerateSubtitlesPayload,
     """
     Kick off local (cost-free) subtitle generation via FFmpeg + faster-whisper.
     Returns immediately with a task_id; poll the status endpoint to track progress.
+    Accepts project_id = 0 for unregistered (non-project) videos.
     """
-    project = project_repository.get_by_id(db, payload.project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # Persist the movie URL up front so the front-end can reference it
-    project_repository.update(db, payload.project_id,
-                              mastered_movie_url=payload.movie_url)
+    if payload.project_id and payload.project_id > 0:
+        project = project_repository.get_by_id(db, payload.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        # Persist the movie URL up front so the front-end can reference it
+        project_repository.update(db, payload.project_id,
+                                  mastered_movie_url=payload.movie_url)
 
     task_id = str(uuid.uuid4())
     background_tasks.add_task(
         post_production_service.generate_subtitles_background,
         task_id,
-        payload.project_id,
+        payload.project_id or 0,
         payload.movie_url,
     )
 

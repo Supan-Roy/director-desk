@@ -68,6 +68,7 @@ export default function PostProductionStudio() {
   const [subtitles, setSubtitles] = useState([])
   const [statistics, setStatistics] = useState(null)
   const [movieUrl, setMovieUrl] = useState("")
+  const rawMovieUrlRef = useRef("")
 
   // Generation status states
   const [generating, setGenerating] = useState(false)
@@ -142,8 +143,10 @@ export default function PostProductionStudio() {
       let url = location.state?.movieUrl
       if (url) {
         sessionStorage.setItem('temp_post_prod_movie_url', url)
+        rawMovieUrlRef.current = url
       } else {
         url = sessionStorage.getItem('temp_post_prod_movie_url')
+        rawMovieUrlRef.current = url || ''
       }
       if (url) {
         const fullUrl = url.startsWith('http') ? url : `${apiBaseUrl}${url}`
@@ -230,7 +233,10 @@ export default function PostProductionStudio() {
 
   // Trigger Subtitle Generation (async, polls backend for real progress)
   const handleGenerateSubtitles = async () => {
-    if (!project || !project.mastered_movie_url) return
+    const url = hasValidProject && project?.mastered_movie_url
+      ? project.mastered_movie_url
+      : rawMovieUrlRef.current
+    if (!url) return
 
     setGenerating(true)
     setGenerationError("")
@@ -243,7 +249,7 @@ export default function PostProductionStudio() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project_id: numericId,
-          movie_url: project.mastered_movie_url
+          movie_url: url
         })
       })
 
@@ -571,14 +577,17 @@ export default function PostProductionStudio() {
                         {!hasValidProject ? (
                           <div className="space-y-3">
                             <button
-                              onClick={handleAddSubtitle}
+                              onClick={handleGenerateSubtitles}
                               className="w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider bg-purple-600 text-white hover:bg-purple-500 transition-all cursor-pointer shadow-lg shadow-purple-500/10"
+                            >
+                              Generate Subtitles
+                            </button>
+                            <button
+                              onClick={handleAddSubtitle}
+                              className="w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider border border-purple-600 text-purple-400 hover:bg-purple-600/10 transition-all cursor-pointer"
                             >
                               Add Segment Manually
                             </button>
-                            <p className={`text-[9.5px] font-medium ${d ? 'text-amber-600' : 'text-amber-500'}`}>
-                              Note: AI transcription is only available for registered projects.
-                            </p>
                           </div>
                         ) : (
                           <button

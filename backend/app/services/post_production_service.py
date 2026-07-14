@@ -105,7 +105,7 @@ def generate_subtitles_background(task_id: str, project_id: int, movie_url: str)
       0. Extract audio (FFmpeg)
       1. Load Whisper model (cached singleton)
       2. Transcribe (local faster-whisper)
-      3. Finalise & persist
+      3. Finalise & persist (only if project_id > 0)
     Progress is written to the global `generation_tasks` dict so the HTTP
     polling endpoint can read it.
     """
@@ -186,12 +186,14 @@ def generate_subtitles_background(task_id: str, project_id: int, movie_url: str)
         stats = calculate_statistics(subtitles)
         generation_tasks[task_id]["step_progress"] = 30
 
-        db = SessionLocal()
-        project = project_repository.get_by_id(db, project_id)
-        if project is not None:
-            project_repository.update(db, project_id,
-                                      subtitles=subtitles,
-                                      mastered_movie_url=movie_url)
+        # Persist to database if this is a registered project
+        if project_id > 0:
+            db = SessionLocal()
+            project = project_repository.get_by_id(db, project_id)
+            if project is not None:
+                project_repository.update(db, project_id,
+                                          subtitles=subtitles,
+                                          mastered_movie_url=movie_url)
         generation_tasks[task_id]["step_progress"] = 100
 
         generation_tasks[task_id]["status"] = "completed"
