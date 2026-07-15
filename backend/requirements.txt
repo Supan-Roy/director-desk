@@ -9,9 +9,5 @@ redis>=5.0.0
 psycopg2-binary>=2.9.0
 openai==2.41.0
 faster-whisper>=1.1.0
-transformers>=4.40.0
-torch>=2.0.0
-sentencepiece>=0.2.0
-protobuf>=3.20.0
 ffmpeg-python>=0.2.0
 edge-tts>=6.1.13

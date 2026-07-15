@@ -1,79 +1,38 @@
 """
-Translation Service — local, offline subtitle translation using Meta NLLB-200.
+Translation Service — cloud-based subtitle translation using Alibaba Cloud Qwen LLM.
 
-Uses HuggingFace ``transformers`` to load the distilled 600M variant.
-The model is cached on disk after first download (~600 MB) and reused across
-all translation requests.
+Translates subtitle tracks dynamically via the Qwen API. Uses 0 MB of local RAM
+and 0% local CPU capacity, making it fully compatible with low-resource environments.
 """
 
 from __future__ import annotations
 
+import json
 import logging
-import threading
-from typing import ClassVar, Dict, List, Optional, Tuple
+import re
+from typing import Dict, List
 
-from .tts_provider import NLLB_LANG_MAP
+from app.services.qwen_service import qwen_service
 
 logger = logging.getLogger(__name__)
 
+# Supported UI languages list
+SUPPORTED_LANGUAGES = [
+    "English",
+    "Spanish",
+    "French",
+    "Japanese",
+    "Korean",
+    "Chinese",
+    "Hindi",
+]
 
-# ---------------------------------------------------------------------------
-# NLLB-200 Wrapper
-# ---------------------------------------------------------------------------
 
-class NLLBTranslator:
+class QwenTranslator:
     """
-    Translates text using Meta's No Language Left Behind (NLLB-200) model.
-
-    Uses the distilled 600M variant (``nllb-200-distilled-600M``) for a good
-    balance of quality and resource usage.  The model is loaded lazily on the
-    first call (thread-safe singleton pattern).
+    Translates text using Alibaba Cloud's Qwen LLM API.
+    Bypasses local deep learning downloads and runs efficiently in the cloud.
     """
-
-    _lock: ClassVar[threading.Lock] = threading.Lock()
-    _model = None
-    _tokenizer = None
-
-    # ------------------------------------------------------------------
-    # Model loading (lazy, thread-safe)
-    # ------------------------------------------------------------------
-
-    @classmethod
-    def _ensure_model(cls):
-        """Load NLLB-200 model + tokenizer once (singleton)."""
-        if cls._model is not None:
-            return
-
-        with cls._lock:
-            if cls._model is not None:
-                return
-
-            try:
-                import torch
-                from transformers import (
-                    AutoTokenizer,
-                    AutoModelForSeq2SeqLM,
-                )
-            except ImportError:
-                raise RuntimeError(
-                    "transformers / torch are required for NLLB translation. "
-                    "Run: pip install transformers torch"
-                ) from None
-
-            model_name = "facebook/nllb-200-distilled-600M"
-            logger.info("Loading NLLB-200 distilled 600M model (first load downloads ~600 MB) ...")
-
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            logger.info("NLLB using device: %s", device)
-
-            cls._tokenizer = AutoTokenizer.from_pretrained(model_name)
-            cls._model = AutoModelForSeq2SeqLM.from_pretrained(model_name).to(device)
-            cls._device = device
-            logger.info("NLLB-200 model loaded on %s.", device)
-
-    # ------------------------------------------------------------------
-    # Translation
-    # ------------------------------------------------------------------
 
     @classmethod
     def translate(
@@ -81,53 +40,44 @@ class NLLBTranslator:
         texts: List[str],
         source_lang: str = "English",
         target_lang: str = "Spanish",
-        batch_size: int = 8,
     ) -> List[str]:
-        """
-        Translate a list of subtitle text strings from *source_lang* to
-        *target_lang*.
+        if not texts:
+            return []
 
-        Batches texts to improve throughput on GPU; falls back to single-item
-        processing on CPU.
-        """
-        cls._ensure_model()
+        if source_lang == target_lang:
+            return texts
 
-        src_code = NLLB_LANG_MAP.get(source_lang, "eng_Latn")
-        tgt_code = NLLB_LANG_MAP.get(target_lang, "spa_Latn")
-
-        if not src_code or not tgt_code:
-            raise ValueError(
-                f"Unsupported language pair: {source_lang} → {target_lang}. "
-                f"Supported: {list(NLLB_LANG_MAP.keys())}"
-            )
-
-        cls._tokenizer.src_lang = src_code
-
-        results: List[str] = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
-            try:
-                inputs = cls._tokenizer(
-                    batch, return_tensors="pt", padding=True, truncation=True
-                ).to(cls._device)
-
-                translated = cls._model.generate(
-                    **inputs,
-                    forced_bos_token_id=cls._tokenizer.lang_code_to_id[tgt_code],
-                    max_length=256,
-                )
-
-                decoded = cls._tokenizer.batch_decode(translated, skip_special_tokens=True)
-                results.extend(decoded)
-            except Exception as exc:
-                logger.error("Translation batch failed at index %d: %s", i, exc)
-                # Fall back: return original text for failed batch
-                results.extend(batch)
-
-        logger.info(
-            "Translated %d segments from %s → %s", len(texts), source_lang, target_lang
+        # Construct the translation prompt requesting a clean JSON list
+        prompt = (
+            f"You are a professional video translator.\n"
+            f"Translate the following JSON list of subtitle strings from {source_lang} to {target_lang}.\n"
+            f"Preserve the exact same number of items, order, and timing context of the strings.\n\n"
+            f"Requirements:\n"
+            f"- Return ONLY a valid JSON list of translated strings.\n"
+            f"- Do NOT add any conversational introduction, explanations, or extra text.\n"
+            f"- Do NOT wrap the JSON inside markdown code blocks (e.g. do not use ```json ... ```).\n\n"
+            f"Input JSON:\n"
+            f"{json.dumps(texts, ensure_ascii=False)}"
         )
-        return results
+
+        try:
+            response = qwen_service.generate_text(prompt)
+            # Clean response text from possible markdown wraps
+            clean_res = response.strip()
+            if clean_res.startswith("```"):
+                clean_res = re.sub(r"^```(?:json)?\n", "", clean_res)
+                clean_res = re.sub(r"\n```$", "", clean_res)
+                clean_res = clean_res.strip()
+
+            translated_list = json.loads(clean_res)
+            if isinstance(translated_list, list) and len(translated_list) == len(texts):
+                return [str(item) for item in translated_list]
+            else:
+                logger.warning("Qwen returned mismatched list length. Falling back to original.")
+        except Exception as exc:
+            logger.error(f"Qwen translation failed: {exc}. Falling back to original.")
+
+        return texts
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +96,7 @@ def translate_subtitles(
     The ID / timing fields are preserved verbatim.
     """
     texts = [sub["text"] for sub in subtitles]
-    translated = NLLBTranslator.translate(texts, source_language, target_language)
+    translated = QwenTranslator.translate(texts, source_language, target_language)
 
     translated_subs: List[Dict] = []
     for sub, new_text in zip(subtitles, translated):
