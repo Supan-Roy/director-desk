@@ -99,6 +99,7 @@ export default function PostProductionStudio() {
   const [dubLanguages, setDubLanguages] = useState([])
   const [dubLang, setDubLang] = useState("Spanish")
   const [dubOpen, setDubOpen] = useState(false)
+  const dubRef = useRef(null)
   const [isDubbing, setIsDubbing] = useState(false)
   const [dubTaskId, setDubTaskId] = useState(null)
   const [dubStep, setDubStep] = useState(0)
@@ -159,6 +160,17 @@ export default function PostProductionStudio() {
       setLoading(false)
     }
   }, [numericId])
+
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dubRef.current && !dubRef.current.contains(e.target)) {
+        setDubOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   useEffect(() => {
     if (hasValidProject) {
@@ -1211,7 +1223,7 @@ export default function PostProductionStudio() {
                       </div>
 
                       {/* Language dropdown */}
-                      <div className="relative">
+                      <div className="relative" ref={dubRef}>
                         <button
                           onClick={() => setDubOpen(!dubOpen)}
                           disabled={isDubbing}
@@ -1226,7 +1238,7 @@ export default function PostProductionStudio() {
                           <FiChevronDown size={14} className={`transition-transform ${dubOpen ? 'rotate-180' : ''}`} />
                         </button>
                         {dubOpen && (
-                          <div className={`absolute z-20 mt-1 w-full rounded-xl border shadow-xl overflow-hidden ${
+                          <div className={`absolute z-20 mt-1 w-full rounded-xl border shadow-xl overflow-hidden max-h-[240px] overflow-y-auto ${
                             bgt('bg-white border-gray-200', 'bg-[#101319] border-white/[0.06]')
                           }`}>
                             {dubLanguages.map(lang => (

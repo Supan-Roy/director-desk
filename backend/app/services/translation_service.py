@@ -25,6 +25,19 @@ SUPPORTED_LANGUAGES = [
     "Korean",
     "Chinese",
     "Hindi",
+    "Bengali",
+    "Arabic",
+    "Portuguese",
+    "Russian",
+    "German",
+    "Italian",
+    "Dutch",
+    "Turkish",
+    "Thai",
+    "Vietnamese",
+    "Indonesian",
+    "Malay",
+    "Tamil",
 ]
 
 

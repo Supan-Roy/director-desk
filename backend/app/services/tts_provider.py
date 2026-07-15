@@ -31,6 +31,19 @@ NLLB_LANG_MAP: Dict[str, str] = {
     "Korean": "kor_Hang",
     "Chinese": "zho_Hans",
     "Hindi": "hin_Deva",
+    "Bengali": "ben_Beng",
+    "Arabic": "ara_Arab",
+    "Portuguese": "por_Latn",
+    "Russian": "rus_Cyrl",
+    "German": "deu_Latn",
+    "Italian": "ita_Latn",
+    "Dutch": "nld_Latn",
+    "Turkish": "tur_Latn",
+    "Thai": "tha_Thai",
+    "Vietnamese": "vie_Latn",
+    "Indonesian": "ind_Latn",
+    "Malay": "msa_Latn",
+    "Tamil": "tam_Taml",
 }
 
 SUPPORTED_LANGUAGES: List[str] = list(NLLB_LANG_MAP.keys())
@@ -82,6 +95,19 @@ class EdgeTTSProvider(SpeechProvider):
         "Korean": "ko-KR-SunHiNeural",
         "Chinese": "zh-CN-XiaoxiaoNeural",
         "Hindi": "hi-IN-MadhurNeural",
+        "Bengali": "bn-IN-TanishaaNeural",
+        "Arabic": "ar-SA-ZariyahNeural",
+        "Portuguese": "pt-BR-FranciscaNeural",
+        "Russian": "ru-RU-SvetlanaNeural",
+        "German": "de-DE-KatjaNeural",
+        "Italian": "it-IT-ElsaNeural",
+        "Dutch": "nl-NL-FennaNeural",
+        "Turkish": "tr-TR-EmelNeural",
+        "Thai": "th-TH-PremwadeeNeural",
+        "Vietnamese": "vi-VN-HoaiMyNeural",
+        "Indonesian": "id-ID-GadisNeural",
+        "Malay": "ms-MY-YasminNeural",
+        "Tamil": "ta-IN-PallaviNeural",
     }
 
     def generate_speech(self, text: str, language: str, output_path: str) -> str:
@@ -143,6 +169,19 @@ class EspeakProvider(SpeechProvider):
         "Korean": "ko",
         "Chinese": "cmn",
         "Hindi": "hi",
+        "Bengali": "bn",
+        "Arabic": "ar",
+        "Portuguese": "pt",
+        "Russian": "ru",
+        "German": "de",
+        "Italian": "it",
+        "Dutch": "nl",
+        "Turkish": "tr",
+        "Thai": "th",
+        "Vietnamese": "vi",
+        "Indonesian": "id",
+        "Malay": "ms",
+        "Tamil": "ta",
     }
 
     def generate_speech(self, text: str, language: str, output_path: str) -> str:
