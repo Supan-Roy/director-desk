@@ -1,7 +1,7 @@
 import os
 import uuid
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.db.repository import get_db, project_repository
 from app.services import post_production_service, dubbing_service
+from app.services import speaker_service, voice_casting_service
 
 logger = logging.getLogger(__name__)
 
@@ -331,6 +332,167 @@ def download_translated_subtitles(task_id: str):
         media_type="application/x-subrip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ---------------------------------------------------------------------------
+# Smart Speaker Casting — Speaker Analysis
+# ---------------------------------------------------------------------------
+
+class SpeakerAnalysisPayload(BaseModel):
+    movie_url: str
+    subtitles: List[SubtitleItem]
+
+
+@router.post("/post-production/dubbing/analyze-speakers")
+def analyze_speakers_route(payload: SpeakerAnalysisPayload):
+    """
+    Detect and profile speakers in a movie from its subtitle timeline.
+    Returns speaker list with gender/age estimates and suggested voices.
+    """
+    movie_path = post_production_service.resolve_filepath(payload.movie_url)
+    if not movie_path or not os.path.exists(movie_path):
+        raise HTTPException(status_code=400, detail=f"Movie file not found: {payload.movie_url}")
+
+    subtitle_dicts = [s.model_dump() for s in payload.subtitles]
+    speakers = speaker_service.analyze_speakers(movie_path, subtitle_dicts)
+
+    return {"speakers": speakers}
+
+
+# ---------------------------------------------------------------------------
+# Smart Speaker Casting — Voice Casting Plan
+# ---------------------------------------------------------------------------
+
+class CastingPlanPayload(BaseModel):
+    speakers: List[Dict[str, Any]]
+    target_language: str
+
+
+@router.post("/post-production/dubbing/casting-plan")
+def create_casting_plan_route(payload: CastingPlanPayload):
+    """
+    Create a voice casting plan: assign localized Edge TTS voices to each
+    detected speaker based on their gender/age profile and the target language.
+    Returns a ``plan_id`` for use with the smart dubbing endpoint.
+    """
+    plan_id = voice_casting_service.create_casting_plan(
+        payload.speakers,
+        payload.target_language,
+    )
+    plan = voice_casting_service.get_casting_plan(plan_id)
+    return plan
+
+
+@router.get("/post-production/dubbing/casting-plan/{plan_id}")
+def get_casting_plan_route(plan_id: str):
+    """Retrieve a casting plan by ID."""
+    plan = voice_casting_service.get_casting_plan(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Casting plan not found")
+    return plan
+
+
+class VoiceOverridePayload(BaseModel):
+    speaker_id: int
+    voice_name: str
+
+
+@router.post("/post-production/dubbing/casting-plan/{plan_id}/override")
+def override_voice_route(plan_id: str, payload: VoiceOverridePayload):
+    """
+    Override the assigned voice for a specific speaker in a casting plan.
+    """
+    success = voice_casting_service.update_voice_assignment(
+        plan_id, payload.speaker_id, payload.voice_name,
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Casting plan or speaker not found")
+    plan = voice_casting_service.get_casting_plan(plan_id)
+    return plan
+
+
+# ---------------------------------------------------------------------------
+# Smart Speaker Casting — Generate
+# ---------------------------------------------------------------------------
+
+class SmartDubbingPayload(BaseModel):
+    project_id: int = 0
+    target_language: str
+    casting_plan_id: str
+    movie_url: Optional[str] = None
+    subtitles: Optional[List[SubtitleItem]] = None
+
+
+@router.post("/post-production/dubbing/smart-generate")
+def generate_smart_dub(
+    payload: SmartDubbingPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Start speaker-aware dubbing using a voice casting plan.
+
+    Each subtitle is spoken by the voice assigned to its detected speaker,
+    preserving gender/age consistency throughout the film.
+
+    Poll ``GET /post-production/dubbing/status/{task_id}`` for progress.
+    """
+    movie_url = payload.movie_url
+    subtitles_data = None
+
+    if payload.project_id and payload.project_id > 0:
+        project = project_repository.get_by_id(db, payload.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        if not project.mastered_movie_url:
+            raise HTTPException(status_code=400, detail="No mastered movie. Render in Studio Editor first.")
+        if not project.subtitles:
+            raise HTTPException(status_code=400, detail="No subtitles. Generate subtitles first.")
+        movie_url = project.mastered_movie_url
+        subtitles_data = project.subtitles
+    else:
+        if not movie_url:
+            raise HTTPException(status_code=400, detail="movie_url is required for standalone dubbing.")
+        if not payload.subtitles:
+            raise HTTPException(status_code=400, detail="subtitles are required for standalone dubbing.")
+        subtitles_data = [s.model_dump() for s in payload.subtitles]
+
+    if not dubbing_service.supports_language(payload.target_language):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language '{payload.target_language}'. Supported: {dubbing_service.get_supported_languages()}",
+        )
+
+    # Validate casting plan exists
+    plan = voice_casting_service.get_casting_plan(payload.casting_plan_id)
+    if not plan:
+        raise HTTPException(status_code=400, detail="Casting plan not found. Create one first via /casting-plan.")
+
+    task_id = str(uuid.uuid4())
+    background_tasks.add_task(
+        dubbing_service.generate_smart_dub_background,
+        task_id,
+        payload.project_id or 0,
+        movie_url,
+        payload.target_language,
+        payload.casting_plan_id,
+        subtitles=subtitles_data,
+    )
+
+    return {"task_id": task_id, "status": "pending", "language": payload.target_language}
+
+
+# ---------------------------------------------------------------------------
+# Voice Options
+# ---------------------------------------------------------------------------
+
+@router.get("/post-production/dubbing/voice-options/{language}")
+def get_voice_options_route(language: str):
+    """Return all available Edge TTS voices for a given language."""
+    if not dubbing_service.supports_language(language):
+        raise HTTPException(status_code=400, detail=f"Unsupported language '{language}'")
+    options = voice_casting_service.get_voice_options(language)
+    return {"language": language, "voices": options}
 
 
 # ---------------------------------------------------------------------------
