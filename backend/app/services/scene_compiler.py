@@ -253,8 +253,12 @@ class ScenePackageCompiler:
             if is_continuation and previous_scene_video_url:
                 reference_url = previous_scene_video_url  # last-frame URL set by caller
                 reference_type = "last_frame"
+            elif environment_reference:
+                # Use environment establishing shot as the base first-frame for better blending
+                reference_url = environment_reference
+                reference_type = "environment"
             elif primary_character:
-                # Use clean character portrait — not a composite
+                # Fallback to character portrait if no environment reference is compiled
                 for ref_url in character_references:
                     if primary_character["name"] in ref_url:
                         reference_url = ref_url
@@ -262,9 +266,6 @@ class ScenePackageCompiler:
                 if not reference_url and character_references:
                     reference_url = character_references[0]
                 reference_type = "character_portrait"
-            elif environment_reference:
-                reference_url = environment_reference
-                reference_type = "environment"
             else:
                 reference_type = "none"
 
