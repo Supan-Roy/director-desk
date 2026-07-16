@@ -95,15 +95,17 @@ def _read_wav_pcm(wav_path: str, max_samples: int = 96000) -> List[float]:
 
 def _estimate_pitch(samples: List[float], sample_rate: int = 22050) -> Optional[float]:
     """
-    Estimate fundamental frequency using normalized autocorrelation.
+    Estimate fundamental frequency using normalized autocorrelation
+    with octave-error correction.
+
     Returns pitch in Hz, or None if unreliable.
     """
     if len(samples) < MIN_PITCHABLE_SAMPLES:
         return None
 
     # Remove DC offset
-    mean = sum(samples) / len(samples)
-    samples = [s - mean for s in samples]
+    mean_val = sum(samples) / len(samples)
+    samples = [s - mean_val for s in samples]
 
     # Autocorrelation over plausible pitch range (50-500 Hz)
     min_lag = int(sample_rate / 500)  # ~44 at 22050
@@ -112,13 +114,17 @@ def _estimate_pitch(samples: List[float], sample_rate: int = 22050) -> Optional[
     if max_lag >= len(samples):
         max_lag = len(samples) // 2
 
+    # Pre-compute energy for all lags (use running sum for efficiency)
+    # First compute cumulative energy
+    n_total = len(samples)
+
     best_lag = min_lag
     best_corr = 0.0
 
     for lag in range(min_lag, max_lag):
         corr = 0.0
         energy = 0.0
-        n = len(samples) - lag
+        n = n_total - lag
         for i in range(n):
             corr += samples[i] * samples[i + lag]
             energy += samples[i] * samples[i] + samples[i + lag] * samples[i + lag]
@@ -128,14 +134,35 @@ def _estimate_pitch(samples: List[float], sample_rate: int = 22050) -> Optional[
                 best_corr = corr_norm
                 best_lag = lag
 
-    if best_corr < 0.1:
+    if best_corr < 0.12:
         return None
+
+    # ---- Octave-error correction ----
+    # Autocorrelation often peaks at multiples of the true period (sub-harmonics).
+    # If the best lag is roughly double another strong peak, pick the shorter lag
+    # (higher frequency).  This prevents female voices from being classified as male.
+    for candidate_lag in (best_lag // 2, max(best_lag // 3, min_lag)):
+        if candidate_lag < min_lag:
+            continue
+        corr = 0.0
+        energy = 0.0
+        n = n_total - candidate_lag
+        for i in range(n):
+            corr += samples[i] * samples[i + candidate_lag]
+            energy += samples[i] * samples[i] + samples[i + candidate_lag] * samples[i + candidate_lag]
+        if energy > 0:
+            corr_norm = corr / math.sqrt(energy) * 2
+            # If the sub-harmonic candidate has a strong correlation
+            # (within 80% of the best), prefer it (higher pitch)
+            if corr_norm > best_corr * 0.8:
+                best_corr = corr_norm
+                best_lag = candidate_lag
 
     # Parabolic interpolation for sub-sample accuracy
     if best_lag > min_lag and best_lag < max_lag - 1:
         prev_corr = 0.0
         next_corr = 0.0
-        n = len(samples) - best_lag
+        n = n_total - best_lag
         for i in range(n):
             prev_corr += samples[i] * samples[i + best_lag - 1]
             next_corr += samples[i] * samples[i + best_lag + 1]

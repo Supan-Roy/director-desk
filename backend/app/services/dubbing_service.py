@@ -160,9 +160,12 @@ def _assemble_timed_audio(
             start_ms = int(sub["start"] * 1000)
             dur = sub["end"] - sub["start"]
             label = f"c{idx}"
-            # [idx] matches the input index order in -i arguments
+            # Trim to subtitle duration first, THEN delay to start position.
+            # Order matters: atrim before adelay ensures the audio content
+            # isn't cut away by the trim (adelay prepends silence which atrim
+            # would otherwise slice off).
             filter_parts.append(
-                f"[{idx}:a]adelay={start_ms}|{start_ms},atrim=0:{dur}[{label}]"
+                f"[{idx}:a]atrim=0:{dur},adelay={start_ms}|{start_ms}[{label}]"
             )
             mix_refs.append(f"[{label}]")
 
