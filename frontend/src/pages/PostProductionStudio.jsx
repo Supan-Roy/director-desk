@@ -132,6 +132,18 @@ export default function PostProductionStudio() {
   const [smartDubbing, setSmartDubbing] = useState(false)
   const [autoDubbing, setAutoDubbing] = useState(false)
 
+  // Audio Description (AD) states
+  const [adLang, setAdLang] = useState("English")
+  const [adLangOpen, setAdLangOpen] = useState(false)
+  const adLangRef = useRef(null)
+  const [isGeneratingAD, setIsGeneratingAD] = useState(false)
+  const [adStep, setAdStep] = useState(0)
+  const [adProgress, setAdProgress] = useState(0)
+  const [adTaskId, setAdTaskId] = useState(null)
+  const [adMovieUrl, setAdMovieUrl] = useState("")
+  const [adError, setAdError] = useState("")
+  const adPollRef = useRef(null)
+
   const videoRef = useRef(null)
   const pollingRef = useRef(null)
   const dubPollRef = useRef(null)
@@ -199,6 +211,9 @@ export default function PostProductionStudio() {
       }
       if (smartDubRef.current && !smartDubRef.current.contains(e.target)) {
         setSmartDubOpen(false)
+      }
+      if (adLangRef.current && !adLangRef.current.contains(e.target)) {
+        setAdLangOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -789,6 +804,66 @@ export default function PostProductionStudio() {
     }
   }
 
+  const pollADStatus = useCallback(async (taskId) => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/post-production/ad/status/${taskId}`, { credentials: 'include' })
+      if (!res.ok) throw new Error("Failed to fetch AD status")
+      const data = await res.json()
+
+      setAdStep(data.step ?? 0)
+      setAdProgress(data.step_progress ?? 0)
+
+      if (data.status === "completed") {
+        if (adPollRef.current) clearInterval(adPollRef.current)
+        adPollRef.current = null
+        setIsGeneratingAD(false)
+        setAdMovieUrl(data.movie_url ? `${apiBaseUrl}${data.movie_url}` : "")
+      } else if (data.status === "failed") {
+        if (adPollRef.current) clearInterval(adPollRef.current)
+        adPollRef.current = null
+        setAdError(data.error || "AD generation failed.")
+        setIsGeneratingAD(false)
+      }
+    } catch (err) {
+      if (adPollRef.current) clearInterval(adPollRef.current)
+      adPollRef.current = null
+      setAdError(err.message || "Failed to poll AD status.")
+      setIsGeneratingAD(false)
+    }
+  }, [])
+
+  const handleGenerateAD = async () => {
+    if (!hasValidProject || !numericId) return
+
+    setIsGeneratingAD(true)
+    setAdError("")
+    setAdMovieUrl("")
+    setAdStep(0)
+    setAdProgress(0)
+
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/post-production/ad/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ project_id: numericId, target_language: adLang }),
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || "Failed to start AD generation.")
+      }
+      const { task_id } = await res.json()
+      setAdTaskId(task_id)
+
+      adPollRef.current = setInterval(() => {
+        pollADStatus(task_id)
+      }, 1500)
+    } catch (err) {
+      setAdError(err.message || "An error occurred during AD generation.")
+      setIsGeneratingAD(false)
+    }
+  }
+
   const handleSmartDub = async () => {
     if (!castingPlanId) return
     const movieSrc = hasValidProject && project?.mastered_movie_url
@@ -833,10 +908,11 @@ export default function PostProductionStudio() {
     }
   }
 
-  // Cleanup dubbing poll on unmount
+  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (dubPollRef.current) clearInterval(dubPollRef.current)
+      if (adPollRef.current) clearInterval(adPollRef.current)
     }
   }, [])
 
@@ -846,6 +922,15 @@ export default function PostProductionStudio() {
     { title: "Generating Voices", desc: "Synthesizing speech for each subtitle block..." },
     { title: "Assembling Audio", desc: "Concatenating clips and mixing with video..." },
     { title: "Rendering Movie", desc: "Encoding final dubbed movie..." },
+  ]
+
+  const adSteps = [
+    { title: "Loading Project Data", desc: "Reading script, scenes, and subtitle timeline..." },
+    { title: "Finding AD Windows", desc: "Detecting dialogue gaps for narration placement..." },
+    { title: "Generating AD Text", desc: "Writing visual descriptions with AI..." },
+    { title: "Synthesizing Speech", desc: "Generating AD narration audio..." },
+    { title: "Pacing AD Clips", desc: "Padding AD to fill available time windows..." },
+    { title: "Mixing with Ducking", desc: "Mixing AD with original audio using side-chain compression..." },
   ]
 
   const bgt = (light, dark) => d ? light : dark
@@ -1117,6 +1202,22 @@ export default function PostProductionStudio() {
                     }`}
                   >
                     Multilingual Dubbing
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('ad')}
+                    className={`flex-1 pb-3 text-[10px] font-extrabold uppercase tracking-wider border-b-2 cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+                      activeTab === 'ad'
+                        ? bgt('border-black text-black', 'border-white text-white')
+                        : bgt('border-transparent text-gray-400 hover:text-gray-700', 'border-transparent text-gray-500 hover:text-gray-300')
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <text x="1" y="16" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="11" stroke="none" fill="currentColor">AD</text>
+                      <path d="M16 8a4.5 4.5 0 0 1 0 8" />
+                      <path d="M19 6a7.5 7.5 0 0 1 0 12" />
+                      <path d="M22 4a10.5 10.5 0 0 1 0 16" />
+                    </svg>
+                    Audio Description
                   </button>
                 </div>
 
@@ -1871,6 +1972,164 @@ export default function PostProductionStudio() {
                     )}
 
                     {/* Initial state placeholder removed */}
+                  </div>
+                )}
+
+                {/* Tab Content 3: Audio Description */}
+                {activeTab === 'ad' && (
+                  <div className="space-y-4">
+                    <div className={`rounded-2xl border p-5 ${
+                      bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                    }`}>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                          bgt('bg-gray-100 text-gray-600', 'bg-white/5 text-gray-400')
+                        }`}>
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <text x="1" y="16" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="11" stroke="none" fill="currentColor">AD</text>
+                            <path d="M16 8a4.5 4.5 0 0 1 0 8" />
+                            <path d="M19 6a7.5 7.5 0 0 1 0 12" />
+                            <path d="M22 4a10.5 10.5 0 0 1 0 16" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className={`text-[11px] font-bold uppercase tracking-wider ${bgt('text-gray-800', 'text-white')}`}>
+                            Audio Description (AD)
+                          </h4>
+                          <p className={`text-[9.5px] mt-0.5 ${bgt('text-gray-500', 'text-gray-400')}`}>
+                            Narrated visual descriptions for visually impaired viewers, mixed with professional audio ducking
+                          </p>
+                        </div>
+                      </div>
+
+                      {!hasValidProject ? (
+                        <div className={`p-4 rounded-xl border text-center ${bgt('border-amber-200 bg-amber-50', 'border-amber-500/20 bg-amber-500/5')}`}>
+                          <p className={`text-[10px] font-bold ${bgt('text-amber-800', 'text-amber-300')}`}>
+                            AD requires a full project with script and scene data.
+                          </p>
+                          <p className={`text-[9px] mt-1 ${bgt('text-amber-600', 'text-amber-400')}`}>
+                            Create a project and generate a mastered movie first.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Language selector */}
+                          <div className="relative" ref={adLangRef}>
+                            <button
+                              onClick={() => setAdLangOpen(!adLangOpen)}
+                              disabled={isGeneratingAD}
+                              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl border text-[11px] font-bold cursor-pointer transition-all ${
+                                bgt(
+                                  'border-gray-300 bg-white text-gray-800 hover:bg-gray-50 disabled:opacity-40',
+                                  'border-white/[0.08] bg-[#101319] text-gray-200 hover:bg-[#161a22] disabled:opacity-40'
+                                )
+                              }`}
+                            >
+                              <span>{adLang}</span>
+                              <FiChevronDown size={14} className={`transition-transform ${adLangOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {adLangOpen && (
+                              <div className={`absolute z-20 mt-1 w-full rounded-xl border shadow-xl overflow-hidden max-h-[240px] overflow-y-auto ${
+                                bgt('bg-white border-gray-200', 'bg-[#101319] border-white/[0.06]')
+                              }`}>
+                                {dubLanguages.map(lang => (
+                                  <button
+                                    key={lang}
+                                    onClick={() => { setAdLang(lang); setAdLangOpen(false); }}
+                                    className={`w-full text-left px-4 py-2.5 text-[11px] font-bold transition-colors cursor-pointer ${
+                                      adLang === lang
+                                        ? bgt('bg-gray-100 text-gray-900', 'bg-white/10 text-white')
+                                        : bgt('text-gray-700 hover:bg-gray-50', 'text-gray-400 hover:bg-white/5')
+                                    }`}
+                                  >
+                                    {lang}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Generate AD button */}
+                          <button
+                            onClick={handleGenerateAD}
+                            disabled={isGeneratingAD || !project?.mastered_movie_url}
+                            className={`w-full py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg disabled:opacity-30 mt-4 ${
+                              bgt(
+                                'bg-black text-white hover:bg-gray-800 shadow-black/10',
+                                'bg-white text-black hover:bg-gray-200 shadow-white/5'
+                              )
+                            }`}
+                          >
+                            {isGeneratingAD ? (
+                              <span className="flex items-center justify-center gap-2">
+                                <FiLoader className="animate-spin" size={14} />
+                                Generating AD...
+                              </span>
+                            ) : (
+                              <span className="flex items-center justify-center gap-2">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <text x="1" y="16" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="11" stroke="none" fill="currentColor">AD</text>
+                                  <path d="M16 8a4.5 4.5 0 0 1 0 8" />
+                                  <path d="M19 6a7.5 7.5 0 0 1 0 12" />
+                                  <path d="M22 4a10.5 10.5 0 0 1 0 16" />
+                                </svg>
+                                Generate AD — {adLang}
+                              </span>
+                            )}
+                          </button>
+
+                          {/* Progress */}
+                          {isGeneratingAD && (
+                            <div className="mt-4 space-y-3">
+                              <div className={`w-full h-1.5 rounded-full overflow-hidden ${bgt('bg-gray-200', 'bg-white/5')}`}>
+                                <div className="h-full bg-black dark:bg-white rounded-full transition-all duration-300" style={{ width: `${adProgress}%` }} />
+                              </div>
+                              <p className={`text-[9px] text-center ${bgt('text-gray-400', 'text-gray-500')}`}>
+                                {adSteps[adStep]?.title || 'Processing...'}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Error */}
+                          {adError && (
+                            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] flex items-start gap-2">
+                              <FiAlertCircle size={14} className="shrink-0 mt-0.5" />
+                              <span>{adError}</span>
+                            </div>
+                          )}
+
+                          {/* Completed */}
+                          {adMovieUrl && (
+                            <div className="mt-4 space-y-3">
+                              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${bgt('bg-emerald-50', 'bg-emerald-500/10')}`}>
+                                <FiCheckCircle size={14} className="text-emerald-500" />
+                                <span className={`text-[10px] font-bold ${bgt('text-emerald-700', 'text-emerald-400')}`}>
+                                  AD generated — {adLang}
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => window.open(adMovieUrl, '_blank')}
+                                  className={`flex-1 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                                    bgt('border-gray-300 bg-white text-gray-700 hover:bg-gray-50', 'border-white/[0.08] bg-transparent text-gray-300 hover:bg-white/5')
+                                  }`}
+                                >
+                                  <FiPlay size={10} className="inline mr-1" /> Play
+                                </button>
+                                <button
+                                  onClick={() => window.open(adMovieUrl, '_blank')}
+                                  className={`flex-1 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                                    bgt('border-gray-300 bg-white text-gray-700 hover:bg-gray-50', 'border-white/[0.08] bg-transparent text-gray-300 hover:bg-white/5')
+                                  }`}
+                                >
+                                  <FiDownload size={10} className="inline mr-1" /> Download
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 

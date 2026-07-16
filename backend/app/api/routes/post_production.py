@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.db.repository import get_db, project_repository
 from app.services import post_production_service, dubbing_service
 from app.services import speaker_service, voice_casting_service
+from app.services.ad_service import ad_tasks, generate_ad_background, AD_VOICES
 
 logger = logging.getLogger(__name__)
 
@@ -697,3 +698,78 @@ def get_voice_options_route(language: str):
 def list_dub_languages():
     """Return the list of languages supported for dubbing."""
     return {"languages": dubbing_service.get_supported_languages()}
+
+
+# ---------------------------------------------------------------------------
+# Audio Description (AD)
+# ---------------------------------------------------------------------------
+
+class ADPayload(BaseModel):
+    project_id: int
+    target_language: str = "English"
+
+
+@router.post("/post-production/ad/generate")
+def generate_ad(
+    payload: ADPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Generate Audio Description (AD) track for a project.
+
+    AD provides narrated visual descriptions for visually impaired viewers,
+    mixed with the original audio using professional side-chain ducking.
+    Requires a project with script, scene breakdown, and mastered movie.
+    """
+    project = project_repository.get_by_id(db, payload.project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not project.mastered_movie_url:
+        raise HTTPException(status_code=400, detail="No mastered movie. Render in Studio Editor first.")
+
+    if not project.script and not project.scene_breakdown:
+        raise HTTPException(status_code=400, detail="No script or scene data. AD requires a completed project with script.")
+
+    if not dubbing_service.supports_language(payload.target_language):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language '{payload.target_language}'.",
+        )
+
+    task_id = str(uuid.uuid4())
+    background_tasks.add_task(
+        generate_ad_background,
+        task_id,
+        payload.project_id,
+        project.mastered_movie_url,
+        payload.target_language,
+    )
+
+    return {"task_id": task_id, "status": "pending", "language": payload.target_language}
+
+
+@router.get("/post-production/ad/status/{task_id}")
+def get_ad_status(task_id: str):
+    """Poll AD generation progress."""
+    task = ad_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="AD task not found")
+    return task
+
+
+@router.get("/post-production/ad/download/{task_id}")
+def download_ad_movie(task_id: str):
+    """Download the AD-mixed movie."""
+    task = ad_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="AD task not found")
+    if task.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="AD not yet completed")
+    movie_path = task.get("movie_url", "").lstrip("/")
+    if not movie_path or not os.path.exists(movie_path):
+        raise HTTPException(status_code=404, detail="AD movie file not found")
+
+    filename = os.path.basename(movie_path)
+    return FileResponse(path=movie_path, filename=filename, media_type="video/mp4")
