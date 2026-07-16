@@ -1,71 +1,66 @@
-# Director Desk 🎬 — Track 2: AI Showrunner
+# Director Desk 🎬 — Advanced AI Showrunner & Film Studio Platform
 
 ![Director Desk Banner](frontend/public/images/studio_banner.png)
 
-Director Desk is an advanced, production-grade **AI Showrunner and Creative Director Platform** that automates cinematic storytelling. From screenwriting and multi-agent character casting to environment design, voice directing, video generation, and final video assembly, Director Desk orchestrates the entire creative lifecycle under a unified dashboard.
+Director Desk is a production-grade **AI Showrunner, Creative Director, and Post-Production Platform** that automates the cinematic storytelling pipeline. It bridges the gap between raw AI media generation models and structured, controllable post-production editing. By managing screenplays, casting, location scouting, multi-track audio assembly, and final theatrical release packages, Director Desk orchestrates the entire creative lifecycle under a single cohesive dashboard.
 
-Designed for creators, filmmakers, and AI artists, the platform features a collaborative AI crew, visual presets lookbooks, interactive asset libraries, and non-destructive post-production editors.
+Designed for filmmakers, creative directors, and hackathons, this platform delivers a **low-latency, zero-local-overhead architecture** by leveraging cloud model offloading combined with robust, local media compilation engines.
 
 ---
-
-## 🏗️ System Architecture & Workflow
-
-The diagram below details how the Vite frontend interacts with the FastAPI backend, local SQLite database storage, and external AI generation services.
 
 ![Director Desk - System Architecture & Workflow](frontend/public/images/Director%20Desk%20-%20System%20Architecture%20&%20Workflow.png)
 
 ---
 
-## 🌟 Key Features
+## 🌟 Core Innovation Pillars
 
-### 1. Cinematic Studio Dashboard
-*   **Creative Parameters Console:** Specify Lenses (e.g., Anamorphic Prime, Vintage Spherical), Lighting configurations (e.g., volumetric fog, soft window key), Color profiles (e.g., Teal & Orange, Silver Halide), Camera styles (e.g., zero-gravity drift, vertical crane sweeps), and Aspect Ratios.
-*   **Volumetric Environment Visuals:** Designed with dark mode softness, volumetric drifting lens flares, and interactive film grain overlay filters to mimic a premium movie editing suite.
+### 1. Collaborative Multi-Agent AI Crew
+Direct a specialized, 5-member AI production crew within a unified chat playground:
+*   ✍️ **Screenplay Agent:** Generates, parses, and splits scripts into individual scenes.
+*   🎭 **Casting Agent:** Designs distinct visual characters (defining gender, age group, apparel, demeanor, and ethnicity traits).
+*   🌍 **Location Scout Agent:** Details settings, lighting profiles (volumetric flares, window keys), and architectural descriptions.
+*   🎙️ **Voice Director Agent:** Programs specific speech rates, languages, and speaker signatures.
+*   🎥 **Video Renderer Agent:** Translates script setups into prompt instructions for scene generators.
 
-### 2. Collaborative AI Agents Workspace
-*   **Multi-Agent Playground:** Enter the agents dashboard to direct a specialized 5-member production crew:
-    *   ✍️ **Screenplay Agent:** Generates, parses, and formats screenplays into production-ready segments.
-    *   🎭 **Casting Agent:** Designs rich characters, age groups, attire, and demeanor profiles.
-    *   🌍 **Location Scout Agent:** Creates setting architecture, lighting, and environmental concepts.
-    *   🎙️ **Voice Director Agent:** Adjusts voice models, speeds, language, and speaker signature controls.
-    *   🎥 **Video Renderer Agent:** Translates visual cues into prompt instructions for scene generators.
-*   **Interactive Chat Sandbox:** Engage in real-time dialog with any agent inside a deep console featuring purple action controls, small textbox input segments, and user/agent status avatars.
-*   **Agent Reference Manual:** Fully detailed sidebar manual describing what each agent accomplishes and how they interact.
+### 2. Multi-Track Post-Production Studio
+*   **Subtitle Studio:** High-precision subtitle generation from video tracks using `faster-whisper` with a timeline editor to adjust timestamps down to the millisecond.
+*   **Multilingual Dubbing Studio:** Zero-local-load translation using the cloud **Qwen Cloud API** to translate subtitles and scripts into Spanish, French, Japanese, Korean, Chinese, and Hindi.
+*   **Smart Speaker Casting:** Dialogue tag extraction that parses character lines and maps them to distinct synthetic voice profiles (`edge-tts`/`qwen-tts`) to generate multi-voice dubbed tracks.
+*   **Audio Description (AD) Engine:** Spoken narration of action scenes for visually impaired audiences, featuring **FFmpeg Audio Ducking** filters that lower background soundtracks dynamically when the AD narrator is speaking.
 
-### 3. Visual Presets & Templates Library
-*   **3-Column Vertical Grid Lookbook:** Clean, full-width grid layout of cinematic presets (e.g., Cyberpunk, Cinematic Noir, Sci-Fi Metropolis, Documentary Realism, Space Odyssey) that fits the screen width perfectly.
-*   **Hover-Play Video Previews:** Hovering over any template card automatically streams a muted, looping preview video clip to visualize the template's mood.
-*   **Always-Visible Specs:** View detailed technical specifications and cinematic film inspirations directly on the card bodies.
-*   **Instant Application:** Clicking "Apply Preset Style" redirects the user to the studio dashboard, auto-configuring aspect ratios, camera settings, and inserting a random, highly detailed cinematic prompt into the text area without auto-submitting.
-*   **Custom Templates:** Create and delete custom style presets on the fly, persistent in the SQLite database.
-
-### 4. Unified Asset Library
-*   **Filter Tabs:** Instantly filter assets by Characters, Environments, Voices, and Videos. Tab texts are globally optimized for Day and Night modes.
-*   **Click-To-Expand Animations:** Click any asset card to slide open detailed specifications with CSS transitions (`max-h-96 duration-500`):
-    *   *Characters:* Detailed Gender, Age Group, Ethnicity, Attire/Appearance, Personality Traits, and visual prompts.
-    *   *Environments:* Time of Day, Lighting setups, Atmosphere details, and architecture presets.
-    *   *Voices:* Speaker age/gender targets and model signature definitions with an inline audio controller.
-*   **Unified Search & Selector:** Query assets across all parameters or isolate items by project.
-
-### 5. Non-Destructive Storyboard Editor
-*   **Script & Scene Timeline:** Live script edit boxes, storyboard card lists, aspect ratio selectors, and delete options.
-*   **Video Compiler & Export:** Fully functional FFmpeg video compiler with a dedicated overlay modal video player.
+### 3. Theatrical & Marketing Release Studio
+*   **Poster Generator:** Synthesize film key-art in multiple aspect ratios: Theatrical Poster (16:9), YouTube Thumbnail (16:9), Vertical Poster (9:16), and Social Banner (21:9). Overlays cast billing and credits using interactive HTML5 Canvas editing.
+*   **Trailer Compiler:** Assembles generated video clips into high-impact 15s, 30s, or 60s promotional trailers, adding cinematic cuts, title cards, and backing soundtracks.
 
 ---
 
-## 🛠️ Tech Stack
+## ⚡ Technical Architecture (Alibaba Cloud Optimization)
 
-*   **Frontend:** React 18, Vite, Tailwind CSS, Lucide / React Icons
-*   **Backend:** FastAPI (Python), SQLite (Local Database), SQLAlchemy ORM
-*   **Integrations:** Qwen Multi-Modal APIs (Alibaba Cloud DashScope: Qwen-Plus, Wan2.6-T2I, Wan2.7-T2V, HappyHorse-I2V, Qwen3-TTS-Flash), FFmpeg (Video Compilation & Assembly)
+To achieve maximum performance and stability on low-resource environments (like 2GB RAM / 2vCPU VPS instances), the system implements the following patterns:
+
+*   **Cloud API Offloading:** Instead of running heavy deep-learning translation and TTS models locally, translation and voice synthesis are offloaded to **Alibaba Cloud DashScope APIs** (using `qwen-plus`). This maintains local RAM usage at a minimal ~150MB and CPU at 0-2% during active processing.
+*   **Redis Background Job Workers:** Heavy rendering tasks (video stitching, audio ducking, trailer compilation) are sent to a background Redis queue.
+*   **SSE Live Updates:** Progress percentages (e.g. `progress=68`) and descriptive logs are pushed in real time to the React frontend client using Server-Sent Events (SSE).
+*   **Nginx File Streaming:** Up to 2GB file upload support configured via Nginx limits to accommodate high-quality raw video assets.
 
 ---
 
-## 🚀 Run Locally
+## 🛠️ Technology Stack
+
+*   **Frontend:** React 18, Vite, Tailwind CSS, HTML5 Canvas API, marked.js
+*   **Backend:** FastAPI (Python), SQLite (database), SQLAlchemy (ORM), Redis (job queue)
+*   **Integrations:** Alibaba Cloud DashScope (Qwen-Plus, Wan2.6-T2I, Wan2.7-T2V, HappyHorse-I2V, Qwen-TTS), `faster-whisper`
+*   **Orchestration & Media:** FFmpeg-python, Docker & Docker Compose
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 *   Node.js (v18+)
 *   Python (v3.10+)
+*   FFmpeg (installed and added to your system's `PATH`)
+*   Redis server (running locally or accessible via network)
 
 ### Setup Instructions
 
@@ -88,20 +83,20 @@ cd director-desk
    # macOS/Linux:
    source .venv/bin/activate
    ```
-3. Install the dependencies:
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 4. Configure environment variables:
    *   Copy `.env.example` to `.env`.
-   *   Set database URLs and API keys (e.g., Qwen API tokens, OpenAI tokens) as needed.
+   *   Set database URLs and API keys (e.g., `QWEN_API_KEY`, `QWEN_API_BASE_URL`).
 5. Launch the FastAPI server:
    ```bash
    uvicorn app.main:app --reload --port 8000
    ```
 
 #### 3. Frontend Installation & Setup
-1. Open a new terminal and navigate to the `frontend/` directory:
+1. Navigate to the `frontend/` directory:
    ```bash
    cd frontend
    ```
@@ -110,16 +105,18 @@ cd director-desk
    npm install
    ```
 3. Configure environment variables:
-   *   Copy `.env.example` to `.env` (ensure `VITE_API_BASE_URL` points to your backend: `http://localhost:8000`).
+   *   Copy `.env.example` to `.env` (ensure `VITE_API_BASE_URL` points to `http://localhost:8000`).
 4. Start the dev server:
    ```bash
    npm run dev
    ```
 
-Open your browser and navigate to `http://localhost:5173` to enter the Director Desk studio.
+Open your browser and navigate to `http://localhost:5173` to launch the Director Desk studio.
 
 ---
 
-## 👥 Credits
+## 👥 Hackathon Credits
 
 **Developed by - Supan Roy**
+*   **GitHub**: [@Supan-Roy](https://github.com/Supan-Roy)
+*   **Contact**: [contact@supanroy.com](mailto:contact@supanroy.com)
