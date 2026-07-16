@@ -233,15 +233,30 @@ def generate_dub(
             raise HTTPException(status_code=404, detail="Project not found")
         if not project.mastered_movie_url:
             raise HTTPException(status_code=400, detail="No mastered movie. Render in Studio Editor first.")
-        if not project.subtitles:
-            raise HTTPException(status_code=400, detail="No subtitles. Generate subtitles first.")
         movie_url = project.mastered_movie_url
-        subtitles_data = project.subtitles
+        if project.subtitles:
+            subtitles_data = project.subtitles
     else:
         if not movie_url:
             raise HTTPException(status_code=400, detail="movie_url is required for standalone dubbing.")
-        if not payload.subtitles:
-            raise HTTPException(status_code=400, detail="subtitles are required for standalone dubbing.")
+        if payload.subtitles:
+            subtitles_data = [s.model_dump() for s in payload.subtitles]
+
+    # Auto-generate subtitles if not provided
+    if not subtitles_data:
+        logger.info("No subtitles found; auto-transcribing for auto-dub...")
+        try:
+            subtitles_data = post_production_service.transcribe_sync(movie_url)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Auto subtitle generation failed: {exc}",
+            )
+        if not subtitles_data:
+            raise HTTPException(status_code=400, detail="Failed to generate subtitles from the movie audio.")
+
+    if not subtitles_data:
+        raise HTTPException(status_code=400, detail="No subtitles available for dubbing.")
         subtitles_data = [s.model_dump() for s in payload.subtitles]
 
     if not dubbing_service.supports_language(payload.language):
@@ -480,6 +495,118 @@ def generate_smart_dub(
     )
 
     return {"task_id": task_id, "status": "pending", "language": payload.target_language}
+
+
+# ---------------------------------------------------------------------------
+# Auto Dub — one-click: analyze speakers → create plan → generate
+# ---------------------------------------------------------------------------
+
+class AutoDubbingPayload(BaseModel):
+    project_id: int = 0
+    target_language: str
+    movie_url: Optional[str] = None
+    subtitles: Optional[List[SubtitleItem]] = None
+
+
+@router.post("/post-production/dubbing/auto-generate")
+def generate_auto_dub(
+    payload: AutoDubbingPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    One-click auto dubbing: analyzes speakers, creates a voice casting plan,
+    and generates the speaker-aware dub — all in a single call.
+
+    No manual voice selection needed.  The system automatically picks
+    gender-appropriate voices for each detected speaker.
+
+    Poll ``GET /post-production/dubbing/status/{task_id}`` for progress.
+    """
+    movie_url = payload.movie_url
+    subtitles_data = None
+
+    if payload.project_id and payload.project_id > 0:
+        project = project_repository.get_by_id(db, payload.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        if not project.mastered_movie_url:
+            raise HTTPException(status_code=400, detail="No mastered movie. Render in Studio Editor first.")
+        movie_url = project.mastered_movie_url
+        if project.subtitles:
+            subtitles_data = project.subtitles
+    else:
+        if not movie_url:
+            raise HTTPException(status_code=400, detail="movie_url is required for standalone dubbing.")
+        if payload.subtitles:
+            subtitles_data = [s.model_dump() for s in payload.subtitles]
+
+    # Auto-generate subtitles if not provided
+    if not subtitles_data:
+        logger.info("No subtitles found; auto-transcribing for auto-dub...")
+        try:
+            subtitles_data = post_production_service.transcribe_sync(movie_url)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Auto subtitle generation failed: {exc}",
+            )
+        if not subtitles_data:
+            raise HTTPException(status_code=400, detail="Failed to generate subtitles from the movie audio.")
+
+    if not dubbing_service.supports_language(payload.target_language):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language '{payload.target_language}'. Supported: {dubbing_service.get_supported_languages()}",
+        )
+
+    movie_path = post_production_service.resolve_filepath(movie_url)
+    if not movie_path or not os.path.exists(movie_path):
+        raise HTTPException(status_code=400, detail=f"Movie file not found: {movie_url}")
+
+    # Step 1: Analyze speakers (hybrid timing + acoustic clustering)
+    speakers = speaker_service.analyze_speakers(movie_path, subtitles_data)
+    if not speakers:
+        logger.warning("No speakers detected; falling back to a single default speaker")
+        speakers = [{
+            "speaker_id": 0,
+            "gender": "unknown",
+            "age_group": "adult",
+            "confidence": 0.0,
+            "pitch_hz": None,
+            "voice": None,
+            "subtitle_count": len(subtitles_data),
+            "sample_subtitle": subtitles_data[0],
+        }]
+
+    # Step 2: Create casting plan (auto-selects gender-appropriate voices)
+    plan_id = voice_casting_service.create_casting_plan(speakers, payload.target_language)
+
+    # Step 3: Generate smart dub
+    task_id = str(uuid.uuid4())
+    background_tasks.add_task(
+        dubbing_service.generate_smart_dub_background,
+        task_id,
+        payload.project_id or 0,
+        movie_url,
+        payload.target_language,
+        plan_id,
+        subtitles=subtitles_data,
+    )
+
+    logger.info(
+        "Auto-dub started: %d speakers detected, plan=%s, task=%s, lang=%s",
+        len(speakers), plan_id, task_id, payload.target_language,
+    )
+
+    return {
+        "task_id": task_id,
+        "status": "pending",
+        "language": payload.target_language,
+        "speakers_detected": len(speakers),
+        "speakers": speakers,
+        "casting_plan_id": plan_id,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -96,6 +96,81 @@ def extract_audio_ffmpeg(movie_path: str, output_audio_path: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Synchronous transcription (inline, no polling needed)
+# ---------------------------------------------------------------------------
+
+def transcribe_sync(movie_url: str) -> List[Dict[str, Any]]:
+    """
+    Transcribe a movie file *synchronously* using the local Whisper model.
+
+    Unlike ``generate_subtitles_background`` (which writes progress to a
+    global dict for HTTP polling), this function simply blocks until the
+    transcription is complete and returns the subtitle list directly.
+
+    Useful for the auto-dub pipeline where subtitles are an internal step
+    rather than a user-facing one.
+
+    Returns:
+        List of subtitle dicts: ``[{"id": 1, "start": 0.0, "end": 2.5, "text": "..."}]``
+    """
+    local_path = resolve_filepath(movie_url)
+    if not os.path.exists(local_path):
+        raise FileNotFoundError(f"Movie file not found at {local_path}")
+
+    # ---- Step 1: Extract audio ----
+    logger.info("Extracting audio for inline transcription: %s", local_path)
+    base, _ = os.path.splitext(local_path)
+    audio_path = f"{base}_audio_sync.wav"
+
+    if not extract_audio_ffmpeg(local_path, audio_path):
+        raise RuntimeError("FFmpeg audio extraction failed")
+
+    try:
+        # ---- Step 2: Get audio duration (for progress) ----
+        audio_duration = get_audio_duration_ffprobe(audio_path)
+
+        # ---- Step 3: Transcribe ----
+        logger.info("Starting Whisper transcription (synchronous)...")
+        model = get_or_create_model()
+        segments, _info = model.transcribe(
+            audio_path,
+            beam_size=5,
+            word_timestamps=True,
+            vad_filter=True,
+        )
+
+        subtitles: List[Dict[str, Any]] = []
+        for idx, segment in enumerate(segments):
+            words = list(segment.words) if segment.words else []
+            if words:
+                seg_start = words[0].start
+                seg_end = words[-1].end
+            else:
+                seg_start = segment.start
+                seg_end = segment.end
+
+            subtitles.append({
+                "id": idx + 1,
+                "start": round(seg_start, 3),
+                "end": round(seg_end, 3),
+                "text": segment.text.strip(),
+            })
+
+        logger.info(
+            "Inline transcription complete: %d subtitles from %.2f sec audio",
+            len(subtitles), audio_duration or 0,
+        )
+        return subtitles
+
+    finally:
+        if os.path.exists(audio_path):
+            try:
+                os.remove(audio_path)
+            except Exception:
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Background subtitle generation (entirely API-cost-free)
 # ---------------------------------------------------------------------------
 

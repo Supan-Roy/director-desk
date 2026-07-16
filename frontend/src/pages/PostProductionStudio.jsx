@@ -21,7 +21,9 @@ import {
   FiVolumeX,
   FiMaximize2,
   FiChevronDown,
-  FiCheck
+  FiCheck,
+  FiZap,
+  FiUsers
 } from 'react-icons/fi'
 import { apiBaseUrl } from '../services/apiClient'
 import { useTheme } from '../context/ThemeContext'
@@ -128,6 +130,7 @@ export default function PostProductionStudio() {
   const [smartDubOpen, setSmartDubOpen] = useState(false)
   const smartDubRef = useRef(null)
   const [smartDubbing, setSmartDubbing] = useState(false)
+  const [autoDubbing, setAutoDubbing] = useState(false)
 
   const videoRef = useRef(null)
   const pollingRef = useRef(null)
@@ -566,6 +569,7 @@ export default function PostProductionStudio() {
         setDubStatus("completed")
         setIsDubbing(false)
         setSmartDubbing(false)
+        setAutoDubbing(false)
         const completedUrl = data.movie_url ? `${apiBaseUrl}${data.movie_url}` : ""
         setDubMovieUrl(completedUrl)
         setDubAudioUrl(data.audio_url ? `${apiBaseUrl}${data.audio_url}` : "")
@@ -583,6 +587,7 @@ export default function PostProductionStudio() {
         setDubError(data.error || "Dubbing failed.")
         setIsDubbing(false)
         setSmartDubbing(false)
+        setAutoDubbing(false)
       }
     } catch (err) {
       if (dubPollRef.current) clearInterval(dubPollRef.current)
@@ -590,6 +595,7 @@ export default function PostProductionStudio() {
       setDubError(err.message || "Failed to poll dubbing status.")
       setIsDubbing(false)
       setSmartDubbing(false)
+      setAutoDubbing(false)
     }
   }, [dubLang])
 
@@ -722,6 +728,46 @@ export default function PostProductionStudio() {
       setCastingPlan(plan)
     } catch (err) {
       console.error("Voice override error:", err)
+    }
+  }
+
+  const handleAutoDub = async () => {
+    const movieSrc = hasValidProject && project?.mastered_movie_url
+      ? project.mastered_movie_url
+      : rawMovieUrlRef.current || movieUrl
+    if (!movieSrc) return
+
+    setAutoDubbing(true)
+    setDubError("")
+
+    try {
+      const body = {
+        project_id: numericId || 0,
+        target_language: dubLang,
+        movie_url: movieSrc,
+      }
+      // Don't send subtitles — backend auto-generates them if missing
+
+      const res = await fetch(`${apiBaseUrl}/api/post-production/dubbing/auto-generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || "Failed to start auto dubbing.")
+      }
+      const { task_id } = await res.json()
+      setDubTaskId(task_id)
+      setIsDubbing(true)
+
+      dubPollRef.current = setInterval(() => {
+        pollDubStatus(task_id)
+      }, 1500)
+    } catch (err) {
+      setDubError(err.message || "An error occurred during auto dubbing.")
+      setAutoDubbing(false)
     }
   }
 
@@ -1509,76 +1555,98 @@ export default function PostProductionStudio() {
                         </div>
                       )}
 
-                      {/* Generate area */}
-                      <div className="mt-4 flex items-center gap-3">
-                        {detectedSpeakers.length > 0 && !castingPlan ? (
-                          <button
-                            onClick={() => createCastingPlan(dubLang)}
-                            className={`w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
-                              bgt('bg-black text-white hover:bg-gray-800 shadow-black/10', 'bg-white text-black hover:bg-gray-200 shadow-white/5')
-                            }`}
-                          >
-                            Create Casting Plan
-                          </button>
-                        ) : castingPlan ? (
-                          <>
-                            <div className="flex-1" />
+                      {/* Auto Dub — one click */}
+                      <button
+                        onClick={handleAutoDub}
+                        disabled={autoDubbing || isDubbing || !movieUrl || (hasValidProject && !project?.mastered_movie_url)}
+                        className={`w-full py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg disabled:opacity-30 mt-4 ${
+                          bgt(
+                            'bg-black text-white hover:bg-gray-800 shadow-black/10',
+                            'bg-white text-black hover:bg-gray-200 shadow-white/5'
+                          )
+                        }`}
+                      >
+                        {autoDubbing ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <FiLoader className="animate-spin" size={14} />
+                            Auto Dubbing...
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center gap-2">
+                            <FiZap size={16} />
+                            Auto Dub — {dubLang}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Advanced: Manual speaker analysis */}
+                      <details className="mt-3">
+                        <summary className={`text-[9px] font-bold uppercase tracking-wider cursor-pointer ${bgt('text-gray-500 hover:text-gray-700', 'text-gray-500 hover:text-gray-300')}`}>
+                          Advanced: Manual voice casting
+                        </summary>
+                        <div className="mt-3 flex items-center gap-3">
+                          {detectedSpeakers.length > 0 && !castingPlan ? (
                             <button
-                              onClick={() => setCastingPlan(null)}
-                              className={`px-4 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-wider border cursor-pointer transition-all ${
-                                bgt(
-                                  'border-gray-300 text-gray-700 hover:bg-gray-50',
-                                  'border-white/[0.08] text-gray-300 hover:bg-white/5'
-                                )
+                              onClick={() => createCastingPlan(dubLang)}
+                              className={`w-full py-2 rounded-xl text-[9px] font-extrabold uppercase tracking-wider transition-all cursor-pointer border ${
+                                bgt('border-gray-300 bg-white text-gray-700 hover:bg-gray-50', 'border-white/[0.08] bg-transparent text-gray-300 hover:bg-white/5')
                               }`}
                             >
-                              Reset
+                              Create Casting Plan
                             </button>
+                          ) : castingPlan ? (
+                            <>
+                              <button
+                                onClick={() => setCastingPlan(null)}
+                                className={`px-3 py-2 rounded-xl text-[8px] font-bold uppercase tracking-wider border cursor-pointer transition-all ${
+                                  bgt('border-gray-300 text-gray-700 hover:bg-gray-50', 'border-white/[0.08] text-gray-300 hover:bg-white/5')
+                                }`}
+                              >
+                                Reset
+                              </button>
+                              <button
+                                onClick={handleSmartDub}
+                                disabled={isDubbing}
+                                className={`px-4 py-2 rounded-xl text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg disabled:opacity-30 ${
+                                  bgt('bg-black text-white hover:bg-gray-800', 'bg-white text-black hover:bg-gray-200')
+                                }`}
+                              >
+                                {isDubbing ? (
+                                  <span className="flex items-center gap-1.5">
+                                    <FiLoader className="animate-spin" size={10} />
+                                    Dubbing...
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1.5">
+                                    <FiVolume2 size={12} />
+                                    Generate Smart Dub
+                                  </span>
+                                )}
+                              </button>
+                            </>
+                          ) : (
                             <button
-                              onClick={handleSmartDub}
-                              disabled={isDubbing}
-                              className={`px-5 py-2.5 rounded-xl text-[9.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg disabled:opacity-30 ${
-                                bgt('bg-black text-white hover:bg-gray-800', 'bg-white text-black hover:bg-gray-200')
+                              onClick={analyzeSpeakers}
+                              disabled={analyzingSpeakers || isDubbing || !movieUrl || (!hasValidProject && editedSubtitles.length === 0) || (hasValidProject && (!project?.mastered_movie_url || !subtitles?.length))}
+                              className={`w-full py-2 rounded-xl text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer border disabled:opacity-30 ${
+                                bgt('border-gray-300 bg-white text-gray-700 hover:bg-gray-50', 'border-white/[0.08] bg-transparent text-gray-300 hover:bg-white/5')
                               }`}
                             >
-                              {isDubbing ? (
-                                <span className="flex items-center gap-1.5">
-                                  <FiLoader className="animate-spin" size={10} />
-                                  Dubbing...
+                              {analyzingSpeakers ? (
+                                <span className="flex items-center justify-center gap-2">
+                                  <FiLoader className="animate-spin" size={11} />
+                                  Analyzing Speakers...
                                 </span>
                               ) : (
-                                <span className="flex items-center gap-1.5">
-                                  <FiVolume2 size={12} />
-                                  Generate {dubLang} Smart Dub
+                                <span className="flex items-center justify-center gap-2">
+                                  <FiUsers size={11} />
+                                  Analyze Speakers
                                 </span>
                               )}
                             </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={analyzeSpeakers}
-                            disabled={analyzingSpeakers || isDubbing || !movieUrl || (!hasValidProject && editedSubtitles.length === 0) || (hasValidProject && (!project?.mastered_movie_url || !subtitles?.length))}
-                            className={`w-full py-2.5 rounded-xl text-[10.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-lg disabled:opacity-30 ${
-                              bgt(
-                                'bg-black text-white hover:bg-gray-800 shadow-black/10',
-                                'bg-white text-black hover:bg-gray-200 shadow-white/5'
-                              )
-                            }`}
-                          >
-                            {analyzingSpeakers ? (
-                              <span className="flex items-center justify-center gap-2">
-                                <FiLoader className="animate-spin" size={12} />
-                                Analyzing Speakers...
-                              </span>
-                            ) : (
-                              <span className="flex items-center justify-center gap-2">
-                                <FiVolume2 size={12} />
-                                Analyze Speakers
-                              </span>
-                            )}
-                          </button>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      </details>
 
                       {dubError && (
                         <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] flex items-start gap-2">
