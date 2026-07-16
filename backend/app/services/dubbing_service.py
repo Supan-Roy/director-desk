@@ -101,6 +101,20 @@ def _get_audio_duration(path: str) -> float:
     return _get_media_duration(path)
 
 
+def _pad_wav_to_duration(input_path: str, output_path: str, target_dur: float):
+    """Pad or trim *input_path* to exactly *target_dur* seconds."""
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-i", input_path,
+        "-af", f"atrim=0:{target_dur},apad=pad_dur={target_dur}",
+        "-c:a", "pcm_s16le",
+        "-ar", "22050",
+        "-ac", "1",
+        "-t", str(target_dur),
+        output_path,
+    ], check=True, capture_output=True, text=True, timeout=30)
+
+
 # ---------------------------------------------------------------------------
 # Timed audio assembly — places clips at subtitle-timed positions
 # ---------------------------------------------------------------------------
@@ -116,15 +130,14 @@ def _assemble_timed_audio(
     original subtitle timing.
 
     Strategy:
-      1. For each clip, delay it to its subtitle start time (``adelay``)
-         and trim to its subtitle end time (``atrim``).
-      2. Create a silent reference track matching the video duration.
-      3. Mix all delayed clips into the silent track via ``amix`` so the
-         output length matches the original video.
+      1. Trim each clip to its subtitle duration (``atrim``), then delay
+         it to its start position (``adelay``).
+      2. Mix all delayed clips with ``amix`` — no separate silence track,
+         so volume is not attenuated by a constant silent input.
+      3. Pad the mixed output with ``apad`` to match the full video duration.
 
     Each clip file is an FFmpeg input (-i).  The filter graph references them
-    by their input index (0, 1, 2, …).  A generated ``anullsrc`` supplies the
-    silence for the full duration.
+    by their input index (0, 1, 2, …).
     """
     if not clip_paths:
         raise RuntimeError("No speech clips to assemble")
@@ -142,42 +155,48 @@ def _assemble_timed_audio(
 
     abs_clips = [os.path.abspath(p) for p in clip_paths]
 
+    # ---- Pre-pad each clip to exactly match its subtitle duration ----
+    # TTS clips are often shorter than the subtitle slot (EdgeTTS speaks
+    # faster than natural speech).  Without padding, the gap between clips
+    # becomes audible silence even though the subtitle timing expects audio.
+    padded_clips = []
+    for clip, sub in zip(abs_clips, subtitles):
+        target_dur = sub["end"] - sub["start"]
+        actual_dur = _get_audio_duration(clip)
+        if actual_dur < target_dur:
+            padded = clip.replace(".wav", "_padded.wav")
+            # Use FFmpeg to pad the clip to exactly target_dur
+            _pad_wav_to_duration(clip, padded, target_dur)
+            padded_clips.append(padded)
+        else:
+            padded_clips.append(clip)
+
     # Helper: build a single amix filter command for a set of clips.
-    # clip_inputs: list of (absolute_path, subtitle_dict)
     def _build_mix_cmd(
         clip_inputs: List[tuple],
         out_path: str,
     ) -> List[str]:
-        """Return ``ffmpeg`` argument list for one amix layer."""
-        # anullsrc generates silence at our target sample rate
-        # atrim keeps it exactly as long as the video
-        filter_parts = [
-            f"anullsrc=r=22050:cl=mono,atrim=0:{total_duration}[s]",
-        ]
-        mix_refs = ["[s]"]
+        """Return ``ffmpeg`` argument list for one amix-based overlay."""
+        filter_parts = []
+        mix_refs = []
 
         for idx, (cp, sub) in enumerate(clip_inputs):
             start_ms = int(sub["start"] * 1000)
-            dur = sub["end"] - sub["start"]
             label = f"c{idx}"
-            # Trim to subtitle duration first, THEN delay to start position.
-            # Order matters: atrim before adelay ensures the audio content
-            # isn't cut away by the trim (adelay prepends silence which atrim
-            # would otherwise slice off).
+            # Each clip was pre-padded to exactly match the subtitle duration.
+            # Just delay to position — no individual trim/pad needed.
             filter_parts.append(
-                f"[{idx}:a]atrim=0:{dur},adelay={start_ms}|{start_ms}[{label}]"
+                f"[{idx}:a]adelay={start_ms}|{start_ms}[{label}]"
             )
             mix_refs.append(f"[{label}]")
 
         n_inputs = len(clip_inputs)
         filter_parts.append(
-            f"{''.join(mix_refs)}amix=inputs={n_inputs + 1}:"
-            f"duration=first:dropout_transition=0[out]"
+            f"{''.join(mix_refs)}amix=inputs={n_inputs}:"
+            f"dropout_transition=0,atrim=0:{total_duration}[out]"
         )
 
-        cmd = [
-            "ffmpeg", "-y",
-        ]
+        cmd = ["ffmpeg", "-y"]
         for cp, _ in clip_inputs:
             cmd.extend(["-i", cp])
         cmd.extend([
@@ -192,7 +211,7 @@ def _assemble_timed_audio(
 
     if len(clip_paths) <= MAX_AMIX_INPUTS:
         # Single batch — all clips in one amix graph
-        cmd = _build_mix_cmd(list(zip(abs_clips, subtitles)), output_path)
+        cmd = _build_mix_cmd(list(zip(padded_clips, subtitles)), output_path)
         logger.debug("Timed assembly command: %s", " ".join(cmd))
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
@@ -206,12 +225,12 @@ def _assemble_timed_audio(
         # then mix all group outputs together.
         logger.info(
             "Large clip set (%d), splitting into batches of %d",
-            len(abs_clips), MAX_AMIX_INPUTS,
+            len(clip_paths), MAX_AMIX_INPUTS,
         )
         batch_outputs = []
-        for batch_start in range(0, len(abs_clips), MAX_AMIX_INPUTS):
-            batch_end = min(batch_start + MAX_AMIX_INPUTS, len(abs_clips))
-            batch_clips = abs_clips[batch_start:batch_end]
+        for batch_start in range(0, len(clip_paths), MAX_AMIX_INPUTS):
+            batch_end = min(batch_start + MAX_AMIX_INPUTS, len(clip_paths))
+            batch_clips = padded_clips[batch_start:batch_end]
             batch_subs = subtitles[batch_start:batch_end]
             batch_out = output_path.replace(
                 ".wav", f"_batch{batch_start // MAX_AMIX_INPUTS}.wav"
@@ -245,6 +264,14 @@ def _assemble_timed_audio(
             for bp in batch_outputs:
                 if os.path.exists(bp):
                     os.remove(bp)
+
+    # Clean up padded clip files
+    for p in padded_clips:
+        if p.endswith("_padded.wav") and os.path.exists(p):
+            try:
+                os.remove(p)
+            except Exception:
+                pass
 
     if not os.path.exists(output_path):
         raise RuntimeError(
@@ -431,6 +458,26 @@ def generate_dub_background(
         dubbing_tasks[task_id]["status"] = "completed"
         logger.info("Dubbing task %s completed for language '%s'", task_id, target_language)
 
+        # Persist the completed dub to the project
+        if project_id > 0 and output_movie:
+            try:
+                from app.db.database import SessionLocal as _Session
+                _db2 = _Session()
+                try:
+                    _project = project_repository.get_by_id(_db2, project_id)
+                    if _project:
+                        dubs = _project.dubbed_movies or {}
+                        dubs[target_language] = {
+                            "movie_url": _abs_to_web_url(output_movie),
+                            "audio_url": _abs_to_web_url(dubbed_audio_path),
+                            "task_id": task_id,
+                        }
+                        project_repository.update(_db2, project_id, dubbed_movies=dubs)
+                finally:
+                    _db2.close()
+            except Exception as exc2:
+                logger.warning("Failed to persist dub to project %d: %s", project_id, exc2)
+
     except Exception as exc:
         logger.error("Dubbing task %s failed: %s", task_id, exc, exc_info=True)
         dubbing_tasks[task_id]["status"] = "failed"
@@ -611,6 +658,26 @@ def generate_smart_dub_background(
         # ---- Done ----
         dubbing_tasks[task_id]["status"] = "completed"
         logger.info("Smart dubbing task %s completed for '%s'", task_id, target_language)
+
+        # Persist the completed dub to the project
+        if project_id > 0:
+            try:
+                from app.db.database import SessionLocal as _S
+                _db2 = _S()
+                try:
+                    _p = project_repository.get_by_id(_db2, project_id)
+                    if _p:
+                        dubs = _p.dubbed_movies or {}
+                        dubs[target_language] = {
+                            "movie_url": _abs_to_web_url(output_movie),
+                            "audio_url": _abs_to_web_url(dubbed_audio_path),
+                            "task_id": task_id,
+                        }
+                        project_repository.update(_db2, project_id, dubbed_movies=dubs)
+                finally:
+                    _db2.close()
+            except Exception as exc2:
+                logger.warning("Failed to persist dub to project %d: %s", project_id, exc2)
 
     except Exception as exc:
         logger.error("Smart dubbing task %s failed: %s", task_id, exc, exc_info=True)

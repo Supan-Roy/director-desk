@@ -36,8 +36,11 @@ SPEAKER_GAP_THRESHOLD = 0.5
 OVERLAP_THRESHOLD = 0.1
 
 # Pitch ranges (Hz) for gender classification
-MALE_PITCH_MAX = 165
-FEMALE_PITCH_MIN = 180
+# The gap between MALE_MAX and FEMALE_MIN is the "androgynous / uncertain"
+# zone.  Keep it narrow so female voices in the 170-180 Hz range are still
+# classified correctly.
+MALE_PITCH_MAX = 160
+FEMALE_PITCH_MIN = 175
 
 # Age heuristic based on pitch range spread
 CHILD_PITCH_MIN = 230
@@ -69,25 +72,33 @@ def _read_wav_pcm(wav_path: str, max_samples: int = 96000) -> List[float]:
         with wave.open(wav_path, "rb") as wf:
             n_channels = wf.getnchannels()
             sampwidth = wf.getsampwidth()
-            framerate = wf.getframerate()
             n_frames = min(wf.getnframes(), max_samples)
             raw = wf.readframes(n_frames)
     except Exception as exc:
         logger.warning("Failed to read WAV %s: %s", wav_path, exc)
         return []
 
-    if sampwidth == 1:
-        fmt = f"{len(raw)}B"
-        samples = [((val / 255.0) - 128.0) / 128.0 for val in struct.unpack(fmt, raw)]
-    elif sampwidth == 2:
-        fmt = f"{len(raw) // 2}h"
-        samples = [val / 32768.0 for val in struct.unpack(fmt, raw)]
-    else:
-        logger.warning("Unsupported sample width %d", sampwidth)
+    # Safety: if the WAV is empty or corrupt, bail early
+    if not raw or len(raw) < sampwidth:
+        return []
+
+    try:
+        if sampwidth == 1:
+            fmt = f"{len(raw)}B"
+            samples = [((val / 255.0) - 128.0) / 128.0 for val in struct.unpack(fmt, raw)]
+        elif sampwidth == 2:
+            expected_bytes = (len(raw) // 2) * 2
+            fmt = f"{expected_bytes // 2}h"
+            samples = [val / 32768.0 for val in struct.unpack(fmt, raw[:expected_bytes])]
+        else:
+            logger.warning("Unsupported sample width %d", sampwidth)
+            return []
+    except Exception as exc:
+        logger.warning("Failed to unpack WAV samples from %s: %s", wav_path, exc)
         return []
 
     # Downmix to mono if stereo
-    if n_channels == 2:
+    if n_channels == 2 and len(samples) >= 2:
         samples = [(samples[i] + samples[i + 1]) / 2 for i in range(0, len(samples) - 1, 2)]
 
     return samples
@@ -134,13 +145,15 @@ def _estimate_pitch(samples: List[float], sample_rate: int = 22050) -> Optional[
                 best_corr = corr_norm
                 best_lag = lag
 
-    if best_corr < 0.12:
+    if best_corr < 0.1:
         return None
 
     # ---- Octave-error correction ----
-    # Autocorrelation often peaks at multiples of the true period (sub-harmonics).
-    # If the best lag is roughly double another strong peak, pick the shorter lag
-    # (higher frequency).  This prevents female voices from being classified as male.
+    # Autocorrelation on pure tones often peaks at sub-harmonics (2×, 3× the
+    # true period).  A high correlation at half (or one-third) the best-lag
+    # means the true fundamental is at that shorter lag = higher frequency.
+    # This is essential for correctly detecting female voices (~180-300 Hz)
+    # which otherwise get misclassified as male (~90-150 Hz sub-harmonic).
     for candidate_lag in (best_lag // 2, max(best_lag // 3, min_lag)):
         if candidate_lag < min_lag:
             continue
@@ -152,9 +165,8 @@ def _estimate_pitch(samples: List[float], sample_rate: int = 22050) -> Optional[
             energy += samples[i] * samples[i] + samples[i + candidate_lag] * samples[i + candidate_lag]
         if energy > 0:
             corr_norm = corr / math.sqrt(energy) * 2
-            # If the sub-harmonic candidate has a strong correlation
-            # (within 80% of the best), prefer it (higher pitch)
-            if corr_norm > best_corr * 0.8:
+            # If the sub-harmonic has >90% of the best correlation, prefer it
+            if corr_norm > best_corr * 0.9:
                 best_corr = corr_norm
                 best_lag = candidate_lag
 
@@ -163,7 +175,8 @@ def _estimate_pitch(samples: List[float], sample_rate: int = 22050) -> Optional[
         prev_corr = 0.0
         next_corr = 0.0
         n = n_total - best_lag
-        for i in range(n):
+        # n-1 because prev/next access samples[i + best_lag ± 1]
+        for i in range(n - 1):
             prev_corr += samples[i] * samples[i + best_lag - 1]
             next_corr += samples[i] * samples[i + best_lag + 1]
 
@@ -224,6 +237,27 @@ def _extract_audio_segment(source_path: str, start: float, end: float, output_pa
 # Acoustic feature extraction
 # ---------------------------------------------------------------------------
 
+def _trim_silence(samples: List[float], threshold: float = 0.02) -> List[float]:
+    """Trim leading and trailing silence from a PCM sample array."""
+    if not samples:
+        return samples
+    # Find first sample above threshold
+    start = 0
+    for i, s in enumerate(samples):
+        if abs(s) > threshold:
+            start = i
+            break
+    else:
+        return []  # All silence
+    # Find last sample above threshold
+    end = len(samples)
+    for i in range(len(samples) - 1, -1, -1):
+        if abs(samples[i]) > threshold:
+            end = i + 1
+            break
+    return samples[start:end]
+
+
 def _extract_acoustic_features(samples: List[float]) -> Dict[str, Any]:
     """
     Compute acoustic features from PCM samples.
@@ -239,11 +273,27 @@ def _extract_acoustic_features(samples: List[float]) -> Dict[str, Any]:
     if not samples:
         return features
 
-    pitch = _estimate_pitch(samples)
-    features["pitch_hz"] = pitch
-    features["has_valid_pitch"] = pitch is not None
-    features["rms"] = _compute_rms(samples)
-    features["zcr"] = _compute_zcr(samples)
+    try:
+        # Trim silence — improves pitch accuracy by removing edge noise
+        trimmed = _trim_silence(samples)
+
+        # Only use trimmed if it still has enough samples
+        if len(trimmed) >= MIN_PITCHABLE_SAMPLES:
+            pitch = _estimate_pitch(trimmed)
+        else:
+            pitch = _estimate_pitch(samples)
+
+        # If trimmed failed but original might work
+        if pitch is None:
+            pitch = _estimate_pitch(samples)
+
+        features["pitch_hz"] = pitch
+        features["has_valid_pitch"] = pitch is not None
+        features["rms"] = _compute_rms(samples)
+        features["zcr"] = _compute_zcr(samples)
+    except Exception as exc:
+        import traceback
+        logger.warning("_extract_acoustic_features crashed: %s\n%s", exc, traceback.format_exc())
 
     return features
 
@@ -269,11 +319,18 @@ def _extract_segment_from_subtitle(source_path: str, subtitle: Dict) -> Dict[str
             return {"pitch_hz": None, "rms": 0.0, "zcr": 0.0, "has_valid_pitch": False}
 
         samples = _read_wav_pcm(seg_path)
+        if not samples:
+            return {"pitch_hz": None, "rms": 0.0, "zcr": 0.0, "has_valid_pitch": False}
+
         features = _extract_acoustic_features(samples)
         _segment_cache[cache_key] = features
         return features
     except Exception as exc:
-        logger.warning("Feature extraction failed for [%.2f-%.2f]: %s", start, end, exc)
+        import traceback
+        logger.warning(
+            "Feature extraction failed for [%.2f-%.2f]: %s\n%s",
+            start, end, exc, traceback.format_exc(),
+        )
         return {"pitch_hz": None, "rms": 0.0, "zcr": 0.0, "has_valid_pitch": False}
     finally:
         if os.path.exists(seg_path):

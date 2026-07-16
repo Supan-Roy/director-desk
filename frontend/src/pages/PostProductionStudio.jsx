@@ -159,6 +159,16 @@ export default function PostProductionStudio() {
           setMovieUrl(fullUrl)
           originalMovieUrlRef.current = fullUrl
         }
+        // Load persisted dubs
+        const persistedDubs = data.dubbed_movies || {}
+        const comp = {}
+        const urls = {}
+        for (const [lang, info] of Object.entries(persistedDubs)) {
+          comp[lang] = true
+          if (info.movie_url) urls[lang] = `${apiBaseUrl}${info.movie_url}`
+        }
+        setCompletedDubs(comp)
+        setDubMovieUrls(urls)
       }
     } catch (e) {
       console.error("Failed to fetch subtitles", e)
@@ -671,24 +681,32 @@ export default function PostProductionStudio() {
       : rawMovieUrlRef.current || movieUrl
     if (!movieSrc) return
 
-    const subs = hasValidProject ? subtitles : editedSubtitles
-    if (!subs?.length) return
-
     setAnalyzingSpeakers(true)
     setDetectedSpeakers([])
     setCastingPlan(null)
     setCastingPlanId(null)
 
     try {
+      const body = { movie_url: movieSrc }
+      // For standalone mode, the backend auto-generates subtitles if missing
+      if (hasValidProject && subtitles?.length) {
+        body.subtitles = subtitles
+      }
+
       const res = await fetch(`${apiBaseUrl}/api/post-production/dubbing/analyze-speakers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ movie_url: movieSrc, subtitles: subs }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error("Speaker analysis failed")
       const data = await res.json()
       setDetectedSpeakers(data.speakers || [])
+      // If backend auto-generated subtitles, save them
+      if (data.subtitles?.length) {
+        setSubtitles(data.subtitles)
+        setEditedSubtitles(data.subtitles)
+      }
     } catch (err) {
       console.error("Speaker analysis error:", err)
     } finally {
@@ -1574,7 +1592,7 @@ export default function PostProductionStudio() {
                         ) : (
                           <span className="flex items-center justify-center gap-2">
                             <FiZap size={16} />
-                            Auto Dub — {dubLang}
+                            {completedDubs[dubLang] ? 'Regenerate' : 'Auto Dub'} — {dubLang}
                           </span>
                         )}
                       </button>
@@ -1627,7 +1645,7 @@ export default function PostProductionStudio() {
                           ) : (
                             <button
                               onClick={analyzeSpeakers}
-                              disabled={analyzingSpeakers || isDubbing || !movieUrl || (!hasValidProject && editedSubtitles.length === 0) || (hasValidProject && (!project?.mastered_movie_url || !subtitles?.length))}
+                              disabled={analyzingSpeakers || isDubbing || !movieUrl || (hasValidProject && !project?.mastered_movie_url)}
                               className={`w-full py-2 rounded-xl text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer border disabled:opacity-30 ${
                                 bgt('border-gray-300 bg-white text-gray-700 hover:bg-gray-50', 'border-white/[0.08] bg-transparent text-gray-300 hover:bg-white/5')
                               }`}
@@ -1806,11 +1824,45 @@ export default function PostProductionStudio() {
                             </h4>
                             <div className="flex flex-wrap gap-2">
                               {Object.entries(completedDubs).map(([lang, done]) => done && (
-                                <span key={lang} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider ${
-                                  bgt('bg-emerald-50 text-emerald-700', 'bg-emerald-500/10 text-emerald-400')
-                                }`}>
-                                  <FiCheck size={9} /> {lang}
-                                </span>
+                                <div key={lang} className="flex items-center gap-1">
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider ${
+                                    bgt('bg-emerald-50 text-emerald-700', 'bg-emerald-500/10 text-emerald-400')
+                                  }`}>
+                                    <FiCheck size={9} /> {lang}
+                                  </span>
+                                  {hasValidProject && (
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const res = await fetch(
+                                            `${apiBaseUrl}/api/post-production/dubbing/project/${numericId}?language=${lang}`,
+                                            { method: 'DELETE', credentials: 'include' }
+                                          )
+                                          if (res.ok) {
+                                            setCompletedDubs(prev => {
+                                              const next = { ...prev }
+                                              delete next[lang]
+                                              return next
+                                            })
+                                            setDubMovieUrls(prev => {
+                                              const next = { ...prev }
+                                              delete next[lang]
+                                              return next
+                                            })
+                                          }
+                                        } catch (e) {
+                                          console.error("Failed to delete dub", e)
+                                        }
+                                      }}
+                                      className={`p-1 rounded-md text-[9px] transition-colors cursor-pointer ${
+                                        bgt('text-gray-400 hover:text-red-500 hover:bg-red-50', 'text-gray-500 hover:text-red-400 hover:bg-red-500/10')
+                                      }`}
+                                      title={`Delete ${lang} dub`}
+                                    >
+                                      <FiTrash2 size={10} />
+                                    </button>
+                                  )}
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -1818,23 +1870,7 @@ export default function PostProductionStudio() {
                       </>
                     )}
 
-                    {/* Initial state — nothing generated yet and not currently processing */}
-                    {!isDubbing && dubStatus !== 'completed' && (
-                      <div className={`rounded-2xl border p-5 ${bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')}`}>
-                        <div className="grid grid-cols-2 gap-3">
-                          {dubLanguages.filter(l => l !== dubLang).slice(0, 4).map(lang => (
-                            <div key={lang} className={`p-3 rounded-xl border text-center ${
-                              bgt('border-gray-100 bg-gray-50', 'border-white/[0.03] bg-[#0a0c10]')
-                            }`}>
-                              <span className={`block text-[10px] font-bold ${bgt('text-gray-500', 'text-gray-500')}`}>{lang}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <p className={`text-[9.5px] text-center mt-4 ${bgt('text-gray-400', 'text-gray-500')}`}>
-                          Select a language above and generate your first dub
-                        </p>
-                      </div>
-                    )}
+                    {/* Initial state placeholder removed */}
                   </div>
                 )}
 

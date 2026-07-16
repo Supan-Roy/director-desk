@@ -104,6 +104,7 @@ def get_subtitles(project_id: int = Query(...), db: Session = Depends(get_db)):
         "subtitles": subtitles,
         "statistics": stats,
         "mastered_movie_url": project.mastered_movie_url,
+        "dubbed_movies": project.dubbed_movies or {},
     }
 
 
@@ -355,23 +356,77 @@ def download_translated_subtitles(task_id: str):
 
 class SpeakerAnalysisPayload(BaseModel):
     movie_url: str
-    subtitles: List[SubtitleItem]
+    subtitles: Optional[List[SubtitleItem]] = None
 
 
 @router.post("/post-production/dubbing/analyze-speakers")
 def analyze_speakers_route(payload: SpeakerAnalysisPayload):
     """
     Detect and profile speakers in a movie from its subtitle timeline.
+    If no subtitles are provided, auto-generates them via Whisper first.
     Returns speaker list with gender/age estimates and suggested voices.
     """
     movie_path = post_production_service.resolve_filepath(payload.movie_url)
     if not movie_path or not os.path.exists(movie_path):
         raise HTTPException(status_code=400, detail=f"Movie file not found: {payload.movie_url}")
 
-    subtitle_dicts = [s.model_dump() for s in payload.subtitles]
+    # Auto-generate subtitles if not provided
+    if not payload.subtitles:
+        logger.info("No subtitles provided to analyze-speakers; auto-transcribing...")
+        subtitle_dicts = post_production_service.transcribe_sync(payload.movie_url)
+        if not subtitle_dicts:
+            raise HTTPException(status_code=400, detail="Failed to generate subtitles from the movie audio.")
+    else:
+        subtitle_dicts = [s.model_dump() for s in payload.subtitles]
+
     speakers = speaker_service.analyze_speakers(movie_path, subtitle_dicts)
 
-    return {"speakers": speakers}
+    return {"speakers": speakers, "subtitles": subtitle_dicts}
+
+
+# ---------------------------------------------------------------------------
+# Dubbing — delete a dubbed version
+# ---------------------------------------------------------------------------
+
+@router.delete("/post-production/dubbing/project/{project_id}")
+def delete_project_dub(project_id: int, language: str = Query(...), db: Session = Depends(get_db)):
+    """Delete a previously generated dub for a project, cleaning up files."""
+    project = project_repository.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    dubs = project.dubbed_movies or {}
+    dub_info = dubs.get(language)
+    if not dub_info:
+        raise HTTPException(status_code=404, detail=f"No dub found for language '{language}'")
+
+    # Remove files
+    for key in ("movie_url", "audio_url"):
+        path = dub_info.get(key, "").lstrip("/")
+        if path and os.path.exists(path):
+            try:
+                os.remove(path)
+                logger.info("Deleted dub file: %s", path)
+            except Exception as exc:
+                logger.warning("Failed to delete dub file %s: %s", path, exc)
+
+    # Also remove the parent task directory if it only contains these files
+    task_id = dub_info.get("task_id")
+    if task_id:
+        task_dir = dubbing_service._task_dir(task_id)
+        if os.path.isdir(task_dir):
+            try:
+                import shutil
+                shutil.rmtree(task_dir, ignore_errors=True)
+                logger.info("Removed dub task directory: %s", task_dir)
+            except Exception as exc:
+                logger.warning("Failed to remove task dir %s: %s", task_dir, exc)
+
+    # Remove from db
+    del dubs[language]
+    project_repository.update(db, project_id, dubbed_movies=dubs)
+
+    return {"status": "success", "language": language}
 
 
 # ---------------------------------------------------------------------------
@@ -553,6 +608,18 @@ def generate_auto_dub(
             )
         if not subtitles_data:
             raise HTTPException(status_code=400, detail="Failed to generate subtitles from the movie audio.")
+
+        # Persist the auto-generated subtitles so they survive page reload
+        if payload.project_id and payload.project_id > 0:
+            try:
+                project_repository.update(
+                    db, payload.project_id,
+                    subtitles=subtitles_data,
+                    mastered_movie_url=movie_url,
+                )
+                logger.info("Persisted %d auto-generated subtitles to project %d", len(subtitles_data), payload.project_id)
+            except Exception as exc2:
+                logger.warning("Failed to persist auto-generated subtitles: %s", exc2)
 
     if not dubbing_service.supports_language(payload.target_language):
         raise HTTPException(
