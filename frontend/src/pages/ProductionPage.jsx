@@ -1228,17 +1228,6 @@ export default function ProductionPage() {
               </div>
             </div>
           </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => navigate(`/projects/${id}/release`)}
-              className="btn-accent flex items-center gap-1.5 text-[11px] rounded-lg px-3 py-2 shadow-none"
-              title="Go to Release Studio"
-            >
-              <FiAward size={13} />
-              <span>Release Studio</span>
-            </button>
-          </div>
         </header>
 
         {/* Studio Phase Navigation Tabs */}
