@@ -2,59 +2,83 @@
 
 ![Director Desk Banner](frontend/public/images/studio_banner.png)
 
-Director Desk is a production-grade **AI Showrunner, Creative Director, and Post-Production Platform** that automates the cinematic storytelling pipeline. It bridges the gap between raw AI media generation models and structured, controllable post-production editing. By managing screenplays, casting, location scouting, multi-track audio assembly, and final theatrical release packages, Director Desk orchestrates the entire creative lifecycle under a single cohesive dashboard.
+Director Desk is a production-grade **AI Showrunner, Creative Director, and Post-Production Platform** that automates the cinematic storytelling pipeline. By bridging raw AI media generation with structured, controllable post-production workflows, Director Desk orchestrates the entire creative lifecycle—from screenplays and multi-agent character casting to environment scoping, multi-track audio ducking, sub-second subtitle synchronization, and final theatrical release packages.
 
-Designed for filmmakers, creative directors, and hackathons, this platform delivers a **low-latency, zero-local-overhead architecture** by leveraging cloud model offloading combined with robust, local media compilation engines.
+Designed for filmmakers, creative directors, and hackathons, this platform delivers a **low-latency, zero-local-overhead architecture** by offloading heavy deep learning processes to cloud model APIs while orchestrating media assets via robust local compilation engines.
 
 ---
+
+## 🏗️ System Architecture & Data Flow
+
+The diagram below details how the Vite frontend interacts with the FastAPI backend, local SQLite database, Redis job queue, and external AI generation services.
 
 ![Director Desk - System Architecture & Workflow](frontend/public/images/Director%20Desk%20-%20System%20Architecture%20&%20Workflow.png)
 
 ---
 
-## 🌟 Core Innovation Pillars
+## 🌟 Core Technical & Feature Pillars
 
-### 1. Collaborative Multi-Agent AI Crew
-Direct a specialized, 5-member AI production crew within a unified chat playground:
-*   ✍️ **Screenplay Agent:** Generates, parses, and splits scripts into individual scenes.
-*   🎭 **Casting Agent:** Designs distinct visual characters (defining gender, age group, apparel, demeanor, and ethnicity traits).
-*   🌍 **Location Scout Agent:** Details settings, lighting profiles (volumetric flares, window keys), and architectural descriptions.
-*   🎙️ **Voice Director Agent:** Programs specific speech rates, languages, and speaker signatures.
-*   🎥 **Video Renderer Agent:** Translates script setups into prompt instructions for scene generators.
+### 1. Script Breakdown & Storyboard Parsing
+*   **Industry Screenplay Parser:** Formats raw text scripts into industry-standard formatted screenplays.
+*   **Storyboard Segmenter:** Splits screenplays into structural scene segments, parsing scene headers (e.g., `INT. SCIFI CHAMBER - NIGHT`), descriptive visual paragraphs, and dialogue text blocks.
+*   **Timeline Editor:** A non-destructive editor allowing users to modify actions, reorder shots, configure aspect ratios, or delete scenes, immediately updating database state.
 
-### 2. Multi-Track Post-Production Studio
-*   **Subtitle Studio:** High-precision subtitle generation from video tracks using `faster-whisper` with a timeline editor to adjust timestamps down to the millisecond.
-*   **Multilingual Dubbing Studio:** Zero-local-load translation using the cloud **Qwen Cloud API** to translate subtitles and scripts into Spanish, French, Japanese, Korean, Chinese, and Hindi.
-*   **Smart Speaker Casting:** Dialogue tag extraction that parses character lines and maps them to distinct synthetic voice profiles (`edge-tts`/`qwen-tts`) to generate multi-voice dubbed tracks.
-*   **Audio Description (AD) Engine:** Spoken narration of action scenes for visually impaired audiences, featuring **FFmpeg Audio Ducking** filters that lower background soundtracks dynamically when the AD narrator is speaking.
+### 2. Character Studio & Visual Casting Consistency
+*   **Structured Character Profiles:** Generates specific visual models including Gender, Age Group, Attire/Appearance, demographical details, and Personality Traits.
+*   **Visual Continuity Engine:** Employs consistent character references across multiple scenes. Prompts combine casting traits with location presets to ensure actors retain key physical attributes across different shots.
+*   **Custom Presets Lookbook:** Features a full-width vertical grid of curated style lookbooks (Cyberpunk, Noir, Sci-Fi Metropolis, Space Odyssey) with interactive hover-play video loops. Clicking a lookbook instantly configures the workspace's visual sliders.
 
-### 3. Theatrical & Marketing Release Studio
-*   **Poster Generator:** Synthesize film key-art in multiple aspect ratios: Theatrical Poster (16:9), YouTube Thumbnail (16:9), Vertical Poster (9:16), and Social Banner (21:9). Overlays cast billing and credits using interactive HTML5 Canvas editing.
-*   **Trailer Compiler:** Assembles generated video clips into high-impact 15s, 30s, or 60s promotional trailers, adding cinematic cuts, title cards, and backing soundtracks.
+### 3. Acoustic Voice Analyzer & Speaker Clustering
+*   **Acoustic Feature Extractor:** Analyzes source audio segments to extract Root Mean Square (RMS) energy, Zero Crossing Rate (ZCR), and pitch profiles.
+*   **Pitch Estimation Engine:** Employs an Autocorrelation/AMDF (Average Magnitude Difference Function) pitch tracking algorithm with octave-error correction to calculate the speaker's fundamental frequency ($F_0$).
+*   **Automated Speaker Clustering:** Clusters distinct speakers in video uploads based on acoustic feature similarity metrics.
+*   **Gender & Age Profiling:** Classifies speaker characteristics using frequency ranges ($F_0$ pitch) to map speakers to suitable voice profiles automatically.
+*   **Subtitle Speaker Assignment:** Automatically links speaker identifiers to corresponding subtitle intervals so the system knows exactly *who* speaks *when* without manual annotation.
+
+### 4. Smart Dubbing & Multilingual Translation
+*   **Cloud API Translation:** Offloads subtitle and script translations to the **Alibaba Cloud Qwen API** (`qwen-plus`). Translates dialogue into Spanish, French, Japanese, Korean, Chinese, and Hindi with zero local GPU/RAM overhead.
+*   **Synthetic Voice Cast Synthesis:** Maps speaker identifiers from the dialogue parser to character-specific voice profiles, generating synthetic vocals via `edge-tts` or `qwen-tts`.
+*   **Multi-Track Dialogue Compilation:** Generates silent padding waves to align dialogue segments with original timestamps, preparing individual tracks for master mixing.
+
+### 5. Audio Description (AD) & FFmpeg Ducking Engine
+*   **Silent Action Window Locator:** Scans subtitle files (`_find_ad_windows`) to identify periods of silence (minimum 2.5s) where narrative descriptions can fit. If subtitles are missing, it defaults to full-film narration windows.
+*   **Visual-to-Audio Description (AD):** Combines scene-specific visual details (camera angles, movements, character actions, lighting setups) into natural, spoken descriptors and translates them into narration.
+*   **Dynamic FFmpeg Audio Ducking:** Mixes original backing audio with the synthesized AD narration. It applies an advanced FFmpeg filtergraph to automatically duck/dim backing track volumes (e.g. by -15dB) during active AD speech intervals and restore volume levels during silences.
+
+### 6. Theatrical & Marketing Release Studio
+*   **Poster Design Canvas:** Generates high-fidelity key-art using Qwen image APIs across diverse aspect ratios (Theatrical 16:9, YouTube Thumbnail 16:9, Vertical Poster 9:16, Social Banner 21:9).
+*   **Interactive Billing Layer:** Uses an HTML5 Canvas API interface in the React frontend, allowing creators to dynamically write and overlay movie titles, credit billing, director credits, and laurel decorations. Exports to print-ready PNG/JPEG.
+*   **Trailer Generation Engine:** Stitches together scene clips, overlays cinematic title cards, fades audio tracks, and mixes a backing trailer soundtrack and voiceover.
 
 ---
 
-## ⚡ Technical Architecture (Alibaba Cloud Optimization)
+## 🔒 Technical Systems & Security Orchestration
 
-To achieve maximum performance and stability on low-resource environments (like 2GB RAM / 2vCPU VPS instances), the system implements the following patterns:
+### 🔑 Authentication & User Sessions
+*   **Encryption and Hashing:** Password security managed via bcrypt hashing.
+*   **One-Time Passcode (OTP):** Integrates SMTP services to dispatch verification OTPs for secure signups and recovery.
+*   **Google OAuth 2.0:** Integrates Google Social login.
+*   **JWT Sessions:** Secure, token-based session verification with configurable expiration windows.
 
-*   **Cloud API Offloading:** Instead of running heavy deep-learning translation and TTS models locally, translation and voice synthesis are offloaded to **Alibaba Cloud DashScope APIs** (using `qwen-plus`). This maintains local RAM usage at a minimal ~150MB and CPU at 0-2% during active processing.
-*   **Redis Background Job Workers:** Heavy rendering tasks (video stitching, audio ducking, trailer compilation) are sent to a background Redis queue.
-*   **SSE Live Updates:** Progress percentages (e.g. `progress=68`) and descriptive logs are pushed in real time to the React frontend client using Server-Sent Events (SSE).
-*   **Nginx File Streaming:** Up to 2GB file upload support configured via Nginx limits to accommodate high-quality raw video assets.
+### ⚙️ Asynchronous Job Queue & Streaming (SSE)
+*   **Redis Background Queue:** Heavy video compilation and rendering jobs are scheduled and executed out-of-band to prevent HTTP timeouts.
+*   **Server-Sent Events (SSE):** Provides real-time feedback to the frontend. Pushes active task progress (e.g., `progress=72`) and status messages (e.g. "Stitching Scene Videos...") over a persistent HTTP connection.
+
+### 📈 Showrunner Production Graph
+*   **State Machine Orchestrator:** Manages execution flow through standard production steps (Script breakdown -> Asset mapping -> Reference compilation -> Video rendering -> Master compiler) to ensure visual and auditory continuity.
 
 ---
 
 ## 🛠️ Technology Stack
 
-*   **Frontend:** React 18, Vite, Tailwind CSS, HTML5 Canvas API, marked.js
-*   **Backend:** FastAPI (Python), SQLite (database), SQLAlchemy (ORM), Redis (job queue)
-*   **Integrations:** Alibaba Cloud DashScope (Qwen-Plus, Wan2.6-T2I, Wan2.7-T2V, HappyHorse-I2V, Qwen-TTS), `faster-whisper`
-*   **Orchestration & Media:** FFmpeg-python, Docker & Docker Compose
+*   **Frontend:** React 18, Vite, Tailwind CSS, HTML5 Canvas API (for poster design overlays), marked.js
+*   **Backend:** FastAPI (Python), SQLite (Local Database), SQLAlchemy ORM, Redis (Job queue management)
+*   **AI Models & APIs:** Alibaba Cloud DashScope (Qwen-Plus, Wan2.6-T2I, Wan2.7-T2V, HappyHorse-I2V, Qwen-TTS), `faster-whisper` (Speech-to-Text)
+*   **Media Processing:** FFmpeg (Video rendering, audio mixing, and ducking filters)
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Local Run
 
 ### Prerequisites
 *   Node.js (v18+)
