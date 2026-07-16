@@ -87,6 +87,7 @@ class Project(Base):
     subtitles = Column(JSONType, nullable=True)        # list of subtitle dicts
     mastered_movie_url = Column(String, nullable=True) # rendered final movie path
     dubbed_movies = Column(JSONType, nullable=True)     # {lang: {movie_url, audio_url, task_id}}
+    ad_movies = Column(JSONType, nullable=True)          # {lang: {movie_url, audio_url, task_id}}
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 

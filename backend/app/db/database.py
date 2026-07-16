@@ -40,6 +40,12 @@ def run_migrations():
                 conn.execute(text("ALTER TABLE projects ADD COLUMN dubbed_movies TEXT"))
                 conn.commit()
                 logger.info("Migration: added 'dubbed_movies' column to projects table")
+
+        if "ad_movies" not in columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE projects ADD COLUMN ad_movies TEXT"))
+                conn.commit()
+                logger.info("Migration: added 'ad_movies' column to projects table")
     except Exception as exc:
         logger.warning("Migration check failed (table may not exist yet): %s", exc)
 

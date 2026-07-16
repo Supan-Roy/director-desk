@@ -142,6 +142,8 @@ export default function PostProductionStudio() {
   const [adTaskId, setAdTaskId] = useState(null)
   const [adMovieUrl, setAdMovieUrl] = useState("")
   const [adError, setAdError] = useState("")
+  const [adMovieUrls, setAdMovieUrls] = useState({}) // { language: full_movie_url }
+  const [completedADs, setCompletedADs] = useState({})
   const adPollRef = useRef(null)
 
   const videoRef = useRef(null)
@@ -181,6 +183,17 @@ export default function PostProductionStudio() {
         }
         setCompletedDubs(comp)
         setDubMovieUrls(urls)
+
+        // Load persisted AD movies
+        const persistedADs = data.ad_movies || {}
+        const adComp = {}
+        const adUrls = {}
+        for (const [lang, info] of Object.entries(persistedADs)) {
+          adComp[lang] = true
+          if (info.movie_url) adUrls[lang] = `${apiBaseUrl}${info.movie_url}`
+        }
+        setCompletedADs(adComp)
+        setAdMovieUrls(adUrls)
       }
     } catch (e) {
       console.error("Failed to fetch subtitles", e)
@@ -253,7 +266,11 @@ export default function PostProductionStudio() {
   useEffect(() => {
     if (!videoRef.current) return
     const vid = videoRef.current
-    const newSrc = audioTrack === "Original" ? movieUrl : (dubMovieUrls[audioTrack] || movieUrl)
+    // Check AD tracks first (prefixed with "AD: "), then dub tracks
+    const adKey = audioTrack.startsWith("AD: ") ? audioTrack.slice(4) : null
+    const newSrc = audioTrack === "Original" ? movieUrl
+      : (adKey && adMovieUrls[adKey]) ? adMovieUrls[adKey]
+      : dubMovieUrls[audioTrack] || movieUrl
     if (newSrc && (!vid.src || audioTrack !== prevTrackRef.current)) {
       const wasPlaying = !vid.paused
       vid.src = newSrc
@@ -263,7 +280,7 @@ export default function PostProductionStudio() {
       }
     }
     prevTrackRef.current = audioTrack
-  }, [audioTrack, movieUrl, dubMovieUrls])
+  }, [audioTrack, movieUrl, dubMovieUrls, adMovieUrls])
 
   const handlePlayPause = () => {
     if (!videoRef.current) return
@@ -817,7 +834,13 @@ export default function PostProductionStudio() {
         if (adPollRef.current) clearInterval(adPollRef.current)
         adPollRef.current = null
         setIsGeneratingAD(false)
-        setAdMovieUrl(data.movie_url ? `${apiBaseUrl}${data.movie_url}` : "")
+        const completedUrl = data.movie_url ? `${apiBaseUrl}${data.movie_url}` : ""
+        setAdMovieUrl(completedUrl)
+        // Store in adMovieUrls for the audio track selector, and mark as completed
+        if (completedUrl) {
+          setAdMovieUrls(prev => ({ ...prev, [adLang]: completedUrl }))
+        }
+        setCompletedADs(prev => ({ ...prev, [adLang]: true }))
       } else if (data.status === "failed") {
         if (adPollRef.current) clearInterval(adPollRef.current)
         adPollRef.current = null
@@ -830,7 +853,7 @@ export default function PostProductionStudio() {
       setAdError(err.message || "Failed to poll AD status.")
       setIsGeneratingAD(false)
     }
-  }, [])
+  }, [adLang])
 
   const handleGenerateAD = async () => {
     if (!hasValidProject || !numericId) return
@@ -1089,8 +1112,8 @@ export default function PostProductionStudio() {
 
                         {/* Right: Volume + Audio Track + Fullscreen */}
                         <div className="flex items-center gap-3">
-                          {/* Audio track selector */}
-                          {(Object.keys(dubMovieUrls).length > 0) && (
+                          {/* Audio track selector — show if any dub or AD tracks exist */}
+                          {(Object.keys(dubMovieUrls).length > 0 || Object.keys(adMovieUrls).length > 0) && (
                             <div className="relative">
                               <select
                                 value={audioTrack}
@@ -1100,7 +1123,10 @@ export default function PostProductionStudio() {
                               >
                                 <option value="Original" className="bg-gray-900 text-white">Original</option>
                                 {Object.keys(dubMovieUrls).map(lang => (
-                                  <option key={lang} value={lang} className="bg-gray-900 text-white">{lang}</option>
+                                  <option key={`dub-${lang}`} value={lang} className="bg-gray-900 text-white">{lang}</option>
+                                ))}
+                                {Object.keys(adMovieUrls).map(lang => (
+                                  <option key={`ad-${lang}`} value={`AD: ${lang}`} className="bg-gray-900 text-white">AD — {lang}</option>
                                 ))}
                               </select>
                               <FiChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" />
@@ -2036,13 +2062,16 @@ export default function PostProductionStudio() {
                                   <button
                                     key={lang}
                                     onClick={() => { setAdLang(lang); setAdLangOpen(false); }}
-                                    className={`w-full text-left px-4 py-2.5 text-[11px] font-bold transition-colors cursor-pointer ${
+                                    className={`w-full text-left px-4 py-2.5 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-between ${
                                       adLang === lang
                                         ? bgt('bg-gray-100 text-gray-900', 'bg-white/10 text-white')
                                         : bgt('text-gray-700 hover:bg-gray-50', 'text-gray-400 hover:bg-white/5')
                                     }`}
                                   >
-                                    {lang}
+                                    <span>{lang}</span>
+                                    {completedADs[lang] && (
+                                      <FiCheck size={12} className="text-emerald-500 shrink-0" />
+                                    )}
                                   </button>
                                 ))}
                               </div>
@@ -2073,7 +2102,7 @@ export default function PostProductionStudio() {
                                   <path d="M19 6a7.5 7.5 0 0 1 0 12" />
                                   <path d="M22 4a10.5 10.5 0 0 1 0 16" />
                                 </svg>
-                                Generate AD — {adLang}
+                                {completedADs[adLang] ? 'Regenerate' : 'Generate'} AD — {adLang}
                               </span>
                             )}
                           </button>
@@ -2109,7 +2138,7 @@ export default function PostProductionStudio() {
                               </div>
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => window.open(adMovieUrl, '_blank')}
+                                  onClick={() => setAudioTrack(`AD: ${adLang}`)}
                                   className={`flex-1 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${
                                     bgt('border-gray-300 bg-white text-gray-700 hover:bg-gray-50', 'border-white/[0.08] bg-transparent text-gray-300 hover:bg-white/5')
                                   }`}
@@ -2124,6 +2153,64 @@ export default function PostProductionStudio() {
                                 >
                                   <FiDownload size={10} className="inline mr-1" /> Download
                                 </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Completed ADs per language */}
+                          {Object.keys(completedADs).length > 0 && (
+                            <div className={`rounded-2xl border p-4 mt-6 ${
+                              bgt('bg-white border-gray-200', 'bg-[#0a0c10] border-white/[0.04]')
+                            }`}>
+                              <h4 className={`text-[9px] font-bold uppercase tracking-wider mb-3 ${bgt('text-gray-500', 'text-gray-500')}`}>
+                                Completed Audio Descriptions
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(completedADs).map(([lang, done]) => done && (
+                                  <div key={lang} className="flex items-center gap-1">
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider ${
+                                      bgt('bg-emerald-50 text-emerald-700', 'bg-emerald-500/10 text-emerald-400')
+                                    }`}>
+                                      <FiCheck size={9} /> {lang}
+                                    </span>
+                                    {hasValidProject && (
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            const res = await fetch(
+                                              `${apiBaseUrl}/api/post-production/ad/project/${numericId}?language=${lang}`,
+                                              { method: 'DELETE', credentials: 'include' }
+                                            )
+                                            if (res.ok) {
+                                              setCompletedADs(prev => {
+                                                const next = { ...prev }
+                                                delete next[lang]
+                                                return next
+                                              })
+                                              setAdMovieUrls(prev => {
+                                                const next = { ...prev }
+                                                delete next[lang]
+                                                return next
+                                              })
+                                              // If the deleted AD was currently selected, reset to Original
+                                              if (adMovieUrl && audioTrack === `AD: ${lang}`) {
+                                                setAudioTrack("Original")
+                                              }
+                                            }
+                                          } catch (e) {
+                                            console.error("Failed to delete AD", e)
+                                          }
+                                        }}
+                                        className={`p-1 rounded-md text-[9px] transition-colors cursor-pointer ${
+                                          bgt('text-gray-400 hover:text-red-500 hover:bg-red-50', 'text-gray-500 hover:text-red-400 hover:bg-red-500/10')
+                                        }`}
+                                        title={`Delete ${lang} Audio Description`}
+                                      >
+                                        <FiTrash2 size={10} />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           )}

@@ -106,6 +106,7 @@ def get_subtitles(project_id: int = Query(...), db: Session = Depends(get_db)):
         "statistics": stats,
         "mastered_movie_url": project.mastered_movie_url,
         "dubbed_movies": project.dubbed_movies or {},
+        "ad_movies": project.ad_movies or {},
     }
 
 
@@ -311,6 +312,46 @@ def download_dubbed_movie(task_id: str):
 
     filename = os.path.basename(movie_path)
     return FileResponse(path=movie_path, filename=filename, media_type="video/mp4")
+
+
+@router.delete("/post-production/ad/project/{project_id}")
+def delete_project_ad(project_id: int, language: str = Query(...), db: Session = Depends(get_db)):
+    """Delete a previously generated AD track for a project, cleaning up files."""
+    project = project_repository.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    ads = project.ad_movies or {}
+    ad_info = ads.get(language)
+    if not ad_info:
+        raise HTTPException(status_code=404, detail=f"No AD found for language '{language}'")
+
+    # Remove files
+    for key in ("movie_url", "audio_url"):
+        path = ad_info.get(key, "").lstrip("/")
+        if path and os.path.exists(path):
+            try:
+                os.remove(path)
+                logger.info("Deleted AD file: %s", path)
+            except Exception as exc:
+                logger.warning("Failed to delete AD file %s: %s", path, exc)
+
+    # Remove the parent task directory
+    task_id = ad_info.get("task_id")
+    if task_id:
+        task_dir = os.path.join("static/ad", task_id)
+        if os.path.isdir(task_dir):
+            try:
+                import shutil
+                shutil.rmtree(task_dir, ignore_errors=True)
+                logger.info("Removed AD task directory: %s", task_dir)
+            except Exception as exc:
+                logger.warning("Failed to remove task dir %s: %s", task_dir, exc)
+
+    del ads[language]
+    project_repository.update(db, project_id, ad_movies=ads)
+
+    return {"status": "success", "language": language}
 
 
 @router.get("/post-production/dubbing/download/audio/{task_id}")

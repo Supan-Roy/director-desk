@@ -111,9 +111,22 @@ def _find_ad_windows(subtitles: List[Dict], total_duration: float) -> List[Dict]
     """
     Find silent gaps between subtitle blocks that are long enough for AD.
 
+    When subtitles are sparse or empty, creates evenly-spaced windows across
+    the full video duration so every scene gets described.
+
     Returns list of ``{"start": float, "end": float, "duration": float}``.
     """
-    windows = []
+    windows: List[Dict] = []
+
+    if not subtitles:
+        # No dialogue at all — describe the entire film in chunks
+        chunk_dur = max(min(total_duration / 5, 25), 10)
+        pos = 0.0
+        while pos < total_duration - MIN_AD_GAP:
+            end = min(pos + chunk_dur, total_duration)
+            windows.append({"start": pos, "end": end, "duration": end - pos})
+            pos = end
+        return windows
 
     # Gap before first subtitle
     if subtitles and subtitles[0].get("start", 0) >= MIN_AD_GAP:
@@ -134,7 +147,7 @@ def _find_ad_windows(subtitles: List[Dict], total_duration: float) -> List[Dict]
             })
 
     # Gap after last subtitle
-    if subtitles and total_duration > 0:
+    if total_duration > 0:
         last_end = subtitles[-1]["end"]
         remaining = total_duration - last_end
         if remaining >= MIN_AD_GAP:
@@ -144,68 +157,165 @@ def _find_ad_windows(subtitles: List[Dict], total_duration: float) -> List[Dict]
                 "duration": remaining,
             })
 
+    # If even the above found nothing meaningful, divide the full film
+    if not windows and total_duration > 5:
+        chunk_dur = max(min(total_duration / 5, 25), 10)
+        pos = 0.0
+        while pos < total_duration - MIN_AD_GAP:
+            end = min(pos + chunk_dur, total_duration)
+            windows.append({"start": pos, "end": end, "duration": end - pos})
+            pos = end
+
     return windows
 
 
 # ---------------------------------------------------------------------------
-# AD text generation via Qwen
+# Scene-to-time mapping (estimate when scenes play in the film)
+# ---------------------------------------------------------------------------
+
+def _estimate_scene_timing(
+    scenes: List[Dict],
+    total_duration: float,
+) -> List[Dict]:
+    """
+    Estimate start/end times for each scene by dividing total duration evenly.
+    Returns list of ``{"scene": scene_dict, "start": float, "end": float}``.
+    """
+    if not scenes or total_duration <= 0:
+        return []
+
+    n = len(scenes)
+    scene_dur = total_duration / n
+    result = []
+    for i, s in enumerate(scenes):
+        result.append({
+            "scene": s,
+            "start": i * scene_dur,
+            "end": (i + 1) * scene_dur if i < n - 1 else total_duration,
+        })
+    return result
+
+
+def _get_window_scenes(
+    window_start: float,
+    window_end: float,
+    scene_timing: List[Dict],
+) -> List[Dict]:
+    """Return the scene(s) that overlap with this time window."""
+    overlapping = []
+    for st in scene_timing:
+        if st["start"] < window_end and st["end"] > window_start:
+            overlapping.append(st)
+    return overlapping
+
+
+def _scene_to_description(s: Dict) -> str:
+    """Format a single scene into a compact description string."""
+    parts = []
+
+    def _str(val):
+        if isinstance(val, list):
+            return ", ".join(str(x) for x in val)
+        return str(val or "")
+
+    summary = _str(s.get("summary", "")).strip()
+    env = _str(s.get("environment", "")).strip()
+    chars = _str(s.get("character_descriptions", "")).strip()
+    mood = _str(s.get("mood", "")).strip()
+    camera = (_str(s.get("camera_movement", "")) + " " + _str(s.get("shot_type", ""))).strip()
+    lighting = _str(s.get("lighting_design", "")).strip()
+    time_of_day = _str(s.get("time_of_day", "")).strip()
+    weather = _str(s.get("weather", "")).strip()
+    effects = _str(s.get("special_effects", [])).strip()
+    props = s.get("props", [])
+    if isinstance(props, list):
+        props = [str(x) for x in props]
+    wardrobe = _str(s.get("wardrobe", "")).strip()
+
+    if summary:
+        parts.append(summary)
+    if env:
+        parts.append(f"Setting: {env}")
+    if chars:
+        parts.append(f"Characters: {chars}")
+    if mood:
+        parts.append(f"Mood: {mood}")
+    if camera:
+        parts.append(f"Camera: {camera}")
+    if lighting:
+        parts.append(f"Lighting: {lighting}")
+    if time_of_day:
+        parts.append(f"Time: {time_of_day}")
+    if weather:
+        parts.append(f"Weather: {weather}")
+    if effects:
+        parts.append(f"Effects: {effects}")
+    if props:
+        parts.append(f"Props: {', '.join(props[:5])}")
+    if wardrobe:
+        parts.append(f"Wardrobe: {wardrobe}")
+
+    return " | ".join(parts) if parts else "No visual data available."
+
+
+# ---------------------------------------------------------------------------
+# AD text generation via Qwen (with window-to-scene mapping)
 # ---------------------------------------------------------------------------
 
 def _generate_ad_texts(
     scenes: List[Dict],
     script: str,
     windows: List[Dict],
+    total_duration: float,
 ) -> List[str]:
     """
     Generate audio description texts for each available time window.
 
-    Uses Qwen LLM to convert visual scene data into concise, natural
-    narration that fits within each window's duration.
+    Maps each window to the specific scene(s) playing during that time
+    so the LLM can describe what's actually on screen per window.
+    Falls back to per-scene descriptions if Qwen is unavailable.
     """
     from app.services.qwen_service import qwen_service
 
     if not windows:
         return []
 
-    # Build a compact scene summary for the prompt
-    scene_summaries = []
-    for s in scenes:
-        scene_summaries.append(
-            f"Scene {s.get('scene_number', '?')}: {s.get('summary', '')} | "
-            f"Environment: {s.get('environment', '')} | "
-            f"Characters: {s.get('character_descriptions', '')} | "
-            f"Mood: {s.get('mood', '')} | "
-            f"Camera: {s.get('camera_movement', '')} {s.get('shot_type', '')} | "
-            f"Lighting: {s.get('lighting_design', '')} | "
-            f"Time: {s.get('time_of_day', '')} | "
-            f"Weather: {s.get('weather', '')} | "
-            f"Effects: {s.get('special_effects', '')} | "
-            f"Props: {', '.join(s.get('props', []))} | "
-            f"Wardrobe: {s.get('wardrobe', '')}"
-        )
+    # Estimate which scenes play when
+    scene_timing = _estimate_scene_timing(scenes, total_duration)
 
-    windows_desc = []
+    # Build per-window info with scene context
+    window_details = []
     for i, w in enumerate(windows):
-        windows_desc.append(
-            f"Window {i+1}: {w['start']:.1f}s to {w['end']:.1f}s ({w['duration']:.1f}s available)"
+        overlapping = _get_window_scenes(w["start"], w["end"], scene_timing)
+        if overlapping:
+            scene_context = "; ".join(
+                f"Scene {ov['scene'].get('scene_number', '?')}: "
+                f"{_scene_to_description(ov['scene'])}"
+                for ov in overlapping
+            )
+        else:
+            scene_context = "General scene — no specific scene data available."
+        window_details.append(
+            f"Window {i+1} ({w['start']:.1f}s–{w['end']:.1f}s, "
+            f"{w['duration']:.1f}s available):\n"
+            f"What's happening visually:\n{scene_context}"
         )
 
     prompt = (
         "You are an audio description writer for visually impaired audiences.\n\n"
-        f"Full script:\n{script}\n\n"
-        f"Scene-by-scene visual data:\n" + "\n".join(scene_summaries) + "\n\n"
-        f"Available narration windows (seconds into the film):\n" + "\n".join(windows_desc) + "\n\n"
-        "Write concise, vivid audio descriptions for each window. Each description MUST fit "
-        "within its available duration (1 word ≈ 0.3s spoken). Describe only what is VISUALLY "
-        "happening — character expressions, actions, settings, on-screen text. Do NOT describe "
-        "sounds or dialogue (those are already audible).\n\n"
-        "Return ONLY a valid JSON array of strings, one per window in order. "
-        "If no description is needed for a window, use an empty string \"\"."
+        "Write ONE vivid, concise audio description sentence for each narration "
+        "window below. Each description must describe ONLY what is visible on "
+        "screen — actions, expressions, settings, on-screen text. Do NOT describe "
+        "dialogue or sounds (those are already audible to the viewer).\n\n"
+        f"Film script context:\n{script[:2000]}\n\n"
+        "Windows:\n" + "\n\n".join(window_details) + "\n\n"
+        "Return ONLY a JSON array of strings, one per window in order. "
+        "Keep each description to at most 1 sentence. "
+        "If a window has no useful visual info, use \"\"."
     )
 
     try:
         response = qwen_service.generate_text(prompt)
-        # Clean markdown wraps
         clean = response.strip()
         if clean.startswith("```"):
             clean = re.sub(r"^```(?:json)?\n?", "", clean)
@@ -214,30 +324,26 @@ def _generate_ad_texts(
 
         texts = json.loads(clean)
         if isinstance(texts, list):
-            # Pad or trim to match window count
             while len(texts) < len(windows):
                 texts.append("")
             return texts[:len(windows)]
     except Exception as exc:
-        logger.warning("AD text generation failed: %s", exc)
+        logger.warning("AD text generation via Qwen failed: %s. Using fallback.", exc)
 
-    # Fallback: generate basic descriptions from scene data
+    # Fallback: describe each window using its specific scene data
     fallback = []
     for w in windows:
-        desc = _fallback_ad_text(scenes, w)
-        fallback.append(desc)
+        overlapping = _get_window_scenes(w["start"], w["end"], scene_timing)
+        if overlapping:
+            parts = []
+            for ov in overlapping:
+                desc = _scene_to_description(ov["scene"])
+                if desc:
+                    parts.append(desc)
+            fallback.append(" | ".join(parts)[:300] if parts else "")
+        else:
+            fallback.append("")
     return fallback
-
-
-def _fallback_ad_text(scenes: List[Dict], window: Dict) -> str:
-    """Simple fallback AD text when Qwen is unavailable."""
-    # Find which scene overlaps this window
-    for s in scenes:
-        # Simple heuristic: just use the first scene's summary
-        summary = s.get("summary", "")
-        if summary:
-            return f"Now: {summary[:150]}"
-    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -306,10 +412,8 @@ def generate_ad_background(
         windows = _find_ad_windows(subtitles, total_duration)
 
         if not windows:
-            logger.warning("No gaps large enough for AD found in dialogue")
-            # If no gaps, still try to create a single opening description
-            if total_duration > 5:
-                windows = [{"start": 0, "end": min(5.0, total_duration), "duration": min(5.0, total_duration)}]
+            logger.warning("No AD windows could be created — film may be too short")
+            windows = [{"start": 0, "end": min(8.0, total_duration), "duration": min(8.0, total_duration)}]
 
         logger.info("Found %d AD windows: %s", len(windows), windows)
         ad_tasks[task_id]["step_progress"] = 100
@@ -318,7 +422,7 @@ def generate_ad_background(
         ad_tasks[task_id]["step"] = 2
         ad_tasks[task_id]["step_progress"] = 0
 
-        ad_texts = _generate_ad_texts(scenes, script, windows)
+        ad_texts = _generate_ad_texts(scenes, script, windows, total_duration)
         ad_segments = []
         for w, t in zip(windows, ad_texts):
             if t.strip():
@@ -383,10 +487,13 @@ def generate_ad_background(
         # ---- Step 5: Build full AD audio track ----
         ad_audio_path = os.path.join(task_dir, "ad_audio.wav")
         if padded_paths:
-            # Mix all AD clips together — they're already timed to specific windows
-            # Use the same amix approach as dubbing
-            mix_refs = []
-            filter_parts = []
+            # Mix all AD clips together — they're already timed to specific windows.
+            # Each clip is trimmed to its segment's duration, delayed to the correct
+            # start position, then all clips are mixed into one timeline.
+            # After mixing, apad extends the output to exactly total_duration so the
+            # final mix step never truncates the video.
+            mix_refs: List[str] = []
+            filter_parts: List[str] = []
             for idx, (seg, pp) in enumerate(zip(ad_segments, padded_paths)):
                 start_ms = int(seg["start"] * 1000)
                 dur = seg["end"] - seg["start"]
@@ -397,9 +504,10 @@ def generate_ad_background(
                 mix_refs.append(f"[{label}]")
 
             n = len(padded_paths)
+            # apad ensures the mixed audio fills the entire video duration
             filter_parts.append(
                 f"{''.join(mix_refs)}amix=inputs={n}:"
-                f"dropout_transition=0,atrim=0:{total_duration}[out]"
+                f"dropout_transition=0,apad=pad_dur={total_duration}[out]"
             )
 
             cmd = ["ffmpeg", "-y"]
@@ -413,13 +521,27 @@ def generate_ad_background(
             ])
             subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
         else:
-            # No AD segments — create silence
+            # No AD segments — create silence for the full duration
             subprocess.run([
                 "ffmpeg", "-y",
                 "-f", "lavfi", "-i", f"anullsrc=r=22050:cl=mono",
                 "-t", str(total_duration),
                 ad_audio_path,
             ], check=True, capture_output=True)
+
+        # Verify AD audio duration matches video duration
+        ad_audio_dur = _get_media_duration(ad_audio_path)
+        if ad_audio_dur < total_duration - 1:
+            logger.warning("AD audio (%.1fs) shorter than video (%.1fs) — padding", ad_audio_dur, total_duration)
+            padded_audio = ad_audio_path.replace(".wav", "_extended.wav")
+            subprocess.run([
+                "ffmpeg", "-y", "-i", ad_audio_path,
+                "-af", f"apad=pad_dur={total_duration}",
+                "-c:a", "pcm_s16le", "-ar", "22050", "-ac", "1",
+                "-t", str(total_duration),
+                padded_audio,
+            ], check=True, capture_output=True, timeout=30)
+            os.replace(padded_audio, ad_audio_path)
 
         ad_tasks[task_id]["step_progress"] = 100
         ad_tasks[task_id]["audio_url"] = _abs_to_web_url(ad_audio_path)
@@ -440,11 +562,13 @@ def generate_ad_background(
         safe_lang = re.sub(r"[^a-zA-Z0-9_-]", "_", dest_language.lower())
         output_movie = os.path.join(task_dir, f"{original_stem}_ad_{safe_lang}.mp4")
 
-        if padded_paths:
+        if padded_paths or os.path.getsize(ad_audio_path) > 1000:
             # Professional AD ducking:
             # - AD narration boosted +4 dB
             # - Original audio side-chain compressed by AD track (ducks -10 dB when AD speaks)
             # - Slow attack (5ms) and release (200ms) for natural transitions
+            # - NO -shortest: the AD audio has been padded to full duration above,
+            #   so the output will match the video length.
             mix_cmd = [
                 "ffmpeg", "-y",
                 "-i", local_path,
@@ -458,11 +582,10 @@ def generate_ad_background(
                 "-c:v", "copy",
                 "-c:a", "aac",
                 "-b:a", "192k",
-                "-shortest",
                 output_movie,
             ]
         else:
-            # No AD — just copy original
+            # No AD — just copy original video (no -shortest)
             mix_cmd = [
                 "ffmpeg", "-y",
                 "-i", local_path,
@@ -480,6 +603,27 @@ def generate_ad_background(
 
         ad_tasks[task_id]["movie_url"] = _abs_to_web_url(output_movie)
         ad_tasks[task_id]["step_progress"] = 100
+
+        # ---- Persist AD to project ----
+        if project_id > 0:
+            try:
+                from app.db.database import SessionLocal as _AdSession
+                _adb = _AdSession()
+                try:
+                    _proj = project_repository.get_by_id(_adb, project_id)
+                    if _proj:
+                        ad_movies = dict(_proj.ad_movies or {})
+                        lang_key = dest_language
+                        ad_movies[lang_key] = {
+                            "movie_url": ad_tasks[task_id]["movie_url"],
+                            "audio_url": ad_tasks[task_id]["audio_url"],
+                            "task_id": task_id,
+                        }
+                        project_repository.update(_adb, project_id, ad_movies=ad_movies)
+                finally:
+                    _adb.close()
+            except Exception as exc2:
+                logger.warning("Failed to persist AD to project %d: %s", project_id, exc2)
 
         # ---- Done ----
         ad_tasks[task_id]["status"] = "completed"
