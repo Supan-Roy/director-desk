@@ -790,7 +790,7 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
 
 
 # Production Studio endpoints
-@router.post("/api/generate/character", dependencies=[Depends(RateLimiter(limit=5, window=60))])
+@router.post("/api/generate/character", dependencies=[Depends(RateLimiter(limit=30, window=60))])
 async def generate_character(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue a character portrait generation job — produces a headshot from the character profile."""
     if not request.target_id:
@@ -810,7 +810,7 @@ async def generate_character(background_tasks: BackgroundTasks, request: Generat
     return job
 
 
-@router.post("/api/generate/environment", dependencies=[Depends(RateLimiter(limit=5, window=60))])
+@router.post("/api/generate/environment", dependencies=[Depends(RateLimiter(limit=30, window=60))])
 async def generate_environment(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue an environment reference image generation job."""
     if not request.target_id:
@@ -830,7 +830,7 @@ async def generate_environment(background_tasks: BackgroundTasks, request: Gener
     return job
 
 
-@router.post("/api/generate/voice", dependencies=[Depends(RateLimiter(limit=5, window=60))])
+@router.post("/api/generate/voice", dependencies=[Depends(RateLimiter(limit=30, window=60))])
 async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue a voice profile generation job — synthesizes a TTS voice signature from character description."""
     if not request.target_id:
@@ -851,7 +851,7 @@ async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJob
 
 
 
-@router.post("/api/generate/asset", dependencies=[Depends(RateLimiter(limit=5, window=60))])
+@router.post("/api/generate/asset", dependencies=[Depends(RateLimiter(limit=30, window=60))])
 async def generate_asset(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue a generic asset generation job (simulated — for testing)."""
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="asset_generation")
@@ -1205,7 +1205,7 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         db.close()
 
 
-@router.post("/api/generate/scene", dependencies=[Depends(RateLimiter(limit=3, window=60))])
+@router.post("/api/generate/scene", dependencies=[Depends(RateLimiter(limit=20, window=60))])
 async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue a scene video generation job — renders a per-scene AI video from the production package."""
     if not request.target_id:
@@ -1248,7 +1248,7 @@ async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJob
     return job
 
 
-@router.post("/api/generate/film", dependencies=[Depends(RateLimiter(limit=3, window=60))])
+@router.post("/api/generate/film", dependencies=[Depends(RateLimiter(limit=20, window=60))])
 async def generate_film(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue a full film generation job — generates scene videos for all scenes sequentially."""
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="film_generation")

@@ -176,7 +176,7 @@ def resolve_filepath(url_or_path: str) -> str:
     return clean_url
 
 
-@router.post("/editor/upload", dependencies=[Depends(RateLimiter(limit=5, window=60))])
+@router.post("/editor/upload", dependencies=[Depends(RateLimiter(limit=50, window=60))])
 async def upload_file(request: Request, filename: str = Query(...)):
     """Upload a media file to static/uploads — validates magic numbers and enforces 2 GB storage limit."""
     body = await request.body()

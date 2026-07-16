@@ -103,7 +103,7 @@ def generate_story(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/generate/stream", dependencies=[Depends(RateLimiter(limit=3, window=60))])
+@router.post("/generate/stream")
 async def generate_story_stream(request: GenerateRequest, current_user: Optional[User] = Depends(get_current_user)):
     """Stream story generation as Server-Sent Events — yields script chunks, storyboard, plan, and review events as they're produced."""
     is_safe, error_msg = check_prompt_safety(request.prompt)
@@ -156,7 +156,7 @@ async def generate_story_stream(request: GenerateRequest, current_user: Optional
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/generate/stream/resume/{project_id}", dependencies=[Depends(RateLimiter(limit=3, window=60))])
+@router.post("/generate/stream/resume/{project_id}")
 async def resume_story_stream(project_id: int):
     """Resume an interrupted story generation from a saved project — streams remaining agent events as SSE."""
     try:
