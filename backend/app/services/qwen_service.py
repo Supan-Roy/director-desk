@@ -19,12 +19,16 @@ Models used  :
 Documentation: https://www.alibabacloud.com/help/en/model-studio/
 """
 import os
+import time
+import logging
 from typing import Generator
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 # ── Alibaba Cloud DashScope client (OpenAI-compatible) ─────────────────────────
 # Base URL: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
@@ -36,43 +40,62 @@ client = OpenAI(
 
 class QwenService:
 
-    def generate_text(self, prompt: str) -> str:
+    # ── Retry helper for httpx/httpcore transient errors ──────────────────────
 
+    def _chat_completion_with_retry(self, max_retries: int = 3, **kwargs):
+        """Call client.chat.completions.create with retry on transient HTTP errors.
+
+        Retries on ``RuntimeError("Response content longer than Content-Length")``
+        (a known DashScope API flakiness where the server sometimes sends a
+        Content-Length that doesn't match the actual body).
+        """
         if not os.getenv("QWEN_API_KEY"):
             raise RuntimeError(
                 "QWEN_API_KEY is not set. "
                 "Copy backend/.env.example to backend/.env and add your API key."
             )
 
-        response = client.chat.completions.create(
-            model=os.getenv("QWEN_MODEL", "qwen-plus"),
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
+        last_exc = None
+        for attempt in range(max_retries):
+            try:
+                return client.chat.completions.create(**kwargs)
+            except RuntimeError as e:
+                last_exc = e
+                if "Response content longer than Content-Length" in str(e):
+                    logger.warning(
+                        "Qwen API Content-Length mismatch (attempt %d/%d): %s",
+                        attempt + 1, max_retries, e,
+                    )
+                    if attempt < max_retries - 1:
+                        time.sleep(1.5 ** attempt)
+                        continue
+                else:
+                    raise
+            except Exception as e:
+                last_exc = e
+                logger.warning(
+                    "Qwen API error (attempt %d/%d): %s",
+                    attempt + 1, max_retries, e,
+                )
+                if attempt < max_retries - 1:
+                    time.sleep(1.5 ** attempt)
+                    continue
+                raise
 
+        raise RuntimeError(f"Qwen API failed after {max_retries} retries: {last_exc}")
+
+    def generate_text(self, prompt: str) -> str:
+        response = self._chat_completion_with_retry(
+            model=os.getenv("QWEN_MODEL", "qwen-plus"),
+            messages=[{"role": "user", "content": prompt}]
+        )
         return response.choices[0].message.content
 
     def generate_text_stream(self, prompt: str) -> Generator[str, None, None]:
-
-        if not os.getenv("QWEN_API_KEY"):
-            raise RuntimeError(
-                "QWEN_API_KEY is not set. "
-                "Copy backend/.env.example to backend/.env and add your API key."
-            )
-
-        response = client.chat.completions.create(
+        response = self._chat_completion_with_retry(
             model=os.getenv("QWEN_MODEL", "qwen-plus"),
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            stream=True
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
         )
 
         for chunk in response:
@@ -90,11 +113,9 @@ class QwenService:
         model = os.getenv("QWEN_VISION_MODEL", "qwen-vl-plus")
         image_url = f"data:{mime_type};base64,{base64_image}"
 
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"Calling Qwen Vision ({model}) for image understanding...")
 
-        response = client.chat.completions.create(
+        response = self._chat_completion_with_retry(
             model=model,
             messages=[
                 {
@@ -124,10 +145,6 @@ class QwenService:
         import urllib.error
         import json
         import time
-        import os
-        import logging
-
-        logger = logging.getLogger(__name__)
 
         api_key = os.getenv("QWEN_API_KEY")
         if not api_key:
@@ -295,10 +312,6 @@ class QwenService:
         import urllib.error
         import json
         import time
-        import os
-        import logging
-
-        logger = logging.getLogger(__name__)
 
         api_key = os.getenv("QWEN_API_KEY")
         if not api_key:
