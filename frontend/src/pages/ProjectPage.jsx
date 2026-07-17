@@ -1207,6 +1207,11 @@ export default function ProjectPage() {
 
   useEffect(() => {
     if (project && project.approved && !forcePreProd) {
+      const pType = project.production_type;
+      const initialTab = pType === 'Audio Story' ? 'voices' : (pType === 'Podcast' ? 'dashboard' : 'characters');
+      if (!localStorage.getItem(`activeStudioTab_${id}`)) {
+        localStorage.setItem(`activeStudioTab_${id}`, initialTab);
+      }
       navigate(`/projects/${id}/production`, { replace: true });
     }
   }, [project, id, navigate, forcePreProd]);
@@ -1234,6 +1239,11 @@ export default function ProjectPage() {
       const updated = await updateProjectApproval(numericId, true);
       setProject(updated);
       fetchSavedProjects();
+      
+      const pType = updated?.production_type || project?.production_type;
+      const initialTab = pType === 'Audio Story' ? 'voices' : (pType === 'Podcast' ? 'dashboard' : 'characters');
+      localStorage.setItem(`activeStudioTab_${id}`, initialTab);
+
       navigate(`/projects/${id}/production`);
     } catch (err) {
       console.error('Failed to approve project:', err);

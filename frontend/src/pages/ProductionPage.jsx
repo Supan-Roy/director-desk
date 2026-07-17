@@ -745,6 +745,22 @@ export default function ProductionPage() {
     }
   }, [id, activeStudioTab]);
 
+  useEffect(() => {
+    if (project) {
+      const saved = localStorage.getItem(`activeStudioTab_${id}`);
+      if (!saved) {
+        const prodType = project.production_type || 'Short Film';
+        let initialTab = 'characters';
+        if (prodType === 'Podcast') {
+          initialTab = 'dashboard';
+        } else if (prodType === 'Audio Story') {
+          initialTab = 'voices';
+        }
+        setActiveStudioTab(initialTab);
+      }
+    }
+  }, [project, id]);
+
   const [highlightTarget, setHighlightTarget] = useState(null);
 
   const handleGoToAsset = useCallback((msg) => {
