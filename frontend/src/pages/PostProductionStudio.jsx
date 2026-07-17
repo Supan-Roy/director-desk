@@ -1394,12 +1394,12 @@ export default function PostProductionStudio() {
                                 <button
                                   onClick={handleSaveSubtitles}
                                   disabled={saveStatus === "saving"}
-                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider text-white transition-all cursor-pointer ${
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                                     saveStatus === "success"
-                                      ? 'bg-emerald-600'
+                                      ? 'bg-emerald-600 text-white'
                                       : saveStatus === "error"
-                                        ? 'bg-red-600'
-                                        : bgt('bg-gray-800 hover:bg-gray-700', 'bg-white text-black hover:bg-gray-200')
+                                        ? 'bg-red-600 text-white'
+                                        : bgt('bg-gray-800 text-white hover:bg-gray-700', 'bg-white text-gray-900 hover:bg-gray-100')
                                   }`}
                                 >
                                   {saveStatus === "saving" ? (

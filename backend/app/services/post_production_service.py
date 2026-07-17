@@ -136,7 +136,18 @@ def transcribe_sync(movie_url: str) -> List[Dict[str, Any]]:
             audio_path,
             beam_size=5,
             word_timestamps=True,
+            # VAD filter tuned for videos with long silence periods and late dialogue.
+            # Default vad_filter=True is too aggressive — it cuts out silence windows and
+            # can cause audio near the beginning or end to be missed entirely.
             vad_filter=True,
+            vad_parameters={
+                "threshold": 0.30,              # Lower speech probability threshold (default 0.5)
+                "min_silence_duration_ms": 500,  # Only cut truly long silences (default 2000ms)
+                "speech_pad_ms": 400,            # Pad speech chunks so edge words aren't clipped
+                "min_speech_duration_ms": 100,   # Detect very short utterances (default 250ms)
+            },
+            no_speech_threshold=0.3,             # Default 0.6 — lower to detect quiet/late dialogue
+            condition_on_previous_text=False,    # Avoid hallucinations in sparse/silent audio
         )
 
         subtitles: List[Dict[str, Any]] = []
@@ -232,7 +243,18 @@ def generate_subtitles_background(task_id: str, project_id: int, movie_url: str)
             audio_path,
             beam_size=5,
             word_timestamps=True,
+            # VAD filter tuned for videos with long silence periods and late dialogue.
+            # Default vad_filter=True is too aggressive — it cuts out silence windows and
+            # can cause audio near the beginning or end to be missed entirely.
             vad_filter=True,
+            vad_parameters={
+                "threshold": 0.30,              # Lower speech probability threshold (default 0.5)
+                "min_silence_duration_ms": 500,  # Only cut truly long silences (default 2000ms)
+                "speech_pad_ms": 400,            # Pad speech chunks so edge words aren't clipped
+                "min_speech_duration_ms": 100,   # Detect very short utterances (default 250ms)
+            },
+            no_speech_threshold=0.3,             # Default 0.6 — lower to detect quiet/late dialogue
+            condition_on_previous_text=False,    # Avoid hallucinations in sparse/silent audio
         )
 
         subtitles: List[Dict[str, Any]] = []

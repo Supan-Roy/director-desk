@@ -377,8 +377,11 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
             in_idx = file_to_idx[resolve_filepath(clip.url)]
             clip_dur = clip.end - clip.start
             
-            # Trim
-            trim_filter = f"[{in_idx}:v] trim=start={clip.sourceStart}:end={clip.sourceEnd},setpts=PTS-STARTPTS"
+            # Trim and delay: reset timestamps to 0 then shift by clip.start so the
+            # overlay input timestamps align with the canvas time window (t={clip.start}..{clip.end})
+            # Without this, FFmpeg exhausts the trimmed stream's frames before the
+            # 'between(t,start,end)' enable window opens, causing a black freeze.
+            trim_filter = f"[{in_idx}:v] trim=start={clip.sourceStart}:end={clip.sourceEnd},setpts=PTS-STARTPTS+{clip.start}/TB"
             
             # Scale & pad / crop & zoom & pan
             filepath = resolve_filepath(clip.url)
@@ -619,6 +622,34 @@ def run_ffmpeg_render(task_id: str, payload: ExportPayload):
 
         # 2. Audio mixing processing
         delayed_audio_labels = []
+
+        # 2a. Extract embedded audio from video track clips (AI-generated videos carry their own audio)
+        for idx, clip in enumerate(payload.videoTrack):
+            in_idx = file_to_idx[resolve_filepath(clip.url)]
+            filepath = resolve_filepath(clip.url)
+            # Check if this video file has an audio stream before trying to extract it
+            clip_media_info = get_media_info(filepath)
+            has_audio = any(s.get("codec_type") == "audio" for s in clip_media_info.get("streams", []))
+            if not has_audio:
+                continue
+
+            clip_dur = clip.end - clip.start
+            delay_ms = int(clip.start * 1000)
+            vol = clip.volume if (hasattr(clip, 'volume') and clip.volume is not None) else 1.0
+            a_vid_label = f"a_vid_{idx}"
+            audio_effects = []
+            if vol != 1.0:
+                audio_effects.append(f"volume={vol}")
+            if hasattr(clip, 'fadeIn') and clip.fadeIn > 0.0:
+                audio_effects.append(f"afade=t=in:ss=0:d={clip.fadeIn}")
+            if hasattr(clip, 'fadeOut') and clip.fadeOut > 0.0:
+                audio_effects.append(f"afade=t=out:st={clip_dur - clip.fadeOut}:d={clip.fadeOut}")
+            effects_str = (",".join(audio_effects) + ",") if audio_effects else ""
+            filter_parts.append(
+                f"[{in_idx}:a] atrim=start={clip.sourceStart}:end={clip.sourceEnd},asetpts=PTS-STARTPTS,{effects_str}adelay={delay_ms}|{delay_ms} [{a_vid_label}]"
+            )
+            delayed_audio_labels.append(f"[{a_vid_label}]")
+
         for idx, clip in enumerate(payload.audioTrack):
             in_idx = file_to_idx[resolve_filepath(clip.url)]
             clip_dur = clip.end - clip.start
