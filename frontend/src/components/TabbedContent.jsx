@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import { 
   FiFileText, FiImage, FiClipboard, FiEdit3, FiCheck,
-  FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar, FiList
+  FiTrendingUp, FiAlertCircle, FiCheckSquare, FiAward, FiStar, FiList,
+  FiChevronDown, FiChevronUp
 } from 'react-icons/fi';
 import { PiSparkle } from 'react-icons/pi';
 import { useProjectData } from '../hooks/useProjectData';
@@ -314,6 +315,7 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
   const isAudio = productionType === 'Podcast' || productionType === 'Audio Story';
   const { isDayMode: d } = useTheme();
   const [copiedPrompt, setCopiedPrompt] = useState(null);
+  const [isAssetsExpanded, setIsAssetsExpanded] = useState(false);
 
   const handleCopyPrompt = (promptText, index) => {
     navigator.clipboard.writeText(promptText);
@@ -458,7 +460,8 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
           return (
             <div 
               key={idx} 
-              className="card-premium"
+              className="card-premium scene-breakdown-card"
+              data-placeholder={scene.isPlaceholder ? "true" : "false"}
             >
               {/* Scene Header */}
               <div className="card-premium-header px-5 py-4 flex flex-wrap justify-between items-center gap-3">
@@ -667,100 +670,126 @@ function SceneBreakdownTab({ breakdown, storyboard, productionType, loading }) {
 
       {/* Consolidated Asset Requirements */}
       {displayBreakdown.asset_requirements && (
-        <div className="card-premium p-5">
-          <div className="flex items-center gap-2.5 border-b pb-3 mb-4 border-white/[0.04]">
-            <span className="text-base">📦</span>
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
-                Consolidated Asset Requirements
-              </h3>
-              <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                Downstream pipeline requisition block (Production Agent consumer)
-              </p>
+        <div className="card-premium">
+          <button
+            type="button"
+            onClick={() => setIsAssetsExpanded(!isAssetsExpanded)}
+            className={`w-full flex items-center justify-between p-5 text-left transition-colors duration-150 cursor-pointer ${
+              d ? 'hover:bg-neutral-50/50' : 'hover:bg-white/[0.01]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-base">📦</span>
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
+                  Consolidated Asset Requirements
+                  <span className={`text-[9px] font-normal tracking-normal normal-case px-1.5 py-0.5 rounded ${
+                    d ? 'bg-neutral-100 text-neutral-600' : 'bg-white/[0.04] text-surface-450'
+                  }`}>
+                    {isAssetsExpanded ? 'Click to collapse' : 'Click to expand'}
+                  </span>
+                </h3>
+                <p className={`text-[9px] font-mono mt-0.5 ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                  Downstream pipeline requisition block (Production Agent consumer)
+                </p>
+              </div>
             </div>
-          </div>
+            <div className={`p-1.5 rounded-lg border transition-transform duration-200 ${
+              d 
+                ? 'text-neutral-500 border-neutral-200 bg-neutral-50' 
+                : 'text-surface-400 border-white/[0.04] bg-white/[0.02]'
+            } ${
+              isAssetsExpanded ? 'rotate-180' : ''
+            }`}>
+              <FiChevronDown size={14} />
+            </div>
+          </button>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 text-[11px]">
-            {/* Characters */}
-            <div className="space-y-2">
-              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                Characters Needed
-              </span>
-              <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(displayBreakdown.asset_requirements.characters_needed) && displayBreakdown.asset_requirements.characters_needed.length > 0 ? (
-                  displayBreakdown.asset_requirements.characters_needed.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
-                  ))
-                ) : (
-                  <li className="text-surface-500 font-mono list-none">None</li>
-                )}
-              </ul>
-            </div>
+          {isAssetsExpanded && (
+            <div className={`px-5 pb-5 pt-4 border-t ${d ? 'border-neutral-100' : 'border-white/[0.04]'}`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 text-[11px]">
+                {/* Characters */}
+                <div className="space-y-2">
+                  <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Characters Needed
+                  </span>
+                  <ul className="space-y-1 list-inside list-disc">
+                    {Array.isArray(displayBreakdown.asset_requirements.characters_needed) && displayBreakdown.asset_requirements.characters_needed.length > 0 ? (
+                      displayBreakdown.asset_requirements.characters_needed.map((item, i) => (
+                        <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
+                      ))
+                    ) : (
+                      <li className="text-surface-500 font-mono list-none">None</li>
+                    )}
+                  </ul>
+                </div>
 
-            {/* Locations */}
-            <div className="space-y-2">
-              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                Locations Needed
-              </span>
-              <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(displayBreakdown.asset_requirements.locations_needed) && displayBreakdown.asset_requirements.locations_needed.length > 0 ? (
-                  displayBreakdown.asset_requirements.locations_needed.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
-                  ))
-                ) : (
-                  <li className="text-surface-500 font-mono list-none">None</li>
-                )}
-              </ul>
-            </div>
+                {/* Locations */}
+                <div className="space-y-2">
+                  <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Locations Needed
+                  </span>
+                  <ul className="space-y-1 list-inside list-disc">
+                    {Array.isArray(displayBreakdown.asset_requirements.locations_needed) && displayBreakdown.asset_requirements.locations_needed.length > 0 ? (
+                      displayBreakdown.asset_requirements.locations_needed.map((item, i) => (
+                        <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
+                      ))
+                    ) : (
+                      <li className="text-surface-500 font-mono list-none">None</li>
+                    )}
+                  </ul>
+                </div>
 
-            {/* Props */}
-            <div className="space-y-2">
-              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                Props Needed
-              </span>
-              <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(displayBreakdown.asset_requirements.props_needed) && displayBreakdown.asset_requirements.props_needed.length > 0 ? (
-                  displayBreakdown.asset_requirements.props_needed.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
-                  ))
-                ) : (
-                  <li className="text-surface-500 font-mono list-none">None</li>
-                )}
-              </ul>
-            </div>
+                {/* Props */}
+                <div className="space-y-2">
+                  <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Props Needed
+                  </span>
+                  <ul className="space-y-1 list-inside list-disc">
+                    {Array.isArray(displayBreakdown.asset_requirements.props_needed) && displayBreakdown.asset_requirements.props_needed.length > 0 ? (
+                      displayBreakdown.asset_requirements.props_needed.map((item, i) => (
+                        <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
+                      ))
+                    ) : (
+                      <li className="text-surface-500 font-mono list-none">None</li>
+                    )}
+                  </ul>
+                </div>
 
-            {/* Sound */}
-            <div className="space-y-2">
-              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                Sound Design SFX
-              </span>
-              <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(displayBreakdown.asset_requirements.sound_requirements) && displayBreakdown.asset_requirements.sound_requirements.length > 0 ? (
-                  displayBreakdown.asset_requirements.sound_requirements.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
-                  ))
-                ) : (
-                  <li className="text-surface-500 font-mono list-none">None</li>
-                )}
-              </ul>
-            </div>
+                {/* Sound */}
+                <div className="space-y-2">
+                  <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    Sound Design SFX
+                  </span>
+                  <ul className="space-y-1 list-inside list-disc">
+                    {Array.isArray(displayBreakdown.asset_requirements.sound_requirements) && displayBreakdown.asset_requirements.sound_requirements.length > 0 ? (
+                      displayBreakdown.asset_requirements.sound_requirements.map((item, i) => (
+                        <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
+                      ))
+                    ) : (
+                      <li className="text-surface-500 font-mono list-none">None</li>
+                    )}
+                  </ul>
+                </div>
 
-            {/* VFX */}
-            <div className="space-y-2">
-              <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
-                VFX Overlay Cues
-              </span>
-              <ul className="space-y-1 list-inside list-disc">
-                {Array.isArray(displayBreakdown.asset_requirements.vfx_requirements) && displayBreakdown.asset_requirements.vfx_requirements.length > 0 ? (
-                  displayBreakdown.asset_requirements.vfx_requirements.map((item, i) => (
-                    <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
-                  ))
-                ) : (
-                  <li className="text-surface-500 font-mono list-none">None</li>
-                )}
-              </ul>
+                {/* VFX */}
+                <div className="space-y-2">
+                  <span className={`font-bold uppercase tracking-wider text-[9px] block ${d ? 'text-neutral-400' : 'text-surface-500'}`}>
+                    VFX Overlay Cues
+                  </span>
+                  <ul className="space-y-1 list-inside list-disc">
+                    {Array.isArray(displayBreakdown.asset_requirements.vfx_requirements) && displayBreakdown.asset_requirements.vfx_requirements.length > 0 ? (
+                      displayBreakdown.asset_requirements.vfx_requirements.map((item, i) => (
+                        <li key={i} className={`truncate font-mono ${d ? 'text-neutral-800' : 'text-neutral-355'}`} title={item}>{item}</li>
+                      ))
+                    ) : (
+                      <li className="text-surface-500 font-mono list-none">None</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
@@ -1009,6 +1038,14 @@ export default function TabbedContent() {
     const container = tabScrollContainerRef.current;
     if (container) {
       const scroll = () => {
+        if (activeTab === 'breakdown') {
+          const cards = container.querySelectorAll('.scene-breakdown-card[data-placeholder="false"]');
+          if (cards.length > 0) {
+            const lastCard = cards[cards.length - 1];
+            lastCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return;
+          }
+        }
         container.scrollTo({
           top: container.scrollHeight,
           behavior: 'smooth'
