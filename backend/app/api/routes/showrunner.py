@@ -203,10 +203,6 @@ def _auto_save_project(original_prompt: str, user_id: Optional[int] = None) -> N
     Runs in the same background thread as generate_stream so we use a
     fresh DB session rather than an async-injected one.
     """
-    if user_id is None:
-        logger.info("Anonymous session. Skipping auto-save to database.")
-        return
-
     try:
         from app.services.project_state import project_state
         from app.services.project_service import project_service
