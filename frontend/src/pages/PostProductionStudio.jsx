@@ -143,10 +143,12 @@ export default function PostProductionStudio() {
   const [adMovieUrl, setAdMovieUrl] = useState("")
   const [adError, setAdError] = useState("")
   const [adMovieUrls, setAdMovieUrls] = useState({}) // { language: full_movie_url }
+  const [adAudioUrls, setAdAudioUrls] = useState({})  // { language: full_audio_url }
   const [completedADs, setCompletedADs] = useState({})
   const adPollRef = useRef(null)
 
   const videoRef = useRef(null)
+  const adAudioRef = useRef(null)
   const pollingRef = useRef(null)
   const dubPollRef = useRef(null)
 
@@ -184,16 +186,19 @@ export default function PostProductionStudio() {
         setCompletedDubs(comp)
         setDubMovieUrls(urls)
 
-        // Load persisted AD movies
+        // Load persisted AD movies & audio
         const persistedADs = data.ad_movies || {}
         const adComp = {}
         const adUrls = {}
+        const adAudUrls = {}
         for (const [lang, info] of Object.entries(persistedADs)) {
           adComp[lang] = true
           if (info.movie_url) adUrls[lang] = `${apiBaseUrl}${info.movie_url}`
+          if (info.audio_url) adAudUrls[lang] = `${apiBaseUrl}${info.audio_url}`
         }
         setCompletedADs(adComp)
         setAdMovieUrls(adUrls)
+        setAdAudioUrls(adAudUrls)
       }
     } catch (e) {
       console.error("Failed to fetch subtitles", e)
@@ -261,13 +266,53 @@ export default function PostProductionStudio() {
     setActiveSubtitle(active ? active.text : null)
   }, [currentTime, editedSubtitles])
 
-  // Switch video source when audio track changes
+  // Switch video/audio source when audio track changes
   const prevTrackRef = useRef(audioTrack)
   useEffect(() => {
     if (!videoRef.current) return
     const vid = videoRef.current
-    // Check AD tracks first (prefixed with "AD: "), then dub tracks
+    const adAudio = adAudioRef.current
     const adKey = audioTrack.startsWith("AD: ") ? audioTrack.slice(4) : null
+
+    // AD track — keep original video, overlay AD .wav via hidden audio element
+    if (adKey) {
+      // Ensure video plays the original movie (not a dub)
+      if (movieUrl && (!vid.src || vid.src !== movieUrl)) {
+        const wasPlaying = !vid.paused
+        vid.src = movieUrl
+        vid.load()
+        if (wasPlaying) {
+          vid.oncanplaythrough = () => { vid.play().catch(() => {}); vid.oncanplaythrough = null }
+        }
+      }
+      // Load & sync AD audio overlay if available
+      if (adAudio && adAudioUrls[adKey]) {
+        if (adAudio.src !== adAudioUrls[adKey]) {
+          const wasPlaying = !vid.paused
+          adAudio.src = adAudioUrls[adKey]
+          adAudio.load()
+          if (wasPlaying) {
+            adAudio.oncanplaythrough = () => {
+              adAudio.play().catch(() => {})
+              adAudio.oncanplaythrough = null
+            }
+          }
+        }
+      } else if (adAudio) {
+        // AD selected but no audio URL yet — stop any previous AD audio
+        adAudio.pause()
+        adAudio.src = ""
+      }
+      prevTrackRef.current = audioTrack
+      return
+    }
+
+    // Non-AD track — switch video source as normal, stop AD audio
+    if (adAudio) {
+      adAudio.pause()
+      adAudio.src = ""
+    }
+
     const newSrc = audioTrack === "Original" ? movieUrl
       : (adKey && adMovieUrls[adKey]) ? adMovieUrls[adKey]
       : dubMovieUrls[audioTrack] || movieUrl
@@ -280,15 +325,17 @@ export default function PostProductionStudio() {
       }
     }
     prevTrackRef.current = audioTrack
-  }, [audioTrack, movieUrl, dubMovieUrls, adMovieUrls])
+  }, [audioTrack, movieUrl, dubMovieUrls, adMovieUrls, adAudioUrls])
 
   const handlePlayPause = () => {
     if (!videoRef.current) return
     if (isPlaying) {
       videoRef.current.pause()
+      if (adAudioRef.current) adAudioRef.current.pause()
       setIsPlaying(false)
     } else {
       videoRef.current.play()
+      if (adAudioRef.current && adAudioRef.current.src) adAudioRef.current.play().catch(() => {})
       setIsPlaying(true)
     }
   }
@@ -302,9 +349,11 @@ export default function PostProductionStudio() {
   const seekTo = (seconds) => {
     if (videoRef.current) {
       videoRef.current.currentTime = seconds
+      if (adAudioRef.current && adAudioRef.current.src) adAudioRef.current.currentTime = seconds
       setCurrentTime(seconds)
       if (!isPlaying) {
         videoRef.current.play()
+        if (adAudioRef.current && adAudioRef.current.src) adAudioRef.current.play().catch(() => {})
         setIsPlaying(true)
       }
     }
@@ -316,6 +365,7 @@ export default function PostProductionStudio() {
     const frac = (e.clientX - rect.left) / rect.width
     const t = frac * (videoRef.current.duration || 0)
     videoRef.current.currentTime = t
+    if (adAudioRef.current && adAudioRef.current.src) adAudioRef.current.currentTime = Math.min(t, adAudioRef.current.duration || t)
     setCurrentTime(t)
   }
 
@@ -834,11 +884,16 @@ export default function PostProductionStudio() {
         if (adPollRef.current) clearInterval(adPollRef.current)
         adPollRef.current = null
         setIsGeneratingAD(false)
+        // Store movie URL (mixed mp4) and audio URL (standalone .wav)
         const completedUrl = data.movie_url ? `${apiBaseUrl}${data.movie_url}` : ""
+        const completedAudioUrl = data.audio_url ? `${apiBaseUrl}${data.audio_url}` : ""
         setAdMovieUrl(completedUrl)
-        // Store in adMovieUrls for the audio track selector, and mark as completed
+        // Store in adMovieUrls/adAudioUrls for the audio track selector, and mark as completed
         if (completedUrl) {
           setAdMovieUrls(prev => ({ ...prev, [adLang]: completedUrl }))
+        }
+        if (completedAudioUrl) {
+          setAdAudioUrls(prev => ({ ...prev, [adLang]: completedAudioUrl }))
         }
         setCompletedADs(prev => ({ ...prev, [adLang]: true }))
       } else if (data.status === "failed") {
@@ -1057,8 +1112,27 @@ export default function PostProductionStudio() {
                     <video
                       ref={videoRef}
                       onTimeUpdate={handleTimeUpdate}
+                      onPlay={() => {
+                        if (adAudioRef.current && adAudioRef.current.src) {
+                          adAudioRef.current.currentTime = videoRef.current?.currentTime ?? 0
+                          adAudioRef.current.play().catch(() => {})
+                        }
+                      }}
+                      onPause={() => {
+                        if (adAudioRef.current && adAudioRef.current.src) {
+                          adAudioRef.current.pause()
+                        }
+                      }}
+                      onSeeked={() => {
+                        if (adAudioRef.current && adAudioRef.current.src && videoRef.current) {
+                          adAudioRef.current.currentTime = videoRef.current.currentTime
+                        }
+                      }}
                       className="w-full h-full object-contain"
                     />
+
+                    {/* Hidden AD audio overlay — plays raw AD narration .wav alongside original video */}
+                    <audio ref={adAudioRef} preload="none" />
 
                     {/* Subtitle Overlay */}
                     {activeSubtitle && (
@@ -2188,6 +2262,11 @@ export default function PostProductionStudio() {
                                                 return next
                                               })
                                               setAdMovieUrls(prev => {
+                                                const next = { ...prev }
+                                                delete next[lang]
+                                                return next
+                                              })
+                                              setAdAudioUrls(prev => {
                                                 const next = { ...prev }
                                                 delete next[lang]
                                                 return next
