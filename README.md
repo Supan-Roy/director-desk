@@ -1,4 +1,4 @@
-# Director Desk 🎬 — Advanced AI Showrunner & Film Studio Platform
+# Director Desk 🎬 — AI Showrunner & Film Studio Platform
 
 ![Director Desk Banner](frontend/public/images/studio_banner.png)
 
