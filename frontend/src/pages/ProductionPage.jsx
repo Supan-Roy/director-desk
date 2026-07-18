@@ -26,6 +26,7 @@ import {
   analyzeImpact,
   markStale,
   getSyncStatus,
+  cancelGenerationJob,
   apiBaseUrl 
 } from '../services/apiClient';
 import DirectorSyncCard from '../components/DirectorSyncCard';
@@ -436,12 +437,13 @@ export default function ProductionPage() {
             if (charName) {
               setRunningJobs(prev => {
                 const updated = { ...prev };
-                if (data.status === 'completed' || data.status === 'failed') {
+                if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
                   delete updated[charName];
                   fetchCharactersList();
                   fetchSceneVideosAndStatus();
                 } else {
                   updated[charName] = {
+                    ...updated[charName],
                     status: data.status,
                     progress: data.progress || 0,
                     message: data.message || "Processing..."
@@ -455,13 +457,14 @@ export default function ProductionPage() {
             if (envName) {
               setRunningJobs(prev => {
                 const updated = { ...prev };
-                if (data.status === 'completed' || data.status === 'failed') {
+                if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
                   delete updated[envName];
                   fetchEnvironmentsList();
                   fetchProjectDetails();
                   fetchSceneVideosAndStatus();
                 } else {
                   updated[envName] = {
+                    ...updated[envName],
                     status: data.status,
                     progress: data.progress || 0,
                     message: data.message || "Processing..."
@@ -475,13 +478,14 @@ export default function ProductionPage() {
             if (charName) {
               setRunningJobs(prev => {
                 const updated = { ...prev };
-                if (data.status === 'completed' || data.status === 'failed') {
+                if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
                   delete updated[charName];
                   fetchVoicesList();
                   fetchProjectDetails();
                   fetchSceneVideosAndStatus();
                 } else {
                   updated[charName] = {
+                    ...updated[charName],
                     status: data.status,
                     progress: data.progress || 0,
                     message: data.message || "Processing..."
@@ -495,7 +499,7 @@ export default function ProductionPage() {
             if (sceneName) {
               setRunningJobs(prev => {
                 const updated = { ...prev };
-                if (data.status === 'completed' || data.status === 'failed') {
+                if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
                   delete updated[sceneName];
                   // Reset manual selection map for this scene name so the approved version is shown
                   setSelectedVersionsMap(prevMap => {
@@ -506,6 +510,7 @@ export default function ProductionPage() {
                   fetchSceneVideosAndStatus();
                 } else {
                   updated[sceneName] = {
+                    ...updated[sceneName],
                     status: data.status,
                     progress: data.progress || 0,
                     message: data.message || "Processing..."
@@ -516,6 +521,7 @@ export default function ProductionPage() {
             }
           }
         }
+
       } catch (err) {
         console.error("Error parsing jobs stream event:", err);
       }
@@ -538,11 +544,22 @@ export default function ProductionPage() {
       [characterName]: {
         status: 'queued',
         progress: 0,
-        message: 'Initializing job...'
+        message: 'Initializing job...',
+        jobId: null
       }
     }));
     try {
-      await generateCharacterAsset(numericId, characterName);
+      const job = await generateCharacterAsset(numericId, characterName);
+      setRunningJobs(prev => {
+        if (!prev[characterName]) return prev;
+        return {
+          ...prev,
+          [characterName]: {
+            ...prev[characterName],
+            jobId: job.job_id
+          }
+        };
+      });
     } catch (err) {
       console.error("Failed to trigger character generation:", err);
       showToast("Failed to start character generation: " + err.message, 'error');
@@ -574,11 +591,22 @@ export default function ProductionPage() {
       [envName]: {
         status: 'queued',
         progress: 0,
-        message: 'Initializing job...'
+        message: 'Initializing job...',
+        jobId: null
       }
     }));
     try {
-      await generateEnvironmentAsset(numericId, envName);
+      const job = await generateEnvironmentAsset(numericId, envName);
+      setRunningJobs(prev => {
+        if (!prev[envName]) return prev;
+        return {
+          ...prev,
+          [envName]: {
+            ...prev[envName],
+            jobId: job.job_id
+          }
+        };
+      });
     } catch (err) {
       console.error("Failed to trigger environment generation:", err);
       showToast("Failed to start environment generation: " + err.message, 'error');
@@ -610,11 +638,22 @@ export default function ProductionPage() {
       [characterName]: {
         status: 'queued',
         progress: 0,
-        message: 'Initializing voice job...'
+        message: 'Initializing voice job...',
+        jobId: null
       }
     }));
     try {
-      await generateVoiceAsset(numericId, characterName);
+      const job = await generateVoiceAsset(numericId, characterName);
+      setRunningJobs(prev => {
+        if (!prev[characterName]) return prev;
+        return {
+          ...prev,
+          [characterName]: {
+            ...prev[characterName],
+            jobId: job.job_id
+          }
+        };
+      });
     } catch (err) {
       console.error("Failed to trigger voice generation:", err);
       showToast("Failed to start voice generation: " + err.message, 'error');
@@ -658,7 +697,8 @@ export default function ProductionPage() {
       [trackingKey]: {
         status: 'queued',
         progress: 0,
-        message: 'Preparing generation...'
+        message: 'Preparing generation...',
+        jobId: null
       }
     }));
     
@@ -670,8 +710,18 @@ export default function ProductionPage() {
     });
 
     try {
-      await generateSceneVideo(numericId, targetId);
+      const job = await generateSceneVideo(numericId, targetId);
       showToast(isPodcast ? `Podcast audio synthesis started.` : `Video generation queued for ${sceneNumberStr}.`, 'success');
+      setRunningJobs(prev => {
+        if (!prev[trackingKey]) return prev;
+        return {
+          ...prev,
+          [trackingKey]: {
+            ...prev[trackingKey],
+            jobId: job.job_id
+          }
+        };
+      });
       fetchSceneVideosAndStatus();
     } catch (err) {
       console.error("Failed to trigger scene generation:", err);
@@ -684,6 +734,41 @@ export default function ProductionPage() {
       });
     }
   };
+
+  const handleCancelJob = async (targetName, jobType) => {
+    const job = runningJobs[targetName];
+    if (!job || !job.jobId) {
+      showToast("Cannot cancel: Job ID not found.", 'warning');
+      return;
+    }
+    
+    try {
+      await cancelGenerationJob(job.jobId);
+      showToast(`${jobType} generation cancelled.`, 'info');
+      
+      // Update UI state immediately
+      setRunningJobs(prev => {
+        const updated = { ...prev };
+        delete updated[targetName];
+        return updated;
+      });
+      
+      // Reload lists
+      if (jobType === 'Character') {
+        fetchCharactersList();
+      } else if (jobType === 'Environment') {
+        fetchEnvironmentsList();
+      } else if (jobType === 'Voice') {
+        fetchVoicesList();
+      } else if (jobType === 'Scene') {
+        fetchSceneVideosAndStatus();
+      }
+    } catch (err) {
+      console.error("Failed to cancel job:", err);
+      showToast("Failed to cancel generation: " + err.message, 'error');
+    }
+  };
+
 
   const handleDownloadFile = async (url, filename) => {
     try {
@@ -1695,6 +1780,13 @@ export default function ProductionPage() {
                                         style={{ width: `${activeJob.progress}%` }}
                                       />
                                     </div>
+                                    <button
+                                      disabled={!activeJob.jobId}
+                                      onClick={() => handleCancelJob(char.name, 'Character')}
+                                      className="mt-4 px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-[9px] font-extrabold uppercase tracking-wider text-white cursor-pointer transition-all hover:scale-102 active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      Cancel Generation
+                                    </button>
                                   </div>
                                 ) : !hasAsset ? (
                                   /* Viewfinder placeholder when not generated */
@@ -1948,6 +2040,13 @@ export default function ProductionPage() {
                                           style={{ width: `${activeJob.progress}%` }}
                                         />
                                       </div>
+                                      <button
+                                        disabled={!activeJob.jobId}
+                                        onClick={() => handleCancelJob(env.name, 'Environment')}
+                                        className="mt-4 px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-[9px] font-extrabold uppercase tracking-wider text-white cursor-pointer transition-all hover:scale-102 active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed"
+                                      >
+                                        Cancel Generation
+                                      </button>
                                     </div>
                                   ) : !hasAsset ? (
                                     /* Viewfinder placeholder when not generated */
@@ -2198,6 +2297,13 @@ export default function ProductionPage() {
                                         style={{ width: `${activeJob.progress}%` }}
                                       />
                                     </div>
+                                    <button
+                                      disabled={!activeJob.jobId}
+                                      onClick={() => handleCancelJob(v.character, 'Voice')}
+                                      className="mt-4 px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-[9px] font-extrabold uppercase tracking-wider text-white cursor-pointer transition-all hover:scale-102 active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      Cancel Generation
+                                    </button>
                                   </div>
                                 )}
 
@@ -2563,8 +2669,16 @@ export default function ProductionPage() {
                                             <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-2">
                                               <div className="bg-accent h-full rounded-full transition-all duration-300" style={{ width: `${activeJob.progress}%` }} />
                                             </div>
+                                            <button
+                                              disabled={!activeJob.jobId}
+                                              onClick={() => handleCancelJob(scene.scene_number_str, 'Scene')}
+                                              className="mt-3 px-3 py-1 rounded bg-red-650 hover:bg-red-600 text-[8.5px] font-bold uppercase tracking-wider text-white cursor-pointer transition-all hover:scale-102 active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                              Cancel Render
+                                            </button>
                                           </div>
                                         </div>
+
                                       ) : activeVideo ? (
                                         activeVideo.status === 'completed' ? (
                                           project?.production_type === 'Podcast' || project?.production_type === 'Audio Story' ? (

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Optional
+from typing import Optional, Dict
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -13,6 +13,9 @@ from app.utils.security import RateLimiter
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["jobs"])
+
+# Global registry to track and cancel active generation asyncio Tasks
+active_async_tasks: Dict[str, asyncio.Task] = {}
 
 QUEUES = [
     "character_generation_queue",
@@ -42,9 +45,16 @@ async def run_simulated_job(job_id: str, duration_seconds: int = 10):
             await redis_job_service.update_job_status(job_id, "processing", progress=progress)
             
         await redis_job_service.update_job_status(job_id, "completed", progress=100)
+    except asyncio.CancelledError:
+        logger.info(f"Simulated job {job_id} cancelled by user")
+        await redis_job_service.update_job_status(job_id, "cancelled", message="Cancelled")
+        raise
     except Exception as e:
         logger.error(f"Simulated worker error on job {job_id}: {e}")
         await redis_job_service.update_job_status(job_id, "failed", error=str(e))
+    finally:
+        active_async_tasks.pop(job_id, None)
+
 
 
 @router.get("/debug/redis")
@@ -135,6 +145,25 @@ async def get_job_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
     return job
+
+
+@router.post("/api/jobs/cancel/{job_id}")
+async def cancel_job(job_id: str):
+    """Cancel a running AI generation job by its ID."""
+    task = active_async_tasks.get(job_id)
+    if task:
+        task.cancel()
+        logger.info(f"Requested cancellation for active asyncio task of job {job_id}")
+        await redis_job_service.update_job_status(job_id, "cancelled", message="Cancelled")
+        return {"status": "success", "message": f"Job {job_id} cancelled"}
+        
+    job = await redis_job_service.get_job(job_id)
+    if job:
+        await redis_job_service.update_job_status(job_id, "cancelled", message="Cancelled")
+        return {"status": "success", "message": f"Job {job_id} marked as cancelled"}
+        
+    raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
 
 
 async def run_character_generation_job(job_id: str, project_id: int, character_name: str):
@@ -287,11 +316,17 @@ async def run_character_generation_job(job_id: str, project_id: int, character_n
         logger.info(f"Character asset saved: ID={asset.id}, Name={character_name}, Version=v{version_num}")
         await redis_job_service.update_job_status(job_id, "completed", progress=100, message="Completed")
         
+    except asyncio.CancelledError:
+        logger.info(f"Character generation job {job_id} was cancelled by user.")
+        await redis_job_service.update_job_status(job_id, "cancelled", message="Cancelled")
+        raise
     except Exception as e:
         logger.error(f"Error running character generation: {e}")
         await redis_job_service.update_job_status(job_id, "failed", error=str(e), message="Failed")
     finally:
+        active_async_tasks.pop(job_id, None)
         db.close()
+
 
 
 async def run_environment_generation_job(job_id: str, project_id: int, environment_name: str):
@@ -448,11 +483,17 @@ async def run_environment_generation_job(job_id: str, project_id: int, environme
         logger.info(f"Environment asset saved: ID={asset.id}, Name={environment_name}, Version=v{version_num}")
         await redis_job_service.update_job_status(job_id, "completed", progress=100, message="Completed")
         
+    except asyncio.CancelledError:
+        logger.info(f"Environment generation job {job_id} was cancelled by user.")
+        await redis_job_service.update_job_status(job_id, "cancelled", message="Cancelled")
+        raise
     except Exception as e:
         logger.error(f"Error running environment generation: {e}")
         await redis_job_service.update_job_status(job_id, "failed", error=str(e), message="Failed")
     finally:
+        active_async_tasks.pop(job_id, None)
         db.close()
+
 
 import re
 import urllib.request
@@ -782,11 +823,17 @@ async def run_voice_generation_job(job_id: str, project_id: int, character_name:
         logger.info(f"Voice asset saved: ID={asset.id}, Character={character_name}, Version=v{version_num}")
         await redis_job_service.update_job_status(job_id, "completed", progress=100, message="Completed")
         
+    except asyncio.CancelledError:
+        logger.info(f"Voice generation job {job_id} was cancelled by user.")
+        await redis_job_service.update_job_status(job_id, "cancelled", message="Cancelled")
+        raise
     except Exception as e:
         logger.error(f"Error running voice generation: {e}")
         await redis_job_service.update_job_status(job_id, "failed", error=str(e), message="Failed")
     finally:
+        active_async_tasks.pop(job_id, None)
         db.close()
+
 
 
 # Production Studio endpoints
@@ -801,12 +848,14 @@ async def generate_character(background_tasks: BackgroundTasks, request: Generat
         job_type="character_generation", 
         target_id=request.target_id
     )
-    background_tasks.add_task(
-        run_character_generation_job, 
-        job["job_id"], 
-        int(request.project_id), 
-        request.target_id
+    task = asyncio.create_task(
+        run_character_generation_job(
+            job["job_id"], 
+            int(request.project_id), 
+            request.target_id
+        )
     )
+    active_async_tasks[job["job_id"]] = task
     return job
 
 
@@ -821,12 +870,14 @@ async def generate_environment(background_tasks: BackgroundTasks, request: Gener
         job_type="environment_generation", 
         target_id=request.target_id
     )
-    background_tasks.add_task(
-        run_environment_generation_job, 
-        job["job_id"], 
-        int(request.project_id), 
-        request.target_id
+    task = asyncio.create_task(
+        run_environment_generation_job(
+            job["job_id"], 
+            int(request.project_id), 
+            request.target_id
+        )
     )
+    active_async_tasks[job["job_id"]] = task
     return job
 
 
@@ -841,12 +892,14 @@ async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJob
         job_type="voice_generation", 
         target_id=request.target_id
     )
-    background_tasks.add_task(
-        run_voice_generation_job, 
-        job["job_id"], 
-        int(request.project_id), 
-        request.target_id
+    task = asyncio.create_task(
+        run_voice_generation_job(
+            job["job_id"], 
+            int(request.project_id), 
+            request.target_id
+        )
     )
+    active_async_tasks[job["job_id"]] = task
     return job
 
 
@@ -855,7 +908,8 @@ async def generate_voice(background_tasks: BackgroundTasks, request: GenerateJob
 async def generate_asset(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue a generic asset generation job (simulated — for testing)."""
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="asset_generation")
-    background_tasks.add_task(run_simulated_job, job["job_id"], 8)
+    task = asyncio.create_task(run_simulated_job(job["job_id"], 8))
+    active_async_tasks[job["job_id"]] = task
     return job
 
 
@@ -1189,6 +1243,17 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
         logger.info(f"Scene video asset saved: ID={placeholder_video.id}, Scene={scene_number}, Version=v{next_version}")
         await redis_job_service.update_job_status(job_id, "completed", progress=100, message="Completed")
         
+    except asyncio.CancelledError:
+        logger.info(f"Scene generation job {job_id} was cancelled by user.")
+        await redis_job_service.update_job_status(job_id, "cancelled", message="Cancelled")
+        if placeholder_video:
+            try:
+                db.delete(placeholder_video)
+                db.commit()
+                logger.info(f"Successfully deleted placeholder video record on cancel.")
+            except Exception as db_err:
+                logger.error(f"Failed to delete placeholder on cancel: {db_err}")
+        raise
     except Exception as e:
         logger.error(f"Error running scene generation: {e}")
         await redis_job_service.update_job_status(job_id, "failed", error=str(e), message="Failed")
@@ -1202,7 +1267,9 @@ async def run_scene_generation_job(job_id: str, project_id: int, scene_number_st
                 logger.error(f"Failed to save failure status to DB: {db_err}")
             
     finally:
+        active_async_tasks.pop(job_id, None)
         db.close()
+
 
 
 @router.post("/api/generate/scene", dependencies=[Depends(RateLimiter(limit=20, window=60))])
@@ -1239,12 +1306,14 @@ async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJob
         job_type="scene_generation", 
         target_id=request.target_id
     )
-    background_tasks.add_task(
-        run_scene_generation_job, 
-        job["job_id"], 
-        int(request.project_id), 
-        request.target_id
+    task = asyncio.create_task(
+        run_scene_generation_job(
+            job["job_id"], 
+            int(request.project_id), 
+            request.target_id
+        )
     )
+    active_async_tasks[job["job_id"]] = task
     return job
 
 
@@ -1252,6 +1321,7 @@ async def generate_scene(background_tasks: BackgroundTasks, request: GenerateJob
 async def generate_film(background_tasks: BackgroundTasks, request: GenerateJobRequest):
     """Queue a full film generation job — generates scene videos for all scenes sequentially."""
     job = await redis_job_service.create_job(project_id=request.project_id, job_type="film_generation")
-    background_tasks.add_task(run_simulated_job, job["job_id"], 12)
+    task = asyncio.create_task(run_simulated_job(job["job_id"], 12))
+    active_async_tasks[job["job_id"]] = task
     return job
 

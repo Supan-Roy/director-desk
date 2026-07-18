@@ -230,6 +230,12 @@ export async function generateSceneVideo(projectId, sceneNumberStr) {
   return response.data
 }
 
+export async function cancelGenerationJob(jobId) {
+  const response = await apiClient.post(`/api/jobs/cancel/${jobId}`)
+  return response.data
+}
+
+
 export async function approveSceneVideo(projectId, videoId) {
   const response = await apiClient.post(`/api/projects/${projectId}/scenes/videos/${videoId}/approve`)
   return response.data
