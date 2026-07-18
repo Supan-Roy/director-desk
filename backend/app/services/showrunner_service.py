@@ -86,7 +86,7 @@ class ShowrunnerService:
             scene_breakdown=breakdown
         )
 
-    def generate_stream(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect", files: list = None) -> Generator[dict, None, None]:
+    def generate_stream(self, prompt: str, mode: str = "fast", production_type: str = "Auto Detect", files: list = None, cancellation_flag = None) -> Generator[dict, None, None]:
         # Normalize mode string
         mode = (mode or "fast").strip().lower()
         logger.info(f"ShowrunnerService: Starting streaming generation in {mode.upper()} mode...")
@@ -124,6 +124,10 @@ class ShowrunnerService:
                 "status": "active"
             }
             
+            if cancellation_flag and cancellation_flag.is_set():
+                logger.info("generate_stream: Story generation aborted by user before title.")
+                return
+                
             title = showrunner_agent.generate_short_title(prompt)
             project_state.title = title
             yield {
@@ -155,12 +159,19 @@ class ShowrunnerService:
             
             script_accumulated = ""
             for chunk in qwen_service.generate_text_stream(script_prompt):
+                if cancellation_flag and cancellation_flag.is_set():
+                    logger.info("generate_stream: Story generation aborted by user during script generation.")
+                    return
                 script_accumulated += chunk
                 yield {
                     "type": "script_chunk",
                     "data": chunk
                 }
             
+            if cancellation_flag and cancellation_flag.is_set():
+                logger.info("generate_stream: Story generation aborted by user post-script generation.")
+                return
+                
             project_state.script = script_accumulated
             project_state.original_script = script_accumulated
             project_state.set_agent_status("writer", "completed", "just now")
@@ -213,6 +224,9 @@ class ShowrunnerService:
                 """
                 
                 for chunk in qwen_service.generate_text_stream(storyboard_prompt):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        logger.info("generate_stream: Storyboard generation aborted by user.")
+                        return
                     storyboard_text_accumulated += chunk
                     storyboard_parsed = storyboard_parser.parse(storyboard_text_accumulated)
                     mapped_storyboard = [
@@ -238,6 +252,10 @@ class ShowrunnerService:
                     "agent": "storyboard",
                     "status": "completed"
                 }
+
+            if cancellation_flag and cancellation_flag.is_set():
+                logger.info("generate_stream: Story generation aborted by user before scene breakdown.")
+                return
 
             # Stage 3: Scene Breakdown Agent generates scene breakdown
             project_state.set_agent_status("scene_breakdown", "active")
@@ -282,6 +300,9 @@ class ShowrunnerService:
                     script_accumulated,
                     storyboard_scenes
                 ):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        logger.info("generate_stream: Scene breakdown aborted by user.")
+                        return
                     breakdown = partial
                     yield {
                         "type": "scene_breakdown_chunk",
@@ -301,6 +322,10 @@ class ShowrunnerService:
                 }
 
             time.sleep(0.3)
+
+            if cancellation_flag and cancellation_flag.is_set():
+                logger.info("generate_stream: Story generation aborted by user before planner.")
+                return
 
             # Stage 4: Production Planner Agent generates phase-wise actions
             project_state.set_agent_status("planner", "active")
@@ -322,6 +347,9 @@ class ShowrunnerService:
                 p_copy["items"] = []
                 partial_phases.append(p_copy)
                 for idx in range(1, len(p_items) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        logger.info("generate_stream: Story generation aborted by user during planner stream.")
+                        return
                     p_copy["items"] = p_items[:idx]
                     partial_plan = dict(plan)
                     partial_plan["phases"] = list(partial_phases)
@@ -337,6 +365,10 @@ class ShowrunnerService:
                 "agent": "planner",
                 "status": "completed"
             }
+
+            if cancellation_flag and cancellation_flag.is_set():
+                logger.info("generate_stream: Story generation aborted by user before critic review.")
+                return
 
             # Stage 5: Critic Agent generates structured review
             project_state.set_agent_status("critic", "active")
@@ -360,23 +392,31 @@ class ShowrunnerService:
                     if key in critic_review:
                         partial_critic[key] = critic_review[key]
                 if partial_critic:
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.3)
 
                 strengths = critic_review.get("strengths", [])
                 for i in range(1, len(strengths) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["strengths"] = strengths[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
 
                 weaknesses = critic_review.get("weaknesses", [])
                 for i in range(1, len(weaknesses) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["weaknesses"] = weaknesses[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
 
                 suggestions = critic_review.get("suggestions", [])
                 for i in range(1, len(suggestions) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["suggestions"] = suggestions[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
@@ -426,6 +466,9 @@ class ShowrunnerService:
             
             chunk_size = 40  # characters per chunk
             for i in range(0, len(script), chunk_size):
+                if cancellation_flag and cancellation_flag.is_set():
+                    logger.info("generate_stream: Story generation aborted by user during script stream.")
+                    return
                 chunk = script[i:i+chunk_size]
                 yield {
                     "type": "script_chunk",
@@ -476,6 +519,9 @@ class ShowrunnerService:
                 }
             else:
                 for i in range(1, len(mapped_storyboard) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        logger.info("generate_stream: Story generation aborted by user during storyboard stream.")
+                        return
                     yield {
                         "type": "storyboard",
                         "data": mapped_storyboard[:i]
@@ -538,6 +584,9 @@ class ShowrunnerService:
                     result["script"],
                     storyboard_scenes
                 ):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        logger.info("generate_stream: Story generation aborted by user during scene breakdown.")
+                        return
                     breakdown = partial
                     yield {
                         "type": "scene_breakdown_chunk",
@@ -579,6 +628,9 @@ class ShowrunnerService:
                 p_copy["items"] = []
                 partial_phases.append(p_copy)
                 for idx in range(1, len(p_items) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        logger.info("generate_stream: Story generation aborted by user during plan stream.")
+                        return
                     p_copy["items"] = p_items[:idx]
                     partial_plan = dict(plan)
                     partial_plan["phases"] = list(partial_phases)
@@ -634,12 +686,16 @@ class ShowrunnerService:
                     if key in critic_review:
                         partial_critic[key] = critic_review[key]
                 if partial_critic:
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.3)
 
                 # Then stream strengths one by one
                 strengths = critic_review.get("strengths", [])
                 for i in range(1, len(strengths) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["strengths"] = strengths[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
@@ -647,6 +703,8 @@ class ShowrunnerService:
                 # Then stream weaknesses one by one
                 weaknesses = critic_review.get("weaknesses", [])
                 for i in range(1, len(weaknesses) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["weaknesses"] = weaknesses[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
@@ -654,6 +712,8 @@ class ShowrunnerService:
                 # Then stream suggestions one by one
                 suggestions = critic_review.get("suggestions", [])
                 for i in range(1, len(suggestions) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["suggestions"] = suggestions[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.25)
@@ -675,7 +735,7 @@ class ShowrunnerService:
                 "type": "complete"
             }
 
-    def resume_generate_stream(self, project_id: int) -> Generator[dict, None, None]:
+    def resume_generate_stream(self, project_id: int, cancellation_flag = None) -> Generator[dict, None, None]:
         from app.db.database import SessionLocal
         from app.services.project_service import project_service
         from app.schemas.responses import StoryboardScene
@@ -759,6 +819,8 @@ class ShowrunnerService:
 
             # ── Check Stage 3: Scene Breakdown ──
             if not project.scene_breakdown:
+                if cancellation_flag and cancellation_flag.is_set():
+                    return
                 project_state.set_agent_status("scene_breakdown", "active")
                 yield {
                     "type": "agent_status_change",
@@ -799,6 +861,8 @@ class ShowrunnerService:
                     }
                 else:
                     for i in range(1, len(scenes) + 1):
+                        if cancellation_flag and cancellation_flag.is_set():
+                            return
                         partial = dict(breakdown)
                         partial["scenes"] = scenes[:i]
                         is_last = (i == len(scenes))
@@ -820,6 +884,8 @@ class ShowrunnerService:
                     }
                 else:
                     for i in range(1, len(scenes) + 1):
+                        if cancellation_flag and cancellation_flag.is_set():
+                            return
                         partial = dict(project.scene_breakdown)
                         partial["scenes"] = scenes[:i]
                         is_last = (i == len(scenes))
@@ -831,6 +897,8 @@ class ShowrunnerService:
 
             # ── Check Stage 4: Plan ──
             if not project.production_plan:
+                if cancellation_flag and cancellation_flag.is_set():
+                    return
                 project_state.set_agent_status("planner", "active")
                 yield {
                     "type": "agent_status_change",
@@ -854,6 +922,8 @@ class ShowrunnerService:
 
             # ── Check Stage 5: Review ──
             if not project.critic_review:
+                if cancellation_flag and cancellation_flag.is_set():
+                    return
                 project_state.set_agent_status("critic", "active")
                 yield {
                     "type": "agent_status_change",
@@ -881,23 +951,31 @@ class ShowrunnerService:
                         if key in critic_review:
                             partial_critic[key] = critic_review[key]
                     if partial_critic:
+                        if cancellation_flag and cancellation_flag.is_set():
+                            return
                         yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                         time.sleep(0.3)
 
                     strengths = critic_review.get("strengths", [])
                     for i in range(1, len(strengths) + 1):
+                        if cancellation_flag and cancellation_flag.is_set():
+                            return
                         partial_critic["strengths"] = strengths[:i]
                         yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                         time.sleep(0.25)
 
                     weaknesses = critic_review.get("weaknesses", [])
                     for i in range(1, len(weaknesses) + 1):
+                        if cancellation_flag and cancellation_flag.is_set():
+                            return
                         partial_critic["weaknesses"] = weaknesses[:i]
                         yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                         time.sleep(0.25)
 
                     suggestions = critic_review.get("suggestions", [])
                     for i in range(1, len(suggestions) + 1):
+                        if cancellation_flag and cancellation_flag.is_set():
+                            return
                         partial_critic["suggestions"] = suggestions[:i]
                         yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                         time.sleep(0.25)
@@ -918,23 +996,31 @@ class ShowrunnerService:
                     if key in critic_review:
                         partial_critic[key] = critic_review[key]
                 if partial_critic:
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.2)
 
                 strengths = critic_review.get("strengths", [])
                 for i in range(1, len(strengths) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["strengths"] = strengths[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.15)
 
                 weaknesses = critic_review.get("weaknesses", [])
                 for i in range(1, len(weaknesses) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["weaknesses"] = weaknesses[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.15)
 
                 suggestions = critic_review.get("suggestions", [])
                 for i in range(1, len(suggestions) + 1):
+                    if cancellation_flag and cancellation_flag.is_set():
+                        return
                     partial_critic["suggestions"] = suggestions[:i]
                     yield {"type": "critic_review_chunk", "data": dict(partial_critic)}
                     time.sleep(0.15)

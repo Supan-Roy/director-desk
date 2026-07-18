@@ -114,14 +114,18 @@ async def generate_story_stream(request: GenerateRequest, current_user: Optional
         logger.info(f"Streaming story generation for prompt: {request.prompt[:100]}... [Mode: {request.mode}]")
         
         import asyncio
+        import threading
         queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
         user_id = current_user.id if current_user else None
         
+        cancellation_flag = threading.Event()
+        
         def run_sync_generation():
             try:
                 for event in showrunner_service.generate_stream(
-                    request.prompt, request.mode, request.production_type, files=request.files
+                    request.prompt, request.mode, request.production_type, files=request.files,
+                    cancellation_flag=cancellation_flag
                 ):
                     loop.call_soon_threadsafe(queue.put_nowait, event)
 
@@ -138,11 +142,16 @@ async def generate_story_stream(request: GenerateRequest, current_user: Optional
         loop.run_in_executor(None, run_sync_generation)
         
         async def event_generator():
-            while True:
-                event = await queue.get()
-                if event is None:
-                    break
-                yield f"data: {json.dumps(event)}\n\n"
+            try:
+                while True:
+                    event = await queue.get()
+                    if event is None:
+                        break
+                    yield f"data: {json.dumps(event)}\n\n"
+            except asyncio.CancelledError:
+                logger.info("generate_story_stream: Client disconnected, aborting generation thread...")
+                cancellation_flag.set()
+                raise
                 
         headers = {
             "Content-Type": "text/event-stream",
@@ -163,12 +172,15 @@ async def resume_story_stream(project_id: int):
         logger.info(f"Resuming streaming story generation for project: {project_id}")
         
         import asyncio
+        import threading
         queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
         
+        cancellation_flag = threading.Event()
+        
         def run_sync_generation():
             try:
-                for event in showrunner_service.resume_generate_stream(project_id):
+                for event in showrunner_service.resume_generate_stream(project_id, cancellation_flag=cancellation_flag):
                     loop.call_soon_threadsafe(queue.put_nowait, event)
                 loop.call_soon_threadsafe(queue.put_nowait, None)
             except Exception as e:
@@ -179,11 +191,16 @@ async def resume_story_stream(project_id: int):
         loop.run_in_executor(None, run_sync_generation)
         
         async def event_generator():
-            while True:
-                event = await queue.get()
-                if event is None:
-                    break
-                yield f"data: {json.dumps(event)}\n\n"
+            try:
+                while True:
+                    event = await queue.get()
+                    if event is None:
+                        break
+                    yield f"data: {json.dumps(event)}\n\n"
+            except asyncio.CancelledError:
+                logger.info("resume_story_stream: Client disconnected, aborting generation thread...")
+                cancellation_flag.set()
+                raise
                 
         headers = {
             "Content-Type": "text/event-stream",
