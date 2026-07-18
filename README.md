@@ -4,7 +4,7 @@
 
 Director Desk is a production-grade **AI Showrunner, Creative Director, and Post-Production Platform** that automates the cinematic storytelling pipeline. By bridging raw AI media generation with structured, controllable post-production workflows, Director Desk orchestrates the entire creative lifecycle—from screenplays and multi-agent character casting to environment scoping, multi-track audio ducking, sub-second subtitle synchronization, and final theatrical release packages.
 
-Designed for filmmakers, creative directors, and hackathons, this platform delivers a **low-latency, zero-local-overhead architecture** by offloading heavy deep learning processes to cloud model APIs while orchestrating media assets via robust local compilation engines.
+Designed for filmmakers, creative directors, and developers, this platform delivers a **low-latency, zero-local-overhead architecture** by offloading heavy deep learning processes to cloud model APIs while orchestrating media assets via robust local compilation engines.
 
 ---
 
@@ -16,69 +16,211 @@ The diagram below details how the Vite frontend interacts with the FastAPI backe
 
 ---
 
-## 🌟 Core Technical & Feature Pillars
+## 🎬 Supported Production Formats
 
-### 1. Script Breakdown & Storyboard Parsing
-*   **Industry Screenplay Parser:** Formats raw text scripts into industry-standard formatted screenplays.
-*   **Storyboard Segmenter:** Splits screenplays into structural scene segments, parsing scene headers (e.g., `INT. SCIFI CHAMBER - NIGHT`), descriptive visual paragraphs, and dialogue text blocks.
-*   **Timeline Editor:** A non-destructive editor allowing users to modify actions, reorder shots, configure aspect ratios, or delete scenes, immediately updating database state.
+Director Desk supports a diverse set of creative formats, adapting its backend pipeline, script break-down algorithms, and audio/video mixing logic to the media type selected in the dashboard.
 
-### 2. Character Studio & Visual Casting Consistency
-*   **Structured Character Profiles:** Generates specific visual models including Gender, Age Group, Attire/Appearance, demographical details, and Personality Traits.
-*   **Visual Continuity Engine:** Employs consistent character references across multiple scenes. Prompts combine casting traits with location presets to ensure actors retain key physical attributes across different shots.
-*   **Custom Presets Lookbook:** Features a full-width vertical grid of curated style lookbooks (Cyberpunk, Noir, Sci-Fi Metropolis, Space Odyssey) with interactive hover-play video loops. Clicking a lookbook instantly configures the workspace's visual sliders.
-
-### 3. Acoustic Voice Analyzer & Speaker Clustering
-*   **Acoustic Feature Extractor:** Analyzes source audio segments to extract Root Mean Square (RMS) energy, Zero Crossing Rate (ZCR), and pitch profiles.
-*   **Pitch Estimation Engine:** Employs an Autocorrelation/AMDF (Average Magnitude Difference Function) pitch tracking algorithm with octave-error correction to calculate the speaker's fundamental frequency ($F_0$).
-*   **Automated Speaker Clustering:** Clusters distinct speakers in video uploads based on acoustic feature similarity metrics.
-*   **Gender & Age Profiling:** Classifies speaker characteristics using frequency ranges ($F_0$ pitch) to map speakers to suitable voice profiles automatically.
-*   **Subtitle Speaker Assignment:** Automatically links speaker identifiers to corresponding subtitle intervals so the system knows exactly *who* speaks *when* without manual annotation.
-
-### 4. Smart Dubbing & Multilingual Translation
-*   **Cloud API Translation:** Offloads subtitle and script translations to the **Alibaba Cloud Qwen API** (`qwen-plus`). Translates dialogue into Spanish, French, Japanese, Korean, Chinese, and Hindi with zero local GPU/RAM overhead.
-*   **Synthetic Voice Cast Synthesis:** Maps speaker identifiers from the dialogue parser to character-specific voice profiles, generating synthetic vocals via `edge-tts` or `qwen-tts`.
-*   **Multi-Track Dialogue Compilation:** Generates silent padding waves to align dialogue segments with original timestamps, preparing individual tracks for master mixing.
-
-### 5. Audio Description (AD) & FFmpeg Ducking Engine
-*   **Silent Action Window Locator:** Scans subtitle files (`_find_ad_windows`) to identify periods of silence (minimum 2.5s) where narrative descriptions can fit. If subtitles are missing, it defaults to full-film narration windows.
-*   **Visual-to-Audio Description (AD):** Combines scene-specific visual details (camera angles, movements, character actions, lighting setups) into natural, spoken descriptors and translates them into narration.
-*   **Dynamic FFmpeg Audio Ducking:** Mixes original backing audio with the synthesized AD narration. It applies an advanced FFmpeg filtergraph to automatically duck/dim backing track volumes (e.g. by -15dB) during active AD speech intervals and restore volume levels during silences.
-
-### 6. Theatrical & Marketing Release Studio
-*   **Poster Design Canvas:** Generates high-fidelity key-art using Qwen image APIs across diverse aspect ratios (Theatrical 16:9, YouTube Thumbnail 16:9, Vertical Poster 9:16, Social Banner 21:9).
-*   **Interactive Billing Layer:** Uses an HTML5 Canvas API interface in the React frontend, allowing creators to dynamically write and overlay movie titles, credit billing, director credits, and laurel decorations. Exports to print-ready PNG/JPEG.
-*   **Trailer Generation Engine:** Stitches together scene clips, overlays cinematic title cards, fades audio tracks, and mixes a backing trailer soundtrack and voiceover.
+| Format | Medium | Cinematic & Production Description | Primary AI & Technical Pipeline |
+| :--- | :--- | :--- | :--- |
+| **Short Film** | Video & Audio | Narrative-driven visual sequence with character dialogue, scene transitions, visual environments, and ambient music. | Storyboard breakdown + Character casting Lookbook + Wan2.7-T2V / HappyHorse-I2V + Edge-TTS/Qwen-TTS + FFmpeg multi-track mixing. |
+| **Trailer** | Video & Audio | High-impact promotional cut containing key dramatic clips, cinematic title card overlays, and dynamic trailer music. | Clip selection and compilation + Text-to-Video cards + Release Studio trailer compiler. |
+| **Documentary** | Video & Audio | Realism-oriented sequencing with conversational speech, background ambient sounds, and panning/zooming over interview layouts. | Speech transcription + B-Roll visual generation + Panning/Zooming fit mode parameters. |
+| **Podcast** | Audio Only | Multi-speaker conversational panel or monologic talk show with clear vocal separation and ambient background noise. | Script generator + Multi-speaker TTS casting + Timed dialogue wave padding and sequential audio compiler. |
+| **Drama** | Video & Audio | Intense, character-driven storytelling focusing on emotional scenes, close-up camera angles, and character vocal delivery. | Character visual profile constraint + Voice profile pitch classification + Audio Description locator. |
+| **Series Episode** | Video & Audio | Episodic video sequencing preserving character casting features and location descriptors across segments. | Showrunner state machine tracking + Character continuity prompts. |
+| **Educational Show** | Video & Audio | Explanatory visual slides or video tutorials with a narrator voiceover, text overlays, and synchronized subtitles. | Text-to-Speech + Subtitle timestamp generator + Font-styled DrawText overlay. |
+| **Interview** | Video & Audio | Dialogue exchanges between two or more visual speakers with alternating camera angles. | Multi-agent dialogue parser + Alternating visual references + Dual-track audio mixing. |
+| **YouTube Video** | Video & Audio | Fast-paced vlogging or educational style sequences with animated visual overlays, sound effects, and logo branding. | VFX Track overlay + SFX trigger matching + Logo quadrant positioning. |
+| **Audio Story** | Audio Only | Immersive narrative audiobooks with descriptive speech, character vocal castings, and environmental sound effects. | Screenplay parser + TTS speech casting + Sound effect triggers. |
 
 ---
 
-## 🔒 Technical Systems & Security Orchestration
+## 🎥 Cinematic Production Workflow
 
-### 🔑 Authentication & User Sessions
-*   **Encryption and Hashing:** Password security managed via bcrypt hashing.
-*   **One-Time Passcode (OTP):** Integrates SMTP services to dispatch verification OTPs for secure signups and recovery.
-*   **Google OAuth 2.0:** Integrates Google Social login.
-*   **JWT Sessions:** Secure, token-based session verification with configurable expiration windows.
+The platform replicates the real-world filmmaking pipeline, guiding a **Short Film** project through sequential, automated stages while maintaining technical continuity.
 
-### ⚙️ Asynchronous Job Queue & Streaming (SSE)
-*   **Redis Background Queue:** Heavy video compilation and rendering jobs are scheduled and executed out-of-band to prevent HTTP timeouts.
-*   **Server-Sent Events (SSE):** Provides real-time feedback to the frontend. Pushes active task progress (e.g., `progress=72`) and status messages (e.g. "Stitching Scene Videos...") over a persistent HTTP connection.
+```mermaid
+graph TD
+    A[Raw Screenplay / Prompt] -->|Qwen LLM breakdown| B[Script & Storyboard Breakdown]
+    B -->|Automatic Scoping| C[Production Plan Generation]
+    C -->|User Adjustment| D[Visual & Acoustic Scoping]
+    D -->|Character Lookbook & Lenses| E[Scene Video Generation]
+    E -->|Consistent Character Casting| F[Visual Continuity Engine]
+    F -->|Timeline Assembly| G[Studio Editor Tracks]
+    G -->|Multi-Track Compositing| H[Release Studio]
+    H -->|Theatrical Compilation| I[Master Film & Marketing Package]
+```
 
-### 📈 Showrunner Production Graph
-*   **State Machine Orchestrator:** Manages execution flow through standard production steps (Script breakdown -> Asset mapping -> Reference compilation -> Video rendering -> Master compiler) to ensure visual and auditory continuity.
+### 1. Script Generation & Storyboard Breakdown
+When a project begins, the user inputs a premise or screenplay. The backend utilizes **Alibaba Cloud Qwen-Plus** to structure the input into a standard screenplay format. The screenplay parser in [storyboard_parser.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/storyboard_parser.py) reads this and breaks it down into individual scene blocks containing:
+*   `scene_number`: Sequence index for ordering.
+*   `camera_shot`: Directives like `Close-up`, `Wide Shot`, or `Crane Shot`.
+*   `character`: List of active characters.
+*   `dialogue`: Dialogue text matching each character.
+*   `environment`: Scene environment, time of day, and mood.
+
+### 2. Showrunner State Machine & Plan
+To keep the generation structured, the backend maintains a state machine in [project_state.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/project_state.py). This enforces sequence gates:
+`Script Breakdown` ➡️ `Scoping (Visuals, Audio, Characters)` ➡️ `Asset Generation` ➡️ `Scene Compilation` ➡️ `Master Release`.
+
+### 3. Visual & Acoustic Scoping
+Before generating video files, the Director Desk casting team configures:
+*   **Character Casting:** Visual profiles (gender, age group, appearance details, attire).
+*   **Acoustic Voice Casting:** Matching characters to voice profiles (`edge-tts` or `qwen-tts`) based on their age and gender.
+*   **Environment Scoping:** Defining location settings, camera angles, color grading profiles, lens configurations (e.g. Anamorphic 50mm, Wide-angle 24mm), and lighting setups (e.g. Cinematic Three-Point, Volumetric Fog).
+
+### 4. Scene Generation & Visual Continuity
+A common issue in AI video generation is character/style drift. Director Desk achieves visual consistency using a multi-step generation pipeline:
+1.  **Prompt Synthesis:** In [scene_compiler.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/scene_compiler.py), character casting descriptions, environmental parameters, lighting presets, and style sliders are merged into a single prompt.
+2.  **First Frame Anchoring:** An image generator (Wan2.6-T2I) renders the starting frame. This establishes character layout, facial structures, and lighting.
+3.  **Image-to-Video Generation:** The generated first frame and scene prompt are passed to the **Wan2.7-I2V** or **HappyHorse-I2V** model. By starting from the generated image, the character, attire, and environment remain consistent across different shots.
 
 ---
 
-## 🛠️ Technology Stack
+## 🎛️ Detailed Studio Editor
 
-*   **Frontend:** React 18, Vite, Tailwind CSS, HTML5 Canvas API (for poster design overlays), marked.js
-*   **Backend:** FastAPI (Python), SQLite (Local Database), SQLAlchemy ORM, Redis (Job queue management)
-*   **AI Models & APIs:** Alibaba Cloud DashScope (Qwen-Plus, Wan2.6-T2I, Wan2.7-T2V, HappyHorse-I2V, Qwen-TTS), `faster-whisper` (Speech-to-Text)
-*   **Media Processing:** FFmpeg (Video rendering, audio mixing, and ducking filters)
+The **Studio Editor** in [EditorPage.jsx](file:///d:/Programs%20and%20Codes/director-desk/frontend/src/pages/EditorPage.jsx) is a non-destructive timeline editor that lets creators compile their multi-track video projects. The frontend payload is compiled and sent to the backend endpoint in [editor.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/api/routes/editor.py#L906-L915) to be rendered via FFmpeg.
+
+| Track / Component | Feature / Slider | Filmmaking Purpose | Technical Backend/FFmpeg Implementation |
+| :--- | :--- | :--- | :--- |
+| **Video Track** | Trimming (`sourceStart` / `sourceEnd`) | Edit clip starts and cuts. | Uses FFmpeg's `trim` filter and shifts timestamps using `setpts=PTS-STARTPTS+clip_start/TB` to prevent video freezes. |
+| | Fit Mode (`contain` / `cover`) | Scale landscape or portrait clips. | Contains via `scale` and padding; covers via cropping and scaling. |
+| | Brightness & Contrast | Adjust shot exposure. | Applies the `eq` filter: `eq=brightness=B:contrast=C`. |
+| | Blur | Apply depth of field. | Applies the Gaussian blur filter: `gblur=sigma=S`. |
+| | Grayscale / Sepia / Invert | Apply aesthetic styles. | Uses `format=gray`, `colorchannelmixer` matrix mapping, or `negate`. |
+| | Saturation & Hue Rotate | Adjust color vibrance. | Applies the `hue` filter: `hue=h=H:s=S`. |
+| | Mirror (H / V) | Correct orientation. | Applies `hflip` or `vflip`. |
+| | Vignette | Add focus shading. | Applies the `vignette` filter: `vignette=angle=A`. |
+| | Edge Detect & Sharpen | Stylized outline / sharpness. | Applies `edgedetect` and `unsharp=5:5:1.0:5:5:0.0`. |
+| | Transitions (Fade in / out) | Handle shot entrances/cuts. | Applies `fade=t=in` or `fade=t=out`. |
+| **Audio Track** | Volume Adjustment | Balance speech, music, and SFX. | Applies the `volume` filter: `volume=V`. |
+| | Transitions (Fade in / out) | Smooth audio entries/ends. | Applies `afade=t=in` or `afade=t=out`. |
+| | Timing Delay (`adelay`) | Align dialogue with actions. | Delays audio using `adelay=D\|D` where D is in milliseconds. |
+| | Embedded Audio Extraction | Play original video audio. | Probes streams using `ffprobe` and maps video audio `:a` into the final mix. |
+| **Subtitles Track** | Custom Fonts | Match text styling. | Links custom TrueType fonts in `C:/Windows/Fonts/` using FFmpeg's `drawtext` `fontfile` parameter. |
+| | Position Presets | Align text overlay layout. | Positional coordinates mapped via `drawtext` parameter (e.g. `x=(w-tw)/2:y=h*0.78-th`). |
+| | Drop Shadow | Outline text for readability. | Adds outlines via `shadowcolor=black:shadowx=2:shadowy=2`. |
+| **VFX Track** | Blend Modes | Screen overlay effects. | Blends overlays using the `blend=all_mode=X` filter (e.g., `screen`, `addition`, `multiply`). |
+| | Opacity & Transform | Control overlay blend strength. | Controls transparency via `colorchannelmixer=aa=A`, scales with `scale`, and rotates with `rotate` and padding. |
+| **Camera FX** | Screen Shake | Procedural earthquake shake. | Applies `crop` filter shifting x/y based on time sine waves: `x='20+15*sin(2*PI*12*(t-start))'`. |
+| | Zoom Punch | Procedural zoom in/out. | Applies `zoompan` with exponential decay: `z='1.0+0.35*exp(-3.5*(t-start))'`. |
+| | Motion Blur | Cinematic blur on camera movement. | Applies `tblend=all_mode=average,gblur=sigma=1.5`. |
+| | Flash Frame | White transition flash. | Overlays a dynamic fading white canvas using a `color=c=white` input. |
+| | Speed Ramp | Fast/Slow-motion changes. | Manipulates presentation timestamps: `setpts=0.5*(PTS-STARTPTS)`. |
+| | Freeze Frame | Pause scene elements. | Loops the initial frame indefinitely using the `loop` filter. |
+| **Logo Overlay** | Brand watermark | Add watermark/laurels. | Scales logo with `scale`, applies opacity, and overlays onto the final output. |
 
 ---
 
-## 🚀 Installation & Local Run
+## 🎙️ Post-Production Audio & Subtitles Engine
+
+The platform features a post-production audio suite, managed in [PostProductionStudio.jsx](file:///d:/Programs%20and%20Codes/director-desk/frontend/src/pages/PostProductionStudio.jsx) and backed by [post_production_service.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/post_production_service.py) and [dubbing_service.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/dubbing_service.py).
+
+### 1. Subtitle Generation
+Director Desk utilizes a local, CPU-based **`faster-whisper` (tiny model)** to transcribe video files. To accommodate silent gaps in videos:
+*   **VAD (Voice Activity Detection) Tuning:** To prevent Whisper from skipping sparse dialogue or failing in videos with long silent stretches, the VAD filter is tuned with custom parameters:
+    *   `threshold`: `0.30` (captures lower speech volume).
+    *   `min_silence_duration_ms`: `500` (prevents VAD from shifting timestamps across large silent windows).
+    *   `speech_pad_ms`: `400` (ensures trailing words aren't truncated).
+*   **No-Speech Gating:** `no_speech_threshold` is set to `0.3` to capture quiet speech.
+*   **Sub-Second Accuracy:** Utilizes word-level timestamps to generate SRT and WebVTT outputs.
+
+### 2. Multilingual Dubbing Pipeline
+The dubbing pipeline translates and re-records dialogue:
+1.  **Dialogue Translation:** Subtitle files are parsed, and Qwen translates the dialogue into the target language. Supported languages include:
+    *   🇪🇸 Spanish
+    *   🇫🇷 French
+    *   🇯🇵 Japanese
+    *   🇰🇷 Korean
+    *   🇨🇳 Chinese
+    *   🇮🇳 Hindi
+2.  **Voice Profile Mapping:** Matches each speaker's character profile to a localized Text-to-Speech (TTS) voice model.
+3.  **Vocal Synthesis:** Local dialogue segments are synthesized into wav files using `edge-tts`.
+4.  **Audio Padding & Alignment:** In [tts_provider.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/tts_provider.py), silent wav pads are generated and prepended/appended to the synthesized dialogue tracks. This aligns the new audio segments with the original video timestamps.
+5.  **Master Audio Compilation:** FFmpeg mixes the backing tracks with the newly aligned dub tracks.
+
+### 3. Audio Description (AD) & Ducking Engine
+For visually impaired audiences, Director Desk generates synthetic descriptive narration:
+1.  **Silent Window Locator:** The engine (`_find_ad_windows`) scans the subtitle files to identify gaps of silence (minimum 2.5 seconds).
+2.  **Visual Description Synthesis:** Qwen analyzes the visual scene description, action blocks, and environment parameters to generate a concise narrative description.
+3.  **Dynamic FFmpeg Audio Ducking:** The narrative descriptions are synthesized into speech. To ensure the narration is audible, the backend applies an FFmpeg filtergraph to automatically duck/dim the background audio (e.g. by -15dB) during active AD speech intervals and restore volume levels during silences.
+
+---
+
+## 🚀 Release Studio & Marketing Suite
+
+The **Release Studio** ([ReleaseStudio.jsx](file:///d:/Programs%20and%20Codes/director-desk/frontend/src/pages/ReleaseStudio.jsx)) helps creators package their project for distribution.
+
+### 1. Poster Design Canvas
+Generates promotional art using image generation models:
+*   **Aspect Ratio Layouts:** Supports Theatrical Portrait (9:16), YouTube Thumbnail (16:9), and Social Banner (21:9).
+*   **Interactive Billing Layer:** Uses an HTML5 Canvas interface, allowing creators to dynamically write and overlay movie titles, credit billing, director credits, and laurel decorations. Exports to print-ready PNG/JPEG.
+
+### 2. Trailer Stitcher
+Stitches project files into a promotional trailer:
+*   Compiles key video scene files.
+*   Overlays custom title cards between scenes.
+*   Applies fade transitions and mixes backing trailer music.
+
+### 3. End Credits Generator
+Compiles cast and crew details and generates an animated, scrolling end-credits sequence.
+
+---
+
+## 🤖 Dedicated Multi-Agent System
+
+The workspace utilizes dedicated agents in [AgentsPage.jsx](file:///d:/Programs%20and%20Codes/director-desk/frontend/src/pages/AgentsPage.jsx) to manage different parts of the production process:
+
+*   **Scriptwriter Agent (`Qwen-Plus`):** Generates screenplays, formats script headers, writes character dialogue, and splits stories into storyboard segments.
+*   **Visual Director Agent (`Wan2.6`):** Interprets scene environments, configures camera movements, manages style Lookbooks, and generates consistent scene reference frames.
+*   **Acoustic Casting Agent (`Edge-TTS`):** Analyzes character demographics and profiles, and matches speakers to suitable voice profiles.
+*   **Dubbing Agent (`Qwen-Transl`):** Handles translation of dialogues and script logs, and manages localized audio alignment.
+*   **Post-Production Agent (`FFmpeg`):** Coordinates multi-track timeline assembly, video filters, VFX blending, audio ducking, and master video rendering.
+
+---
+
+## 📂 Assets & Templates Lookbook
+
+### Presets Lookbook
+Provides pre-configured visual style templates (e.g. Cyberpunk, Noir, Space Odyssey, Documentary) with interactive video loops. Clicking a lookbook template automatically configures the workspace's visual sliders.
+
+### Custom Templates
+Allows creators to save their custom configurations—including aspect ratio, camera style, lens details, lighting, and color grading—as reusable templates in [TemplatesPage.jsx](file:///d:/Programs%20and%20Codes/director-desk/frontend/src/pages/TemplatesPage.jsx).
+
+### Assets Gallery
+A centralized file manager in [AssetsPage.jsx](file:///d:/Programs%20and%20Codes/director-desk/frontend/src/pages/AssetsPage.jsx) for viewing, filtering, downloading, or deleting generated videos, audio segments, images, and master movies.
+
+---
+
+## 📦 External Libraries & Dependencies
+
+The platform relies on the following third-party libraries and modules:
+
+### Backend Python Libraries (pip)
+*   `fastapi` / `uvicorn`: ASGI web framework and server.
+*   `python-dotenv`: Environment configuration management.
+*   `pydantic` / `pydantic-settings`: Data validation and settings management.
+*   `sqlalchemy`: SQL toolkit and ORM.
+*   `redis`: Client for job queue management.
+*   `pypdf`: Screenplay PDF ingestion.
+*   `openai`: Interface for Cloud Model Studio API integrations.
+*   `faster-whisper`: Local, high-performance transcription.
+*   `ffmpeg-python`: FFmpeg filtergraph builder.
+*   `edge-tts`: Local voice synthesis.
+
+### Frontend Javascript Modules (npm)
+*   `react` / `react-dom`: UI component library.
+*   `react-router-dom`: Route navigation management.
+*   `react-icons`: Icon assets.
+*   `axios`: HTTP request client.
+*   `html2canvas`: Renders HTML elements to canvas images (used in Poster design).
+*   `marked` / `react-markdown`: Markdown parsing.
+*   `tailwindcss` / `autoprefixer` / `postcss`: CSS framework and processor.
+*   `vite`: Build tool and development server.
+
+---
+
+## ⚙️ Setup & Local Installation
 
 ### Prerequisites
 *   Node.js (v18+)
