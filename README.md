@@ -127,14 +127,8 @@ Director Desk utilizes a local, CPU-based **`faster-whisper` (tiny model)** to t
 
 ### 2. Multilingual Dubbing Pipeline
 The dubbing pipeline translates and re-records dialogue:
-1.  **Dialogue Translation:** Subtitle files are parsed, and Qwen translates the dialogue into the target language. Supported languages include:
-    *   🇪🇸 Spanish
-    *   🇫🇷 French
-    *   🇯🇵 Japanese
-    *   🇰🇷 Korean
-    *   🇨🇳 Chinese
-    *   🇮🇳 Hindi
-2.  **Voice Profile Mapping:** Matches each speaker's character profile to a localized Text-to-Speech (TTS) voice model.
+1.  **Dialogue Translation (200+ Languages):** Subtitle files are parsed, and the Qwen API translates the dialogue. While the UI dropdown lists 20 pre-configured major languages (including Spanish, French, Japanese, Korean, Chinese, Hindi, Arabic, Russian, Portuguese, etc.), the underlying Qwen LLM translation engine supports **200+ languages** with deep contextual reasoning.
+2.  **Voice Profile Mapping & Synthesis (70+ Languages):** Localized Text-to-Speech (TTS) voices are matched to speaker profiles. Synthesis uses `edge-tts`, which supports **74 languages/locales** and over **300+ unique voices** for gender-diverse voice casting.
 3.  **Vocal Synthesis:** Local dialogue segments are synthesized into wav files using `edge-tts`.
 4.  **Audio Padding & Alignment:** In [tts_provider.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/tts_provider.py), silent wav pads are generated and prepended/appended to the synthesized dialogue tracks. This aligns the new audio segments with the original video timestamps.
 5.  **Master Audio Compilation:** FFmpeg mixes the backing tracks with the newly aligned dub tracks.
