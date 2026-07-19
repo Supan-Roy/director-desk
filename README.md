@@ -2,9 +2,9 @@
 
 ![Director Desk Banner](frontend/public/images/studio_banner.png)
 
-Director Desk is a production-grade **AI Showrunner, Creative Director, and Post-Production Platform** that automates the cinematic storytelling pipeline. By bridging raw AI media generation with structured, controllable post-production workflows, Director Desk orchestrates the entire creative lifecycle—from screenplays and multi-agent character casting to environment scoping, multi-track audio ducking, sub-second subtitle synchronization, and final theatrical release packages.
+Director Desk is a production-grade **AI Showrunner, Creative Director, and Post-Production Platform** that automates the cinematic storytelling pipeline. Rather than treating filmmaking as a single AI generation task, Director Desk decomposes production into specialized stages orchestrated by dedicated Qwen model agents. By bridging raw AI media generation with structured, controllable post-production workflows, Director Desk coordinates the entire creative lifecycle—from screenplays and multi-agent character casting to environment scoping, multi-track audio ducking, sub-second subtitle synchronization, and final theatrical release packages.
 
-Designed for filmmakers, creative directors, and developers, this platform delivers a **low-latency, zero-local-overhead architecture** by offloading heavy deep learning processes to cloud model APIs while orchestrating media assets via robust local compilation engines.
+Designed for filmmakers, creative directors, and developers, this platform delivers a **low-latency, zero-local-overhead architecture** by offloading heavy deep learning processes to Alibaba Cloud model APIs while compiling media assets via robust local execution engines.
 
 ---
 
@@ -32,6 +32,16 @@ Director Desk supports a diverse set of creative formats, adapting its backend p
 | **Interview** | Video & Audio | Dialogue exchanges between two or more visual speakers with alternating camera angles. | Multi-agent dialogue parser + Alternating visual references + Dual-track audio mixing. |
 | **YouTube Video** | Video & Audio | Fast-paced vlogging or educational style sequences with animated visual overlays, sound effects, and logo branding. | VFX Track overlay + SFX trigger matching + Logo quadrant positioning. |
 | **Audio Story** | Audio Only | Immersive narrative audiobooks with descriptive speech, character vocal castings, and environmental sound effects. | Screenplay parser + TTS speech casting + Sound effect triggers. |
+
+---
+
+## 💡 Why Director Desk Is Different
+
+Most AI video generators treat filmmaking as a single prompt-to-video task.
+
+Director Desk instead models filmmaking as an orchestrated production workflow.
+
+Rather than treating filmmaking as a single AI generation task, Director Desk decomposes production into specialized stages coordinated by dedicated AI agents. Each production stage—writing, planning, asset generation, scene rendering, editing, localization, accessibility, and release—is coordinated independently while preserving shared project state and downstream dependencies.
 
 ---
 
@@ -74,6 +84,38 @@ A common issue in AI video generation is character/style drift. Director Desk ac
 1.  **Prompt Synthesis:** In [scene_compiler.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/scene_compiler.py), character casting descriptions, environmental parameters, lighting presets, and style sliders are merged into a single prompt.
 2.  **First Frame Anchoring:** An image generator (Wan2.6-T2I) renders the starting frame. This establishes character layout, facial structures, and lighting.
 3.  **Image-to-Video Generation:** The generated first frame and scene prompt are passed to the **Wan2.7-I2V** or **HappyHorse-I2V** model. By starting from the generated image, the character, attire, and environment remain consistent across different shots.
+
+## 🛠️ Engineering Highlights & Complex Problem Solving
+
+### 1. Director Sync (Downstream Dependency Tracking)
+One of the primary challenges in generative filmmaking is **asset consistency**. If a user modifies an upstream character visual profile or voice setting, it can silently invalidate downstream media assets. 
+
+Instead of forcing a full, expensive project regeneration, Director Desk features the **Director Sync Engine** (managed in [project_state.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/project_state.py)). The engine runs **downstream dependency tracking** and **impact analysis**:
+*   **Production Graph Representation:** The system represents the film pipeline as a directed dependency graph (implemented in [production_graph_service.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/production_graph_service.py)), where nodes represent script, storyboard, casting lookbooks, voice models, scenes, and post-production audios. Edges represent dependencies.
+*   **Stale Asset Detection:** When an upstream casting, script line, or voice profile changes, Director Sync traces the dependency graph to find affected scenes, audio segments, or video files.
+*   **Partial Regeneration:** Invalidated assets are flagged as `"stale"` in the database and visually marked as dirty in the UI, enabling target-directed rebuilds that save time and API costs.
+
+### 2. Async Job Cancellation & DB Cleanup
+Generative media tasks (Text-to-Video rendering, Voice profile synthesis) are long-running and expensive. To prevent database locks and runaway compute costs when users cancel jobs:
+*   **Async Task Registry:** Rather than using FastAPI's standard `BackgroundTasks` (which run post-response and cannot be inspected or aborted), generation routes in [jobs.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/api/routes/jobs.py) launch workers as immediate `asyncio.Task` references registered in a global `active_async_tasks` map.
+*   **Graceful Interrupts:** When the cancel API `/api/jobs/cancel/{job_id}` is called, the task is terminated via `task.cancel()`. The background worker catches `asyncio.CancelledError` to cleanly abort model requests.
+*   **Placeholder Cleanup:** Upon cancellation, any SQLite database video placeholders generated during queuing are dynamically deleted, immediately releasing the project's production queue.
+
+### 3. Server-Sent Events (SSE) Cooperative Cancellation
+For script and storyboard streaming, client disconnects (like closing the page) normally leave the server-side generation threads running in the background.
+*   **Orphan Prevention:** In [showrunner.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/api/routes/showrunner.py), the SSE connection generator catches `asyncio.CancelledError` when a client disconnects and triggers a thread-safe `threading.Event()` flag.
+*   **Cooperative Exit:** The synchronous background worker checks this flag before executing each subsequent Qwen API call stage, instantly stopping any orphan model generation requests.
+
+### 4. FFmpeg Video Compositing & Precision Timestamp Offsetting
+Stitching multiple short clips with varying speeds and frame rates into a single video track often causes rendering failures:
+*   **The Freezing Bug:** Traditional concatenation using `setpts=PTS-STARTPTS` resets timestamps relative to individual clip starts, causing the video frame stream to freeze at subsequent clip boundaries.
+*   **Precision Offsets:** The studio editor's compositing engine in [editor.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/api/routes/editor.py) implements a custom offset algorithm (`setpts=PTS-STARTPTS+{clip.start}/TB`) to calculate exact target timelines.
+*   **Dynamic Audio Mixer:** The backend uses `ffprobe` to automatically inspect video files, extract any embedded audio tracks, and mix them back into the final video file at precise millisecond boundaries (`adelay`, `atrim`) alongside voiceover and music.
+
+### 5. Whisper & Voice Activity Detection (VAD) Tuning
+Standard automatic transcription often fails to capture late dialogue in silent video clips or starts hallucinating background noise:
+*   **VAD Calibration:** The subtitle extraction engine in [post_production_service.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/post_production_service.py) overrides default transcription parameters to support silence-heavy dramatic cuts.
+*   **Parameters:** We tuned `threshold=0.30` to detect low-volume speech, `min_silence_duration_ms=500` to prevent segment shifts, and `speech_pad_ms=400` to avoid truncating trailing syllables. We also disabled `condition_on_previous_text` to prevent hallucinations during long stretches of silence.
 
 ---
 
