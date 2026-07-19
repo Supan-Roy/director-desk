@@ -14,6 +14,24 @@ The diagram below details how the Vite frontend interacts with the FastAPI backe
 
 ![Director Desk - System Architecture & Workflow](frontend/public/images/Director%20Desk%20-%20System%20Architecture%20&%20Workflow.png)
 
+### 1. Modularity & Separation of Concerns
+*   **Decoupled Agent Layer:** Each production agent (Writer, Storyboarder, Planner, Critic, Scene Breakdown) is implemented as a self-contained module in `backend/app/agents/`. They have zero compile-time dependencies on each other. Instead, a central **Showrunner Service** acts as the orchestrator, taking outputs from one agent, formatting them, and passing them as context to the next.
+*   **Decoupled Media Services:** Heavy audio/video tasks are isolated into discrete helper services: [editor.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/api/routes/editor.py) (handles FFmpeg timeline rendering), [tts_provider.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/tts_provider.py) (handles Text-to-Speech synthesis and wave padding), and [post_production_service.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/post_production_service.py) (handles Whisper transcription & subtitle formatting).
+*   **Stateless State Machine:** The **Director Sync Engine** ([project_state.py](file:///d:/Programs%20and%20Codes/director-desk/backend/app/services/project_state.py)) handles state tracking and dependency staling completely independently of the routing controllers. This separation of state validation from data fetching makes adding new media stages (like VFX or Dubbing) trivial.
+
+### 2. Scalability
+*   **Stateless FastAPI Design:** The backend is fully stateless. User project metadata, asset paths, and rendering statuses are persisted in SQLite (or Postgres in cloud environments) and Redis. This allows you to scale the API horizontally behind a load balancer without session-stickiness issues.
+*   **Non-Blocking Job Queuing:** Expensive generation tasks (video rendering, image synthesis, voice training) do not block FastAPI's thread pool. They are offloaded into background tasks, tracked via Redis, and status updates are piped to the client asynchronously.
+*   **Containerized Architecture:** The system is divided into isolated service containers (`nginx` reverse-proxy, `frontend` client, `backend` API, `redis` state cache, `db` storage). This means you can scale the backend independently on high-performance ECS instances (equipped with GPUs) while keeping lightweight frontend and caching layers on minimal instances.
+
+### 3. Error Handling & Resilience
+*   **Prevention of Wasted Compute (Orphan Task Cancellation):**
+    *   *Backend Tasks:* By wrapping worker threads in `asyncio.create_task` and mapping them in `active_async_tasks`, the backend can cancel running tasks dynamically via `task.cancel()` when an abort API is called.
+    *   *SSE Disconnects:* In the `/generate/stream` endpoints, if a user closes the browser tab, the server intercepts `asyncio.CancelledError` and fires a thread-safe `threading.Event()` flag to exit background threads immediately, preventing orphan API calls to Qwen.
+*   **Resiliency & Resumable Streams:** If the generation pipeline fails or is interrupted (due to rate-limiting, network drops, or container restarts), the system doesn't make you start over. The `/generate/stream/resume/{project_id}` route reads the saved state from the database and resumes streaming the pipeline from the exact stage it failed on.
+*   **DashScope Flakiness Tolerance:** The Qwen API client wraps completions in a custom retry handler (`_chat_completion_with_retry`) to handle transient network issues and specific DashScope API bugs (like the known Content-Length mismatch flakiness).
+*   **FFmpeg/Subprocess Safety:** Every dynamic FFmpeg filtergraph compilation is wrapped in standard error-trapping blocks. If a video clip is corrupted or has an incompatible codec, the engine catches it, logs the output, and gracefully falls back to visual placeholders instead of crashing the entire master render process.
+
 ---
 
 ## 🎬 Supported Production Formats
