@@ -10,7 +10,7 @@ Designed for filmmakers, creative directors, and developers, this platform deliv
 
 ## 🏗️ System Architecture & Data Flow
 
-The diagram below details how the Vite frontend interacts with the FastAPI backend, local SQLite database, Redis job queue, and external AI generation services.
+The diagram below details how the Vite frontend interacts with the FastAPI backend, local SQLite / cloud PostgreSQL production database, Redis job queue, and external AI generation services.
 
 ![Director Desk - System Architecture & Workflow](frontend/public/images/Director%20Desk%20-%20System%20Architecture%20&%20Workflow.png)
 
