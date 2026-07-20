@@ -637,6 +637,36 @@ export default function EditorPage() {
   const navigate = useNavigate()
   const { isDayMode: themeIsDayMode } = useTheme()
   const isDayMode = false // Lock Studio Editor in Dark Mode
+
+  // Force document root data-theme to 'night' while on EditorPage
+  useEffect(() => {
+    const applyNight = () => {
+      document.documentElement.setAttribute('data-theme', 'night');
+    };
+    applyNight();
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+          if (document.documentElement.getAttribute('data-theme') !== 'night') {
+            document.documentElement.setAttribute('data-theme', 'night');
+          }
+        }
+      });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => {
+      observer.disconnect();
+      const savedTheme = localStorage.getItem('dd-theme-mode') || 'dark';
+      let activeTheme = savedTheme;
+      if (savedTheme === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        activeTheme = prefersDark ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', activeTheme === 'light' ? 'day' : 'night');
+    };
+  }, []);
   const {
     script,
     storyboard,
@@ -1672,13 +1702,11 @@ export default function EditorPage() {
     .sort((a, b) => a.start - b.start)
 
   return (
-    <div className={`flex h-screen overflow-hidden select-none font-display relative transition-colors duration-500 ${
-      isDayMode ? 'bg-white' : 'bg-[#09090d]'
-    }`}>
+    <div className="flex h-screen overflow-hidden select-none font-display relative transition-colors duration-500 bg-[#09090d] text-white dark">
 
       {/* Viewport Sidebar */}
       <div className="relative z-30 shrink-0 h-screen max-md:h-0">
-        <Sidebar />
+        <Sidebar forceDark={true} />
       </div>
 
       {/* Editor Main Workspace */}

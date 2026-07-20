@@ -148,7 +148,7 @@ function getUserProfile() {
 
 // ── Main Sidebar ───────────────────────────────────────────────────────────
 
-export default function Sidebar() {
+export default function Sidebar({ forceDark = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -160,7 +160,8 @@ export default function Sidebar() {
     updateProjectDetails,
     fetchSavedProjects,
   } = useProjectData();
-  const { isDayMode: d } = useTheme();
+  const { isDayMode: themeDay } = useTheme();
+  const d = forceDark ? false : themeDay;
 
   const activeProjectId = (() => {
     const match = location.pathname.match(/^\/projects\/([a-z0-9]+)(?:\/(?:production|release))?$/);
