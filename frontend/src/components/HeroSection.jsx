@@ -1009,14 +1009,18 @@ export default function HeroSection({
 
             {/* Premium Typography Logo Lockup */}
             <h2 className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 uppercase font-display select-none">
-              <span className="flex items-center text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400">
+              <span className={`flex items-center text-4xl md:text-5xl lg:text-6xl font-black tracking-tight ${
+                isDayMode 
+                  ? 'text-neutral-950 font-black' 
+                  : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400'
+              }`}>
                 <span>Direct</span>
                 <svg className="inline-block h-[0.8em] w-[0.8em] shrink-0 self-center align-middle mx-[0.04em] mt-[-0.04em]" viewBox="0 0 100 100">
                   <defs>
                     <linearGradient id="director-o-gradient-hero" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ffffff" />
-                      <stop offset="50%" stopColor="#f5f5f5" />
-                      <stop offset="100%" stopColor="#a3a3a3" />
+                      <stop offset="0%" stopColor={isDayMode ? "#0a0a0a" : "#ffffff"} />
+                      <stop offset="50%" stopColor={isDayMode ? "#0a0a0a" : "#f5f5f5"} />
+                      <stop offset="100%" stopColor={isDayMode ? "#0a0a0a" : "#a3a3a3"} />
                     </linearGradient>
                     <mask id="film-reel-mask-hero">
                       <circle cx="50" cy="50" r="50" fill="white" />
@@ -1033,7 +1037,11 @@ export default function HeroSection({
                 </svg>
                 <span>r</span>
               </span>
-              <span className="text-4xl md:text-5xl lg:text-6xl font-light tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-[#a78bfa] via-[#e9d5ff] to-white ml-2">
+              <span className={`text-4xl md:text-5xl lg:text-6xl font-light tracking-[0.25em] ml-2 ${
+                isDayMode 
+                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] to-[#5b21b6]' 
+                  : 'text-transparent bg-clip-text bg-gradient-to-r from-[#a78bfa] via-[#e9d5ff] to-white'
+              }`}>
                 Desk
               </span>
             </h2>

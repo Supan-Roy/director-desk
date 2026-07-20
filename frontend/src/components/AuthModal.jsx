@@ -394,14 +394,18 @@ export default function AuthModal() {
           {/* Brand Header */}
           <div className="flex flex-col items-center text-center mb-6">
             <div className="flex items-center gap-1 mb-1.5 select-none leading-none">
-              <span className="text-[25px] font-black tracking-tight uppercase flex items-center text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400">
+              <span className={`text-[25px] font-black tracking-tight uppercase flex items-center ${
+                isDayMode 
+                  ? 'text-neutral-950 font-black' 
+                  : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400'
+              }`}>
                 Direct
                 <svg className="inline-block h-[0.85em] w-[0.85em] shrink-0 self-center align-middle mx-[0.04em] mt-[-0.04em]" viewBox="0 0 100 100">
                   <defs>
                     <linearGradient id="director-o-gradient-modal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ffffff" />
-                      <stop offset="50%" stopColor="#f5f5f5" />
-                      <stop offset="100%" stopColor="#a3a3a3" />
+                      <stop offset="0%" stopColor={isDayMode ? "#0a0a0a" : "#ffffff"} />
+                      <stop offset="50%" stopColor={isDayMode ? "#0a0a0a" : "#f5f5f5"} />
+                      <stop offset="100%" stopColor={isDayMode ? "#0a0a0a" : "#a3a3a3"} />
                     </linearGradient>
                     <mask id="film-reel-mask-modal">
                       <circle cx="50" cy="50" r="50" fill="white" />
@@ -418,7 +422,11 @@ export default function AuthModal() {
                 </svg>
                 r
               </span>
-              <span className="text-[25px] font-light tracking-[0.1em] uppercase text-transparent bg-clip-text bg-gradient-to-r from-accent via-[#a78bfa] to-white ml-0.5">
+              <span className={`text-[25px] font-light tracking-[0.1em] uppercase ml-0.5 ${
+                isDayMode 
+                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] to-[#5b21b6]' 
+                  : 'text-transparent bg-clip-text bg-gradient-to-r from-accent via-[#a78bfa] to-white'
+              }`}>
                 Desk
               </span>
             </div>

@@ -796,7 +796,7 @@ export default function ReleaseStudio() {
                 <button
                   onClick={() => navigate('/')}
                   className={`mt-2 px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                    d ? 'bg-gray-900 text-white hover:bg-gray-800' : 'bg-white/10 text-white hover:bg-white/15'
+                    d ? 'bg-black text-white hover:bg-neutral-800 !text-white' : 'bg-white/10 text-white hover:bg-white/15'
                   }`}
                 >
                   Go to Studio

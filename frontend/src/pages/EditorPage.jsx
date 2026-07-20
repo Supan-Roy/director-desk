@@ -634,8 +634,8 @@ function NLEDropdown({ value, onChange, options, disabled = false, className = '
 
 export default function EditorPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
-  const { isDayMode } = useTheme()
+  const { isDayMode: themeIsDayMode } = useTheme()
+  const isDayMode = false // Lock Studio Editor in Dark Mode
   const {
     script,
     storyboard,

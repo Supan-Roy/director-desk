@@ -681,7 +681,7 @@ export default function Sidebar() {
               <span className="flex items-center gap-1 select-none leading-none">
                 <span className={`text-[12px] font-black tracking-tight uppercase flex items-center ${
                   d 
-                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-neutral-950 to-neutral-750' 
+                    ? 'text-neutral-950 font-black' 
                     : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400'
                 }`}>
                   <span>Direct</span>
@@ -689,8 +689,8 @@ export default function Sidebar() {
                     <defs>
                       <linearGradient id="director-o-gradient-sidebar" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={d ? "#0a0a0a" : "#ffffff"} />
-                        <stop offset="50%" stopColor={d ? "#171717" : "#f5f5f5"} />
-                        <stop offset="100%" stopColor={d ? "#404040" : "#a3a3a3"} />
+                        <stop offset="50%" stopColor={d ? "#0a0a0a" : "#f5f5f5"} />
+                        <stop offset="100%" stopColor={d ? "#0a0a0a" : "#a3a3a3"} />
                       </linearGradient>
                       <mask id="film-reel-mask-sidebar">
                         <circle cx="50" cy="50" r="50" fill="white" />
@@ -709,7 +709,7 @@ export default function Sidebar() {
                 </span>
                 <span className={`text-[12px] font-light tracking-[0.1em] uppercase ${
                   d 
-                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] to-[#8b5cf6]' 
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] to-[#5b21b6]' 
                     : 'text-transparent bg-clip-text bg-gradient-to-r from-accent via-[#a78bfa] to-white'
                 }`}>
                   Desk
@@ -1017,13 +1017,13 @@ export default function Sidebar() {
               isCollapsed ? 'h-9 w-9 p-0 rounded-full mx-auto' : 'w-fit mx-auto'
             } ${
               d 
-                ? 'bg-gradient-to-b from-neutral-800 to-black hover:from-neutral-900 hover:to-black text-white border border-black/15 hover:shadow-md' 
+                ? 'bg-black text-white hover:bg-neutral-900 border border-black/15 shadow-md !text-white' 
                 : 'bg-gradient-to-b from-white via-neutral-50 to-neutral-200 text-black hover:from-white hover:to-neutral-100 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(255,255,255,0.25)]'
             }`}
             title="Log In / Sign Up"
           >
-            <FiUser size={11} className="shrink-0" />
-            {!isCollapsed && <span>Sign In</span>}
+            <FiUser size={11} className={`shrink-0 ${d ? 'text-white' : ''}`} />
+            {!isCollapsed && <span className={d ? 'text-white font-extrabold !text-white' : ''}>Sign In</span>}
           </button>
         )}
       </div>

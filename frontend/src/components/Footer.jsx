@@ -29,7 +29,7 @@ export default function Footer() {
               <span className="flex items-center gap-1 select-none leading-none">
                 <span className={`text-[12px] font-black tracking-tight uppercase flex items-center ${
                   d 
-                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-neutral-950 to-neutral-750' 
+                    ? 'text-neutral-950 font-black' 
                     : 'text-transparent bg-clip-text bg-gradient-to-b from-white via-neutral-100 to-neutral-400'
                 }`}>
                   <span>Direct</span>
@@ -37,8 +37,8 @@ export default function Footer() {
                     <defs>
                       <linearGradient id="director-o-gradient-footer" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={d ? "#0a0a0a" : "#ffffff"} />
-                        <stop offset="50%" stopColor={d ? "#171717" : "#f5f5f5"} />
-                        <stop offset="100%" stopColor={d ? "#404040" : "#a3a3a3"} />
+                        <stop offset="50%" stopColor={d ? "#0a0a0a" : "#f5f5f5"} />
+                        <stop offset="100%" stopColor={d ? "#0a0a0a" : "#a3a3a3"} />
                       </linearGradient>
                       <mask id="film-reel-mask-footer">
                         <circle cx="50" cy="50" r="50" fill="white" />
@@ -57,7 +57,7 @@ export default function Footer() {
                 </span>
                 <span className={`text-[12px] font-light tracking-[0.1em] uppercase ${
                   d 
-                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] to-[#8b5cf6]' 
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] to-[#5b21b6]' 
                     : 'text-transparent bg-clip-text bg-gradient-to-r from-accent via-[#a78bfa] to-white'
                 }`}>
                   Desk
